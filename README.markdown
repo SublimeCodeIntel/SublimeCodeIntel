@@ -32,11 +32,17 @@ The "User" packages directory is located at:
 * Linux:
     ~/.Sublime Text 2/Packages/
 
+
 Don't forget to add key or mouse bindings. For "Jump to Symbol Declaration":
+
     Setup in User Key Bindings:
+
         `{ "keys": ["super+f3"], "command": "goto_python_definition" }`
+
     ...or in User Mouse Bindings (super + click):
+
         `{ "button": "button1", "modifiers": ["super"], "command": "goto_python_definition" }`
+
 
 Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config'). Example::
 
@@ -74,3 +80,11 @@ Start typing, use the `goto_python_definition` with the key or mouse bindings.
 Don't despair! The first time you use it it needs to build some indexes and it can take more than a few seconds (around six in my configuration).
 
 It just works!
+
+LICENSE
+-------
+The plugin is based in code from the Open Komodo Editor and has a MPL license.
+
+The Original Code is Komodo code.
+
+Port by German M. Bravo (Kronuz).
