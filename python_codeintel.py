@@ -107,6 +107,10 @@ def logger(view, type, msg=None, delay=0, timeout=None, id='CodeIntel'):
     calltip(view, '%s: %s' % (type, msg), delay, timeout, id + '-' + type)
 
 class PythonCodeIntel(sublime_plugin.EventListener):
+    def on_close(self, view):
+        path = view.file_name() or "<Unsaved>"
+        codeintel_cleanup(path)
+
     def on_modified(self, view):
         pos = view.sel()[0].end()
         text = view.substr(sublime.Region(pos-7, pos))
@@ -126,7 +130,10 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             cplns, calltips = codeintel(view, path, content, lang, pos, forms=('cplns', 'calltips'))
             if cplns is not None:
                 # Show autocompletions:
-                self.completions = sorted((name, name) for type, name in cplns)
+                self.completions = sorted(
+                    [ ('%s  (%s)' % (name, type), name) for type, name in cplns ], 
+                    cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
+                )
                 view.run_command('auto_complete')
             elif calltips is not None:
                 # Triger a tooltip
@@ -162,10 +169,17 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                 window.open_file(path, sublime.ENCODED_POSITION)
 
 
+_codeintel_ = {}
 _ci_db_base_dir_ = None
 _ci_db_catalog_dirs_ = []
 _ci_db_import_everything_langs = None
 _ci_extra_module_dirs_ = None
+
+def codeintel_cleanup(path):
+    if path in _codeintel_:
+        mgr, env = _codeintel_[path]
+        mgr.finalize()
+        del _codeintel_[path]
 
 def codeintel(view, path, content, lang, pos, forms):
     cplns = None
@@ -179,77 +193,81 @@ def codeintel(view, path, content, lang, pos, forms):
         return [None] * len(forms)
     encoding = None
 
-    calltip(view, "About to update indexes. The first time this can take a while. Do not despair!", delay=1000)
-    
-    mgr = Manager(
-        extra_module_dirs = _ci_extra_module_dirs_,
-        db_base_dir = _ci_db_base_dir_,
-        db_catalog_dirs = _ci_db_catalog_dirs_,
-        db_import_everything_langs = _ci_db_import_everything_langs,
-        db_event_reporter = lambda m: logger(view, m),
-    )
-    catalogs = []
-    for catalog in mgr.db.get_catalogs_zone().avail_catalogs():
-        if catalog['lang'] == lang:
-            catalogs.append(catalog['name'])
-    config = {
-        "codeintel_selected_catalogs": catalogs,
-        "codeintel_max_recursive_dir_depth": 10,
-        "codeintel_scan_files_in_project": True,
-    }
-    _config = {}
-    tryReadCodeIntelDict(os.path.expanduser(os.path.join('~', '.codeintel', 'config')), _config)
-    project_dir = find_ropeproject(path, '.codeintel')
-    if project_dir:
-        tryReadCodeIntelDict(os.path.join(project_dir, 'config'), _config)
-    config.update(_config.get(lang, {}))
-    for conf in [ 'pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths' ]:
-        v = config.get(conf)
-        if v and isinstance(v, (list, tuple)):
-            config[conf] = os.pathsep.join(v)
-
-    env = SimplePrefsEnvironment(**config)
-
-    mgr.env = env
-    mgr.upgrade()
-    mgr.initialize()
-
-    calltip(view, "")
-
     try:
-        buf = mgr.buf_from_content(content, lang, env, path, encoding)
-        if not isinstance(buf, CitadelBuffer):
-            logger(view, "Error", "`%s' (%s) is not a language that uses CIX" % (path, buf.lang))
-            return [None] * len(forms)
-            
-        if 'cplns' in forms or 'calltips' in forms or 'defns' in forms:
+        mgr, env = _codeintel_[path]
+        print 'reused!'
+    except KeyError:
+        print 'created!'
+        calltip(view, "About to update indexes. The first time this can take a while. Do not despair!", delay=1000)
+        
+        mgr = Manager(
+            extra_module_dirs = _ci_extra_module_dirs_,
+            db_base_dir = _ci_db_base_dir_,
+            db_catalog_dirs = _ci_db_catalog_dirs_,
+            db_import_everything_langs = _ci_db_import_everything_langs,
+            db_event_reporter = lambda m: logger(view, m),
+        )
+        catalogs = []
+        for catalog in mgr.db.get_catalogs_zone().avail_catalogs():
+            if catalog['lang'] == lang:
+                catalogs.append(catalog['name'])
+        config = {
+            "codeintel_selected_catalogs": catalogs,
+            "codeintel_max_recursive_dir_depth": 10,
+            "codeintel_scan_files_in_project": True,
+        }
+        _config = {}
+        tryReadCodeIntelDict(os.path.expanduser(os.path.join('~', '.codeintel', 'config')), _config)
+        project_dir = find_ropeproject(path, '.codeintel')
+        if project_dir:
+            tryReadCodeIntelDict(os.path.join(project_dir, 'config'), _config)
+        config.update(_config.get(lang, {}))
+        for conf in [ 'pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths' ]:
+            v = config.get(conf)
+            if v and isinstance(v, (list, tuple)):
+                config[conf] = os.pathsep.join(v)
+
+        env = SimplePrefsEnvironment(**config)
+
+        mgr.env = env
+        mgr.upgrade()
+        mgr.initialize()
+
+        _codeintel_[path] = (mgr, env)
+
+        calltip(view, "")
+
+    buf = mgr.buf_from_content(content, lang, env, path, encoding)
+    if not isinstance(buf, CitadelBuffer):
+        logger(view, "Error", "`%s' (%s) is not a language that uses CIX" % (path, buf.lang))
+        return [None] * len(forms)
+        
+    if 'cplns' in forms or 'calltips' in forms or 'defns' in forms:
+        try:
+            trg = buf.trg_from_pos(pos)
+            defn_trg = buf.defn_trg_from_pos(pos)
+        except CodeIntelError:
+            trg = None
+            defn_trg = None
+        else:
+            eval_log_stream = StringIO()
+            hdlr = logging.StreamHandler(eval_log_stream)
+            fmtr = logging.Formatter("%(name)s: %(levelname)s: %(message)s")
+            hdlr.setFormatter(fmtr)
+            codeintel_logger.addHandler(hdlr)
+            ctlr = LogEvalController(codeintel_logger)
             try:
-                trg = buf.trg_from_pos(pos)
-                defn_trg = buf.defn_trg_from_pos(pos)
-            except CodeIntelError:
-                trg = None
-                defn_trg = None
-            else:
-                eval_log_stream = StringIO()
-                hdlr = logging.StreamHandler(eval_log_stream)
-                fmtr = logging.Formatter("%(name)s: %(levelname)s: %(message)s")
-                hdlr.setFormatter(fmtr)
-                codeintel_logger.addHandler(hdlr)
-                ctlr = LogEvalController(codeintel_logger)
-                try:
-                    if 'cplns' in forms and trg and trg.form == TRG_FORM_CPLN:
-                        cplns = buf.cplns_from_trg(trg, ctlr=ctlr)
-                    if 'calltips' in forms and trg and trg.form == TRG_FORM_CALLTIP:
-                        calltips = buf.calltips_from_trg(trg, ctlr=ctlr)
-                    if 'defns' in forms and defn_trg and defn_trg.form == TRG_FORM_DEFN:
-                        defns = buf.defns_from_trg(defn_trg, ctlr=ctlr)
-                finally:
-                    codeintel_logger.removeHandler(hdlr)
-                msg = eval_log_stream.getvalue()
-                if msg:
-                    logger(view, "Error", msg)
-    finally:
-        mgr.finalize()
+                if 'cplns' in forms and trg and trg.form == TRG_FORM_CPLN:
+                    cplns = buf.cplns_from_trg(trg, ctlr=ctlr)
+                if 'calltips' in forms and trg and trg.form == TRG_FORM_CALLTIP:
+                    calltips = buf.calltips_from_trg(trg, ctlr=ctlr)
+                if 'defns' in forms and defn_trg and defn_trg.form == TRG_FORM_DEFN:
+                    defns = buf.defns_from_trg(defn_trg, ctlr=ctlr)
+            finally:
+                codeintel_logger.removeHandler(hdlr)
+            msg = eval_log_stream.getvalue()
+            if msg:
+                logger(view, "Error", msg)
 
     ret = []
     l = locals()
