@@ -137,7 +137,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                 view.run_command('auto_complete')
             elif calltips is not None:
                 # Triger a tooltip
-                calltip(view, calltips[0])
+                calltip(view, 'Tip: ' + calltips[0])
 
     def on_selection_modified(self, view):
         lineno = view.rowcol(view.sel()[0].end())[0]
@@ -169,19 +169,23 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                 window.open_file(path, sublime.ENCODED_POSITION)
 
 
-_codeintel_ = {}
+_ci_mgr_ = None
+_ci_envs_ = {}
 _ci_db_base_dir_ = None
 _ci_db_catalog_dirs_ = []
 _ci_db_import_everything_langs = None
 _ci_extra_module_dirs_ = None
 
 def codeintel_cleanup(path):
-    if path in _codeintel_:
-        mgr, env = _codeintel_[path]
-        mgr.finalize()
-        del _codeintel_[path]
+    global _ci_mgr_
+    if path in _ci_envs_:
+        del _ci_envs_[path]
+        if not _ci_envs_:
+            _ci_mgr_.finalize()
+            _ci_mgr_ = None
 
 def codeintel(view, path, content, lang, pos, forms):
+    global _ci_mgr_
     cplns = None
     calltips = None
     defns = None
@@ -194,13 +198,12 @@ def codeintel(view, path, content, lang, pos, forms):
     encoding = None
 
     try:
-        mgr, env = _codeintel_[path]
-        print 'reused!'
+        env = _ci_envs_[path]
+        mgr = _ci_mgr_
     except KeyError:
-        print 'created!'
         calltip(view, "About to update indexes. The first time this can take a while. Do not despair!", delay=1000)
         
-        mgr = Manager(
+        mgr = _ci_mgr_ or Manager(
             extra_module_dirs = _ci_extra_module_dirs_,
             db_base_dir = _ci_db_base_dir_,
             db_catalog_dirs = _ci_db_catalog_dirs_,
@@ -229,13 +232,16 @@ def codeintel(view, path, content, lang, pos, forms):
 
         env = SimplePrefsEnvironment(**config)
 
-        mgr.env = env
-        mgr.upgrade()
-        mgr.initialize()
+        if not _ci_mgr_:
+            mgr.upgrade()
+            mgr.initialize()
+            _ci_mgr_ = mgr
 
-        _codeintel_[path] = (mgr, env)
+        _ci_envs_[path] = env
 
         calltip(view, "")
+
+    mgr.env = env
 
     buf = mgr.buf_from_content(content, lang, env, path, encoding)
     if not isinstance(buf, CitadelBuffer):
