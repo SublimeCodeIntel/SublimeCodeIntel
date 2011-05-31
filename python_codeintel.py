@@ -226,7 +226,7 @@ def codeintel(view, path, content, lang, pos, forms):
             try:
                 trg = buf.trg_from_pos(pos)
                 defn_trg = buf.defn_trg_from_pos(pos)
-            except CodeIntelError, ex:
+            except CodeIntelError:
                 trg = None
                 defn_trg = None
             else:
