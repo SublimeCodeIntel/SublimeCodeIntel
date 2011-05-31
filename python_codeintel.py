@@ -45,7 +45,7 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
- 
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'libs'))
 
 from codeintel2.common import *
@@ -171,11 +171,6 @@ def codeintel(view, path, content, lang, pos, forms):
     cplns = None
     calltips = None
     defns = None
-    
-    if '#' in path:
-        path, anchor = path.rsplit('#', 1)
-    else:
-        anchor = None
     
     try:
         lang = lang or guess_lang_from_path(path)
