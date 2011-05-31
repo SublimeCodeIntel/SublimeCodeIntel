@@ -35,13 +35,13 @@ The "User" packages directory is located at:
 
 Don't forget to add key or mouse bindings. For "Jump to Symbol Declaration":
 
-    Setup in User Key Bindings:
+    Setup in User Key Bindings (Packages/User/Default.sublime-keymap):
 
         `{ "keys": ["super+f3"], "command": "goto_python_definition" }`
 
-    ...or in User Mouse Bindings (super + click):
+    ...or in User Mouse Bindings (Packages/User/Default.sublime-mousemap):
 
-        `{ "button": "button1", "modifiers": ["super"], "command": "goto_python_definition" }`
+        `{ "button": "button1", "modifiers": ["super"], "command": "goto_python_definition", "press_command": "drag_select" }`
 
 
 Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config'). Example::

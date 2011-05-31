@@ -4,10 +4,10 @@ The plugin is based in code from the Open Komodo Editor and has a MPL license.
 Port by German M. Bravo (Kronuz). May 30, 2011
 
 For "Jump to symbol declaration":
-    Setup in User Key Bindings:
+    Setup in User Key Bindings (Packages/User/Default.sublime-keymap):
         { "keys": ["super+f3"], "command": "goto_python_definition" }
-    ...or in User Mouse Bindings (super + click):
-        { "button": "button1", "modifiers": ["super"], "command": "goto_python_definition" }
+    ...or in User Mouse Bindings (Packages/User/Default.sublime-mousemap):
+        { "button": "button1", "modifiers": ["super"], "command": "goto_python_definition", "press_command": "drag_select" }
 
 Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config'). Example:
     {
