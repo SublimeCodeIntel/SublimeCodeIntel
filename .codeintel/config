@@ -1,0 +1,6 @@
+{
+    "Python": {
+        "pythonExtraPaths": [ "./libs/" ]
+    }
+}
+

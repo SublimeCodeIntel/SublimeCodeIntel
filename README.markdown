@@ -44,33 +44,33 @@ Don't forget to add key or mouse bindings. For "Jump to Symbol Declaration":
         `{ "button": "button1", "modifiers": ["super"], "command": "goto_python_definition", "press_command": "drag_select" }`
 
 
-Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config'). Example::
+Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config'). All configurations are optional. Example::
 
     {
         "PHP": {
             "php": '/usr/bin/php',
             "phpExtraPaths": [],
-            "phpConfigFile": 'php.ini',
+            "phpConfigFile": 'php.ini'
         },
         "JavaScript": {
-            "javascriptExtraPaths": [],
+            "javascriptExtraPaths": []
         },
         "Perl": {
             "perl": "/usr/bin/perl",
-            "perlExtraPaths": [],
+            "perlExtraPaths": []
         },
         "Perl": {
             "ruby": "/usr/bin/ruby",
-            "rubyExtraPaths": [],
+            "rubyExtraPaths": []
         },
         "Python": {
             "python": '/usr/bin/python',
-            "pythonExtraPaths": [],
+            "pythonExtraPaths": []
         },
         "Python3": {
             "python": '/usr/bin/python3',
-            "pythonExtraPaths": [],
-        },
+            "pythonExtraPaths": []
+        }
     }
 
 Using

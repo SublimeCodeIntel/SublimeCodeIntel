@@ -9,32 +9,32 @@ For "Jump to symbol declaration":
     ...or in User Mouse Bindings (Packages/User/Default.sublime-mousemap):
         { "button": "button1", "modifiers": ["super"], "command": "goto_python_definition", "press_command": "drag_select" }
 
-Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config'). Example:
+Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config'). All configurations are optional. Example:
     {
         "PHP": {
             "php": '/usr/bin/php',
             "phpExtraPaths": [],
-            "phpConfigFile": 'php.ini',
+            "phpConfigFile": 'php.ini'
         },
         "JavaScript": {
-            "javascriptExtraPaths": [],
+            "javascriptExtraPaths": []
         },
         "Perl": {
             "perl": "/usr/bin/perl",
-            "perlExtraPaths": [],
+            "perlExtraPaths": []
         },
         "Perl": {
             "ruby": "/usr/bin/ruby",
-            "rubyExtraPaths": [],
+            "rubyExtraPaths": []
         },
         "Python": {
             "python": '/usr/bin/python',
-            "pythonExtraPaths": [],
+            "pythonExtraPaths": []
         },
         "Python3": {
             "python": '/usr/bin/python3',
-            "pythonExtraPaths": [],
-        },
+            "pythonExtraPaths": []
+        }
     }
 
 """
@@ -247,11 +247,13 @@ def codeintel_scan(view, path, content, lang):
         project_dir = path and find_folder(path, '.codeintel')
         if project_dir:
             tryReadCodeIntelDict(os.path.join(project_dir, 'config'), _config)
+        else:
+            project_dir = os.path.expanduser(os.path.join('~', '.codeintel'))
         config.update(_config.get(lang, {}))
         for conf in [ 'pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths' ]:
             v = config.get(conf)
             if v and isinstance(v, (list, tuple)):
-                config[conf] = os.pathsep.join(v)
+                config[conf] = os.pathsep.join(p if p.startswith('/') else os.path.abspath(os.path.join(project_dir, '..', p)) for p in v)
 
         env = SimplePrefsEnvironment(**config)
 
