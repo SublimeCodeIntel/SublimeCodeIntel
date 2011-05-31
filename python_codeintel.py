@@ -36,9 +36,8 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
             "pythonExtraPaths": []
         }
     }
-
 """
-import os, sys, stat
+import os, sys, stat, time
 import sublime_plugin, sublime
 import logging
 try:
@@ -55,7 +54,12 @@ from codeintel2.environment import SimplePrefsEnvironment
 from codeintel2.util import guess_lang_from_path
 
 stderr_hdlr = logging.StreamHandler(sys.stderr)
-codeintel_logger = logging.getLogger("codeintel")
+stderr_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
+codeintel_log = logging.getLogger("codeintel")
+
+log = logging.getLogger("SublimeCodeIntel")
+log.setLevel(logging.DEBUG)
+log.addHandler(stderr_hdlr)
 
 cpln_fillup_chars = {
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ ",
@@ -220,23 +224,35 @@ def codeintel_scan(view, path, content, lang):
         return [None] * len(forms)
     encoding = None
 
+    start = None
+
     try:
         env = _ci_envs_[path]
         mgr = _ci_mgr_
     except KeyError:
-        calltip(view, "About to update indexes. The first time this can take a while. Do not despair!", delay=1000)
+        start = time.time()
+
+        log.info("About to update indexes. The first time this can take a while. Do not despair!")
+        if _ci_mgr_:
+            mgr = _ci_mgr_
+        else:
+            mgr = Manager(
+                extra_module_dirs = _ci_extra_module_dirs_,
+                db_base_dir = _ci_db_base_dir_,
+                db_catalog_dirs = _ci_db_catalog_dirs_,
+                db_import_everything_langs = _ci_db_import_everything_langs,
+                db_event_reporter = lambda m: logger(view, m),
+            )
+            mgr.upgrade()
+            mgr.initialize()
+            _ci_mgr_ = mgr
         
-        mgr = _ci_mgr_ or Manager(
-            extra_module_dirs = _ci_extra_module_dirs_,
-            db_base_dir = _ci_db_base_dir_,
-            db_catalog_dirs = _ci_db_catalog_dirs_,
-            db_import_everything_langs = _ci_db_import_everything_langs,
-            db_event_reporter = lambda m: logger(view, m),
-        )
+        # Load configuration files:
         catalogs = []
         for catalog in mgr.db.get_catalogs_zone().avail_catalogs():
             if catalog['lang'] == lang:
                 catalogs.append(catalog['name'])
+        log.debug("Catalogs for '%s': %s", lang, ', '.join(catalogs))
         config = {
             "codeintel_selected_catalogs": catalogs,
             "codeintel_max_recursive_dir_depth": 10,
@@ -257,16 +273,10 @@ def codeintel_scan(view, path, content, lang):
 
         env = SimplePrefsEnvironment(**config)
 
-        if not _ci_mgr_:
-            mgr.upgrade()
-            mgr.initialize()
-            _ci_mgr_ = mgr
-
         _ci_envs_[path] = env
 
         calltip(view, "")
 
-    mgr = _ci_mgr_
     buf = mgr.buf_from_content(content, lang, env, path or "<Unsaved>", encoding)
     if isinstance(buf, CitadelBuffer):
         if not path or view.is_scratch():
@@ -278,6 +288,8 @@ def codeintel_scan(view, path, content, lang):
             else:
                 mtime = os.stat(path)[stat.ST_MTIME]
             buf.scan(mtime=mtime, skip_scan_time_check=_dirty)
+        if start:
+            log.info('Ready! Scan took %s sec.' % (time.time() - start))
         return buf
     return None
 
@@ -300,10 +312,9 @@ def codeintel(view, path, content, lang, pos, forms):
     else:
         eval_log_stream = StringIO()
         hdlr = logging.StreamHandler(eval_log_stream)
-        fmtr = logging.Formatter("%(name)s: %(levelname)s: %(message)s")
-        hdlr.setFormatter(fmtr)
-        codeintel_logger.addHandler(hdlr)
-        ctlr = LogEvalController(codeintel_logger)
+        hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
+        codeintel_log.addHandler(hdlr)
+        ctlr = LogEvalController(codeintel_log)
         try:
             if 'cplns' in forms and trg and trg.form == TRG_FORM_CPLN:
                 cplns = buf.cplns_from_trg(trg, ctlr=ctlr)
@@ -312,7 +323,7 @@ def codeintel(view, path, content, lang, pos, forms):
             if 'defns' in forms and defn_trg and defn_trg.form == TRG_FORM_DEFN:
                 defns = buf.defns_from_trg(defn_trg, ctlr=ctlr)
         finally:
-            codeintel_logger.removeHandler(hdlr)
+            codeintel_log.removeHandler(hdlr)
         msg = eval_log_stream.getvalue()
         if msg:
             logger(view, "Error", msg)
