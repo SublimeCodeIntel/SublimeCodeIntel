@@ -1254,7 +1254,6 @@ class LangZone(object):
                 # Too few indeces in memory to bother culling.
                 return
 
-            print "XXX culling memory..."
             now = time.time()
             for dbsubpath, (index, atime) \
                     in self._index_and_atime_from_dbsubpath.items():

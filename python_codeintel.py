@@ -38,7 +38,7 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
     }
 
 """
-import os, sys
+import os, sys, stat
 import sublime_plugin, sublime
 import logging
 try:
@@ -54,8 +54,8 @@ from codeintel2.citadel import CitadelBuffer
 from codeintel2.environment import SimplePrefsEnvironment
 from codeintel2.util import guess_lang_from_path
 
+stderr_hdlr = logging.StreamHandler(sys.stderr)
 codeintel_logger = logging.getLogger("codeintel")
-codeintel_logger.addHandler(logging.StreamHandler(sys.stderr))
 
 cpln_fillup_chars = {
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ ",
@@ -108,14 +108,15 @@ def logger(view, type, msg=None, delay=0, timeout=None, id='CodeIntel'):
 
 class PythonCodeIntel(sublime_plugin.EventListener):
     def on_close(self, view):
-        path = view.file_name() or "<Unsaved>"
+        path = view.file_name()
         codeintel_cleanup(path)
 
     def on_modified(self, view):
         pos = view.sel()[0].end()
         text = view.substr(sublime.Region(pos-7, pos))
 
-        path = view.file_name() or "<Unsaved>"
+        path = view.file_name()
+
         lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
         try:
             lang = lang or guess_lang_from_path(path)
@@ -123,7 +124,6 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             pass
 
         if text and text[-1] in cpln_fillup_chars.get(lang, ''):
-            path = view.file_name() or "<Unsaved>"
             content = view.substr(sublime.Region(0, view.size()))
             lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
             pos = view.sel()[0].end()
@@ -138,6 +138,12 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             elif calltips is not None:
                 # Triger a tooltip
                 calltip(view, 'Tip: ' + calltips[0])
+        else:
+            def scan_callback(path):
+                content = view.substr(sublime.Region(0, view.size()))
+                lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
+                codeintel_scan(view, path, content, lang)
+            _ci_scan_callbacks_[path] = scan_callback
 
     def on_selection_modified(self, view):
         lineno = view.rowcol(view.sel()[0].end())[0]
@@ -153,11 +159,12 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
     def run(self, edit, block=False):
-        path = self.view.file_name() or '<Unsaved>'
-        content = self.view.substr(sublime.Region(0, self.view.size()))
-        lang, _ = os.path.splitext(os.path.basename(self.view.settings().get('syntax')))
-        pos = self.view.sel()[0].end()
-        defns, = codeintel(self.view, path, content, lang, pos, forms=('defns',))
+        view = self.view
+        path = view.file_name()
+        content = view.substr(sublime.Region(0, view.size()))
+        lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
+        pos = view.sel()[0].end()
+        defns, = codeintel(view, path, content, lang, pos, forms=('defns',))
         if defns is not None:
             defn = defns[0]
             path = defn.path
@@ -175,21 +182,37 @@ _ci_db_base_dir_ = None
 _ci_db_catalog_dirs_ = []
 _ci_db_import_everything_langs = None
 _ci_extra_module_dirs_ = None
+_ci_scan_callbacks_ = {}
+_ci_save_ = 0
+
+def codeintel_scanning(force=False):
+    global _ci_save_
+    for path, callback in _ci_scan_callbacks_.items():
+        del _ci_scan_callbacks_[path]
+        callback(path)
+    if not force:
+        sublime.set_timeout(codeintel_scanning, 3000)
+    # saving and culling cached parts of the database:
+    if _ci_mgr_:
+        _ci_save_ -= 1
+        if _ci_save_ == 0 or force:
+            _ci_mgr_.db.save()
+            _ci_mgr_.db.cull_mem()
+        if _ci_save_ <= 0:
+            _ci_save_ = 3
+sublime.set_timeout(codeintel_scanning, 3000)
 
 def codeintel_cleanup(path):
     global _ci_mgr_
     if path in _ci_envs_:
         del _ci_envs_[path]
         if not _ci_envs_:
+            codeintel_scanning(True)
             _ci_mgr_.finalize()
             _ci_mgr_ = None
 
-def codeintel(view, path, content, lang, pos, forms):
+def codeintel_scan(view, path, content, lang):
     global _ci_mgr_
-    cplns = None
-    calltips = None
-    defns = None
-    
     try:
         lang = lang or guess_lang_from_path(path)
     except CodeIntelError:
@@ -221,7 +244,7 @@ def codeintel(view, path, content, lang, pos, forms):
         }
         _config = {}
         tryReadCodeIntelDict(os.path.expanduser(os.path.join('~', '.codeintel', 'config')), _config)
-        project_dir = find_ropeproject(path, '.codeintel')
+        project_dir = path and find_folder(path, '.codeintel')
         if project_dir:
             tryReadCodeIntelDict(os.path.join(project_dir, 'config'), _config)
         config.update(_config.get(lang, {}))
@@ -241,39 +264,56 @@ def codeintel(view, path, content, lang, pos, forms):
 
         calltip(view, "")
 
-    mgr.env = env
+    mgr = _ci_mgr_
+    buf = mgr.buf_from_content(content, lang, env, path or "<Unsaved>", encoding)
+    if isinstance(buf, CitadelBuffer):
+        if not path or view.is_scratch():
+            buf.scan() #FIXME: Always scanning unsaved files (since many tabs can have unsaved files, or find other path as ID)
+        else:
+            _dirty = view.is_dirty()
+            if _dirty:
+                mtime = 1
+            else:
+                mtime = os.stat(path)[stat.ST_MTIME]
+            buf.scan(mtime=mtime, skip_scan_time_check=_dirty)
+        return buf
+    return None
 
-    buf = mgr.buf_from_content(content, lang, env, path, encoding)
-    if not isinstance(buf, CitadelBuffer):
+def codeintel(view, path, content, lang, pos, forms):
+    cplns = None
+    calltips = None
+    defns = None
+
+    buf = codeintel_scan(view, path, content, lang)
+    if not buf:
         logger(view, "Error", "`%s' (%s) is not a language that uses CIX" % (path, buf.lang))
         return [None] * len(forms)
-        
-    if 'cplns' in forms or 'calltips' in forms or 'defns' in forms:
+
+    try:
+        trg = buf.trg_from_pos(pos)
+        defn_trg = buf.defn_trg_from_pos(pos)
+    except CodeIntelError:
+        trg = None
+        defn_trg = None
+    else:
+        eval_log_stream = StringIO()
+        hdlr = logging.StreamHandler(eval_log_stream)
+        fmtr = logging.Formatter("%(name)s: %(levelname)s: %(message)s")
+        hdlr.setFormatter(fmtr)
+        codeintel_logger.addHandler(hdlr)
+        ctlr = LogEvalController(codeintel_logger)
         try:
-            trg = buf.trg_from_pos(pos)
-            defn_trg = buf.defn_trg_from_pos(pos)
-        except CodeIntelError:
-            trg = None
-            defn_trg = None
-        else:
-            eval_log_stream = StringIO()
-            hdlr = logging.StreamHandler(eval_log_stream)
-            fmtr = logging.Formatter("%(name)s: %(levelname)s: %(message)s")
-            hdlr.setFormatter(fmtr)
-            codeintel_logger.addHandler(hdlr)
-            ctlr = LogEvalController(codeintel_logger)
-            try:
-                if 'cplns' in forms and trg and trg.form == TRG_FORM_CPLN:
-                    cplns = buf.cplns_from_trg(trg, ctlr=ctlr)
-                if 'calltips' in forms and trg and trg.form == TRG_FORM_CALLTIP:
-                    calltips = buf.calltips_from_trg(trg, ctlr=ctlr)
-                if 'defns' in forms and defn_trg and defn_trg.form == TRG_FORM_DEFN:
-                    defns = buf.defns_from_trg(defn_trg, ctlr=ctlr)
-            finally:
-                codeintel_logger.removeHandler(hdlr)
-            msg = eval_log_stream.getvalue()
-            if msg:
-                logger(view, "Error", msg)
+            if 'cplns' in forms and trg and trg.form == TRG_FORM_CPLN:
+                cplns = buf.cplns_from_trg(trg, ctlr=ctlr)
+            if 'calltips' in forms and trg and trg.form == TRG_FORM_CALLTIP:
+                calltips = buf.calltips_from_trg(trg, ctlr=ctlr)
+            if 'defns' in forms and defn_trg and defn_trg.form == TRG_FORM_DEFN:
+                defns = buf.defns_from_trg(defn_trg, ctlr=ctlr)
+        finally:
+            codeintel_logger.removeHandler(hdlr)
+        msg = eval_log_stream.getvalue()
+        if msg:
+            logger(view, "Error", msg)
 
     ret = []
     l = locals()
@@ -281,7 +321,7 @@ def codeintel(view, path, content, lang, pos, forms):
         ret.append(l.get(f))
     return ret
 
-def find_ropeproject(start_at, look_for):
+def find_folder(start_at, look_for):
     start_at = os.path.abspath(start_at)
     if not os.path.isdir(start_at):
         start_at = os.path.dirname(start_at)
