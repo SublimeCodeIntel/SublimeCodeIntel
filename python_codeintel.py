@@ -1,7 +1,8 @@
+# -*- coding: UTF-8 -*-
 """
 CodeIntel is a plugin intended to display "code intelligence" information.
 The plugin is based in code from the Open Komodo Editor and has a MPL license.
-Port by German M. Bravo (Kronuz). May 30, 2011
+Port by Germán M. Bravo (Kronuz). May 30, 2011
 
 For "Jump to symbol declaration":
     Setup in User Key Bindings (Packages/User/Default.sublime-keymap):
@@ -84,6 +85,9 @@ cpln_stop_chars = {
     'CSS': " ('\";{},.>/",
     'JavaScript': "~`!@#%^&*()-=+{}[]|\\;:'\",.<>?/ ",
 }
+
+def pos2bytes(content, pos):
+    return len(content[:pos].encode('utf-8'))
 
 status_msg = {}
 status_lineno ={}
@@ -234,7 +238,6 @@ _ci_save_ = 0
 
 def codeintel_save(force=False):
     global _ci_save_
-    print str(_ci_save_)+'.', force
     for path, callback in _ci_save_callbacks_.items():
         del _ci_save_callbacks_[path]
         callback(path)
@@ -326,8 +329,7 @@ def codeintel_scan(view, path, content, lang, callback=None):
 
             calltip(view, "")
 
-        encoding = None
-        buf = mgr.buf_from_content(content, lang, env, path or "<Unsaved>", encoding)
+        buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
         if isinstance(buf, CitadelBuffer):
             logger(view, 'info', "Updating indexes... The first time this can take a while.", timeout=20000, delay=2000)
             if not path or is_scratch:
@@ -355,8 +357,8 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000
             return [None] * len(forms)
 
         try:
-            trg = buf.trg_from_pos(pos)
-            defn_trg = buf.defn_trg_from_pos(pos)
+            trg = buf.trg_from_pos(pos2bytes(content, pos))
+            defn_trg = buf.defn_trg_from_pos(pos2bytes(content, pos))
         except CodeIntelError:
             trg = None
             defn_trg = None
