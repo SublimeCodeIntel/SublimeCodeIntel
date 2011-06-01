@@ -1,4 +1,30 @@
 # -*- coding: UTF-8 -*-
+# ***** BEGIN LICENSE BLOCK *****
+# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+# 
+# The contents of this file are subject to the Mozilla Public License
+# Version 1.1 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License at
+# http://www.mozilla.org/MPL/
+# 
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+# License for the specific language governing rights and limitations
+# under the License.
+# 
+# The Original Code is SublimeCodeIntel code.
+# 
+# The Initial Developer of the Original Code is German M. Bravo (Kronuz).
+# Portions created by German M. Bravo (Kronuz) are Copyright (C) 2011
+# German M. Bravo (Kronuz). All Rights Reserved.
+# 
+# Contributor(s):
+#   German M. Bravo (Kronuz)
+#   ActiveState Software Inc
+# 
+# Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
+# ActiveState Software Inc. All Rights Reserved.
+#
 """
 CodeIntel is a plugin intended to display "code intelligence" information.
 The plugin is based in code from the Open Komodo Editor and has a MPL license.
@@ -60,15 +86,7 @@ from codeintel2.util import guess_lang_from_path
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
-try:
-    if not os.path.exists(CODEINTEL_HOME_DIR):
-        os.makedirs(CODEINTEL_HOME_DIR)
-    codeintel_file = open(os.path.join(CODEINTEL_HOME_DIR, 'codeintel.log'), 'w', 0)
-    codeintel_file.write('\n'+('#'*80)+'\n'+'# Logging ('+str(time.time())+'):\n')
-    codeintel_hdlr = logging.StreamHandler(codeintel_file)
-except:
-    codeintel_hdlr = NullHandler()
-    print >>sys.stderr, "Cannot open `~/codeintel.log'!"
+codeintel_hdlr = NullHandler()
 codeintel_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
 stderr_hdlr = logging.StreamHandler(sys.stderr)
 stderr_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
@@ -317,6 +335,10 @@ def codeintel_scan(view, path, content, lang, callback=None):
                 )
                 mgr.upgrade()
                 mgr.initialize()
+
+                # Connect the logging file to the handler
+                codeintel_log.handlers = [ logging.StreamHandler(open(os.path.join(mgr.db.base_dir, 'codeintel.log'), 'w', 0)) ]
+
                 _ci_mgr_ = mgr
 
             # Load configuration files:
