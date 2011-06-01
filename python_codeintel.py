@@ -76,7 +76,7 @@ codeintel_log = logging.getLogger("codeintel")
 log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [ codeintel_hdlr ]
 log.handlers = [ stderr_hdlr ]
-codeintel_log.setLevel(logging.ERROR)
+codeintel_log.setLevel(logging.INFO)
 logging.getLogger("codeintel.db").setLevel(logging.INFO)
 log.setLevel(logging.ERROR)
 
@@ -322,7 +322,7 @@ def codeintel_scan(view, path, content, lang, callback=None):
             for catalog in mgr.db.get_catalogs_zone().avail_catalogs():
                 if catalog['lang'] == lang:
                     catalogs.append(catalog['name'])
-            codeintel_log.debug("Catalogs for '%s': %s", lang, ', '.join(catalogs) or None)
+            codeintel_log.info("Catalogs for '%s': %s", lang, ', '.join(catalogs) or None)
             config = {
                 "codeintel_selected_catalogs": catalogs,
                 "codeintel_max_recursive_dir_depth": 10,
@@ -395,12 +395,13 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000
                     defns = buf.defns_from_trg(defn_trg, ctlr=ctlr)
             finally:
                 codeintel_log.removeHandler(hdlr)
+            logger(view, 'warning', "")
             msg = eval_log_stream.getvalue()
-            msg = msg.strip().split('\n')[-1]
-            if msg and msg.startswith('evaluating '):
-                logger(view, 'warning', msg)
-            else:
-                logger(view, 'warning', "")
+            msgs = msg.strip().split('\n')
+            for msg in reversed(msgs):
+                if msg and msg.startswith('evaluating '):
+                    logger(view, 'warning', msg)
+                    break
 
         ret = []
         l = locals()
