@@ -193,8 +193,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                 elif calltips is not None:
                     # Triger a tooltip
                     calltip(view, 'tip', calltips[0])
-                else:
-                    calltip(view, 'tip', "")
+            calltip(view, 'tip', "")
             codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
         else:
             def save_callback(path):
@@ -238,6 +237,7 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                             window.open_file(path, sublime.ENCODED_POSITION)
                             window.open_file(path, sublime.ENCODED_POSITION)
                         sublime.set_timeout(__trigger, 0)
+        calltip(view, 'tip', "")
         codeintel(view, path, content, lang, pos, ('defns',), _trigger)
 
 _ci_mgr_ = None
