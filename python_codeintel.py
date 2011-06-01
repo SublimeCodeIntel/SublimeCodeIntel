@@ -63,7 +63,7 @@ class NullHandler(logging.Handler):
 try:
     if not os.path.exists(CODEINTEL_HOME_DIR):
         os.makedirs(CODEINTEL_HOME_DIR)
-    codeintel_file = open(os.path.join(CODEINTEL_HOME_DIR, 'codeintel.log'), 'a', 0)
+    codeintel_file = open(os.path.join(CODEINTEL_HOME_DIR, 'codeintel.log'), 'w', 0)
     codeintel_file.write('\n'+('#'*80)+'\n'+'# Logging ('+str(time.time())+'):\n')
     codeintel_hdlr = logging.StreamHandler(codeintel_file)
 except:
@@ -396,6 +396,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000
             finally:
                 codeintel_log.removeHandler(hdlr)
             msg = eval_log_stream.getvalue()
+            msg = msg.strip().split('\n')[-1]
             if msg and not msg.startswith('event: scanning '):
                 logger(view, 'warning', msg)
             else:
