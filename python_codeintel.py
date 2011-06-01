@@ -115,6 +115,9 @@ cpln_stop_chars = {
     'JavaScript': "~`!@#%^&*()-=+{}[]|\\;:'\",.<>?/ ",
 }
 
+old_pos = None
+despair = 0
+
 def pos2bytes(content, pos):
     return len(content[:pos].encode('utf-8'))
 
@@ -221,14 +224,18 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             _ci_save_callbacks_[path] = save_callback
 
     def on_selection_modified(self, view):
-        lineno = view.rowcol(view.sel()[0].end())[0]
-        status_lock.acquire()
-        try:
-            slns = [ id for id, sln in status_lineno.items() if sln != lineno ]
-        finally:
-            status_lock.release()
-        for id in slns:
-            calltip(view, "", id=id)
+        global despair, old_pos
+        pos = view.rowcol(view.sel()[0].end())
+        if old_pos != pos:
+            old_pos = pos
+            despair = 1000
+            status_lock.acquire()
+            try:
+                slns = [ id for id, sln in status_lineno.items() if sln != pos[0] ]
+            finally:
+                status_lock.release()
+            for id in slns:
+                calltip(view, "", id=id)
 
     def on_query_completions(self, view, prefix, locations):
         completions = getattr(self, 'completions', [])
@@ -303,9 +310,11 @@ def codeintel_cleanup(path):
             _ci_mgr_ = None
 
 def codeintel_scan(view, path, content, lang, callback=None):
+    global despair
     for thread in threading.enumerate():
         if thread.isAlive() and thread.name == "scanning thread":
-            logger(view, 'info', "Updating indexes... The first time this can take a while. Do not despair!", timeout=20000, delay=1000)
+            logger(view, 'info', "Updating indexes... The first time this can take a while. Do not despair!", timeout=20000, delay=despair)
+            despair = 0
             return
     try:
         lang = lang or guess_lang_from_path(path)
@@ -369,6 +378,7 @@ def codeintel_scan(view, path, content, lang, callback=None):
 
         buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
         if isinstance(buf, CitadelBuffer):
+            despair = 0
             logger(view, 'info', "Updating indexes... The first time this can take a while.", timeout=20000, delay=2000)
             if not path or is_scratch:
                 buf.scan() #FIXME: Always scanning unsaved files (since many tabs can have unsaved files, or find other path as ID)
