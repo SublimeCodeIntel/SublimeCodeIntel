@@ -397,7 +397,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000
                 codeintel_log.removeHandler(hdlr)
             msg = eval_log_stream.getvalue()
             msg = msg.strip().split('\n')[-1]
-            if msg and not msg.startswith('event: scanning '):
+            if msg and msg.startswith('evaluating '):
                 logger(view, 'warning', msg)
             else:
                 logger(view, 'warning', "")
