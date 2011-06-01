@@ -47,6 +47,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+CODEINTEL_HOME_DIR = os.path.expanduser(os.path.join('~', '.codeintel'))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'libs'))
 
 from codeintel2.common import *
@@ -55,19 +56,29 @@ from codeintel2.citadel import CitadelBuffer
 from codeintel2.environment import SimplePrefsEnvironment
 from codeintel2.util import guess_lang_from_path
 
-
+# Setup the complex logging (status bar gets stuff from there):
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
+try:
+    if not os.path.exists(CODEINTEL_HOME_DIR):
+        os.makedirs(CODEINTEL_HOME_DIR)
+    codeintel_file = open(os.path.join(CODEINTEL_HOME_DIR, 'codeintel.log'), 'a', 0)
+    codeintel_file.write('\n'+('#'*80)+'\n'+'# Logging ('+str(time.time())+'):\n')
+    codeintel_hdlr = logging.StreamHandler(codeintel_file)
+except:
+    codeintel_hdlr = NullHandler()
+    print >>sys.stderr, "Cannot open `~/codeintel.log'!"
+codeintel_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
 stderr_hdlr = logging.StreamHandler(sys.stderr)
 stderr_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
 codeintel_log = logging.getLogger("codeintel")
 log = logging.getLogger("SublimeCodeIntel")
-codeintel_log.handlers = [ NullHandler() ]
+codeintel_log.handlers = [ codeintel_hdlr ]
 log.handlers = [ stderr_hdlr ]
-
-codeintel_log.setLevel(logging.DEBUG)
-log.setLevel(logging.ERROR)
+logging.getLogger("codeintel.db").setLevel(logging.INFO)
+codeintel_log.setLevel(logging.ERROR)
+log.setLevel(logging.DEBUG)
 
 cpln_fillup_chars = {
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ ",
@@ -89,46 +100,46 @@ cpln_stop_chars = {
 def pos2bytes(content, pos):
     return len(content[:pos].encode('utf-8'))
 
+status_order = 0
 status_msg = {}
 status_lineno ={}
 status_lock = threading.Lock()
 def calltip(view, type, msg=None, timeout=15000, delay=0, id='CodeIntel', logger=None):
-    global status_msg
+    global status_msg, status_order
+    if msg == status_msg.get(id, (None, None, None))[1]:
+        return
+    status_lock.acquire()
+    try:
+        status_order += 1
+        order = status_order
+    finally:
+        status_lock.release()
     if msg is None:
         msg, type = type, 'debug'
     msg = msg.strip()
-    status_lock.acquire()
-    try:
-        status_msg[id] = (type, msg)
-    finally:
-        status_lock.release()
     def _calltip_erase():
         status_lock.acquire()
         try:
-            if msg == status_msg.get(id, (None, None))[1]:
+            if msg == status_msg.get(id, (None, None, None))[1]:
                 view.erase_status(id)
+                status_msg[id] = (None, None, None)
         finally:
             status_lock.release()
     def _calltip_set():
         lineno = view.rowcol(view.sel()[0].end())[0]
         status_lock.acquire()
         try:
-            if 'warning' not in id:
-                status_lineno[id] = lineno
-            current_tip = status_msg.get(id, (None, None))[1]
-            if msg == current_tip:
-                if msg:
-                    view.set_status(id, "%s: %s" % (type.capitalize(), msg))
-                    (logger or log.debug)(msg)
-                else:
-                    view.erase_status(id)
-            elif current_tip:
-                current_type = status_msg.get(id, (None, None))[0]
-                if current_type and current_tip:
-                    view.set_status(id, "%s: %s" % (current_type.capitalize(), current_tip))
-                    (logger or log.debug)(current_tip)
-            else:
-                view.erase_status(id)
+            if order == status_order:
+                current_msg = status_msg.get(id, (None, None, None))[1]
+                if msg != current_msg:
+                    if msg:
+                        view.set_status(id, "%s: %s" % (type.capitalize(), msg))
+                        (logger or log.debug)(msg)
+                    else:
+                        view.erase_status(id)
+                    status_msg[id] = (type, msg, order)
+                    if 'warning' not in id:
+                        status_lineno[id] = lineno
         finally:
             status_lock.release()
     try:
@@ -234,25 +245,34 @@ _ci_db_catalog_dirs_ = []
 _ci_db_import_everything_langs = None
 _ci_extra_module_dirs_ = None
 _ci_save_callbacks_ = {}
-_ci_save_ = 0
+_ci_next_save_ = 0
+_ci_next_savedb_ = 0
+_ci_next_cullmem_ = 0
 
 def codeintel_save(force=False):
-    global _ci_save_
-    for path, callback in _ci_save_callbacks_.items():
-        del _ci_save_callbacks_[path]
-        callback(path)
+    global _ci_next_save_, _ci_next_savedb_, _ci_next_cullmem_
+    now = time.time()
+    if now >= _ci_next_save_:
+        if _ci_next_save_:
+            for path, callback in _ci_save_callbacks_.items():
+                del _ci_save_callbacks_[path]
+                callback(path)
+        _ci_next_save_ = now + 3
     # saving and culling cached parts of the database:
-    _ci_save_ -= 1
     if _ci_mgr_:
-        if _ci_save_ % 2 == 0 or force:
-            _ci_mgr_.db.save() # Save every 6 seconds
-            if _ci_save_ == 0 or force:
+        if now >= _ci_next_savedb_:
+            if _ci_next_savedb_:
+                log.debug('Saving database')
+                _ci_mgr_.db.save() # Save every 6 seconds
+            _ci_next_savedb_ = now + 6
+        if now >= _ci_next_cullmem_:
+            if _ci_next_cullmem_:
+                log.debug('Culling memory')
                 _ci_mgr_.db.cull_mem() # Every 30 seconds
-    if _ci_save_ <= 0:
-        _ci_save_ = 30
+            _ci_next_cullmem_ = now + 30
     if not force:
-        sublime.set_timeout(codeintel_save, 3000)
-sublime.set_timeout(codeintel_save, 3000)
+        sublime.set_timeout(codeintel_save, 3100)
+sublime.set_timeout(codeintel_save, 3100)
 
 def codeintel_cleanup(path):
     global _ci_mgr_
@@ -263,6 +283,10 @@ def codeintel_cleanup(path):
             _ci_mgr_ = None
 
 def codeintel_scan(view, path, content, lang, callback=None):
+    for thread in threading.enumerate():
+        if thread.isAlive() and thread.name == "scanning thread":
+            logger(view, 'info', "Updating indexes... The first time this can take a while. Do not despair!", timeout=20000, delay=1000)
+            return
     try:
         lang = lang or guess_lang_from_path(path)
     except CodeIntelError:
@@ -272,11 +296,6 @@ def codeintel_scan(view, path, content, lang, callback=None):
     is_dirty = view.is_dirty()
     def _codeintel_scan():
         global _ci_mgr_
-        current_thread = threading.current_thread()
-        for thread in threading.enumerate():
-            if thread.name == "scanning thread" and thread != current_thread:
-                logger(view, 'info', "Updating indexes... The first time this can take a while. Do not despair!", timeout=20000)
-                return
         try:
             env = _ci_envs_[path]
             mgr = _ci_mgr_
@@ -310,12 +329,10 @@ def codeintel_scan(view, path, content, lang, callback=None):
                 "codeintel_scan_files_in_project": True,
             }
             _config = {}
-            tryReadCodeIntelDict(os.path.expanduser(os.path.join('~', '.codeintel', 'config')), _config)
+            tryReadCodeIntelDict(os.path.join(CODEINTEL_HOME_DIR, 'config'), _config)
             project_dir = path and find_folder(path, '.codeintel')
             if project_dir:
                 tryReadCodeIntelDict(os.path.join(project_dir, 'config'), _config)
-            else:
-                project_dir = os.path.expanduser(os.path.join('~', '.codeintel'))
             config.update(_config.get(lang, {}))
             for conf in [ 'pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths' ]:
                 v = config.get(conf)
