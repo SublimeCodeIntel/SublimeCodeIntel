@@ -103,7 +103,9 @@ def pos2bytes(content, pos):
 status_msg = {}
 status_lineno ={}
 status_lock = threading.Lock()
-def calltip(view, type, msg=None, timeout=15000, delay=0, id='CodeIntel', logger=None):
+def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=None):
+    if timeout is None:
+        timeout = { None: 3000, 'error': 3000, 'warning': 5000, 'info': 10000, 'tip': 15000 }.get(type)
     if msg is None:
         msg, type = type, 'debug'
     msg = msg.strip()
@@ -157,8 +159,6 @@ def calltip(view, type, msg=None, timeout=15000, delay=0, id='CodeIntel', logger
 def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
     if msg is None:
         msg, type = type, 'info'
-    if timeout is None:
-        timeout = { None: 3000, 'error': 3000, 'warning': 5000, 'info': 10000 }.get(type)
     calltip(view, type, msg, timeout=timeout, delay=delay, id=id + '-' + type, logger=getattr(log, type, None))
 
 class PythonCodeIntel(sublime_plugin.EventListener):
@@ -193,6 +193,8 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                 elif calltips is not None:
                     # Triger a tooltip
                     calltip(view, 'tip', calltips[0])
+                else:
+                    calltip(view, 'tip', "")
             codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
         else:
             def save_callback(path):
@@ -341,10 +343,7 @@ def codeintel_scan(view, path, content, lang, callback=None):
                     config[conf] = os.pathsep.join(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join(project_dir, '..', p)) for p in v if p.strip())
 
             env = SimplePrefsEnvironment(**config)
-
             _ci_envs_[path] = env
-
-            calltip(view, "")
 
         buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
         if isinstance(buf, CitadelBuffer):
@@ -400,7 +399,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000
             msgs = msg.strip().split('\n')
             for msg in reversed(msgs):
                 if msg and msg.startswith('evaluating '):
-                    logger(view, 'warning', msg)
+                    calltip(view, 'warning', msg)
                     break
 
         ret = []
