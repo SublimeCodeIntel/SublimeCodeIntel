@@ -54,16 +54,19 @@ from codeintel2.citadel import CitadelBuffer
 from codeintel2.environment import SimplePrefsEnvironment
 from codeintel2.util import guess_lang_from_path
 
+
+class NullHandler(logging.Handler):
+    def emit(self, record):
+        pass
 stderr_hdlr = logging.StreamHandler(sys.stderr)
 stderr_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
 codeintel_log = logging.getLogger("codeintel")
-
-#codeintel_log.setLevel(logging.DEBUG)
-#codeintel_log.addHandler(stderr_hdlr)
-
 log = logging.getLogger("SublimeCodeIntel")
+codeintel_log.handlers = [ NullHandler() ]
+log.handlers = [ stderr_hdlr ]
+
+codeintel_log.setLevel(logging.DEBUG)
 log.setLevel(logging.ERROR)
-log.addHandler(stderr_hdlr)
 
 cpln_fillup_chars = {
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ ",
@@ -85,18 +88,20 @@ cpln_stop_chars = {
 status_msg = {}
 status_lineno ={}
 status_lock = threading.Lock()
-def calltip(view, tip, timeout=10000, delay=0, id='CodeIntel'):
+def calltip(view, type, msg=None, timeout=15000, delay=0, id='CodeIntel', logger=None):
     global status_msg
+    if msg is None:
+        msg, type = type, 'debug'
+    msg = msg.strip()
     status_lock.acquire()
     try:
-        now = time.time()
-        status_msg[id] = tip
+        status_msg[id] = (type, msg)
     finally:
         status_lock.release()
     def _calltip_erase():
         status_lock.acquire()
         try:
-            if tip == status_msg.get(id):
+            if msg == status_msg.get(id, (None, None))[1]:
                 view.erase_status(id)
         finally:
             status_lock.release()
@@ -106,14 +111,18 @@ def calltip(view, tip, timeout=10000, delay=0, id='CodeIntel'):
         try:
             if 'warning' not in id:
                 status_lineno[id] = lineno
-            current_tip = status_msg.get(id)
-            if tip == current_tip:
-                if tip:
-                    view.set_status(id, tip)
+            current_tip = status_msg.get(id, (None, None))[1]
+            if msg == current_tip:
+                if msg:
+                    view.set_status(id, "%s: %s" % (type.capitalize(), msg))
+                    (logger or log.debug)(msg)
                 else:
                     view.erase_status(id)
             elif current_tip:
-                view.set_status(id, current_tip)
+                current_type = status_msg.get(id, (None, None))[0]
+                if current_type and current_tip:
+                    view.set_status(id, "%s: %s" % (current_type.capitalize(), current_tip))
+                    (logger or log.debug)(current_tip)
             else:
                 view.erase_status(id)
         finally:
@@ -125,7 +134,7 @@ def calltip(view, tip, timeout=10000, delay=0, id='CodeIntel'):
             _calltip_set()
     except:
         sublime.set_timeout(_calltip_set, delay)
-    if tip:
+    if msg:
         sublime.set_timeout(_calltip_erase, timeout)
 
 def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
@@ -133,8 +142,7 @@ def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
         msg, type = type, 'info'
     if timeout is None:
         timeout = { None: 3000, 'error': 3000, 'warning': 5000, 'info': 10000 }.get(type)
-    calltip(view, '%s: %s' % (type.capitalize(), msg), timeout=timeout, delay=delay, id=id + '-' + type)
-    getattr(log, type, log.debug)(msg)
+    calltip(view, type, msg, timeout=timeout, delay=delay, id=id + '-' + type, logger=getattr(log, type, None))
 
 class PythonCodeIntel(sublime_plugin.EventListener):
     def on_close(self, view):
@@ -167,7 +175,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                     sublime.set_timeout(lambda: view.run_command('auto_complete'), 0)
                 elif calltips is not None:
                     # Triger a tooltip
-                    calltip(view, "Tip: " + calltips[0])
+                    calltip(view, 'tip', calltips[0])
             codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
         else:
             def save_callback(path):
@@ -199,18 +207,19 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
         content = view.substr(sublime.Region(0, view.size()))
         lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
         pos = view.sel()[0].end()
+        file_name = view.file_name()
         def _trigger(defns):
             if defns is not None:
                 defn = defns[0]
-                path = defn.path
-                if path:
-                    if defn.line:
-                        path += ':' + str(defn.line)
-                    def __trigger():
-                        window = sublime.active_window()
-                        window.open_file(path, sublime.ENCODED_POSITION)
-                        window.open_file(path, sublime.ENCODED_POSITION)
-                    sublime.set_timeout(__trigger, 0)
+                if defn.path and defn.line:
+                    if defn.line != 1 or defn.path != file_name:
+                        path = defn.path + ':' + str(defn.line)
+                        log.debug('Jumping to: %s', path)
+                        def __trigger():
+                            window = sublime.active_window()
+                            window.open_file(path, sublime.ENCODED_POSITION)
+                            window.open_file(path, sublime.ENCODED_POSITION)
+                        sublime.set_timeout(__trigger, 0)
         codeintel(view, path, content, lang, pos, ('defns',), _trigger)
 
 
@@ -225,19 +234,21 @@ _ci_save_ = 0
 
 def codeintel_save(force=False):
     global _ci_save_
+    print str(_ci_save_)+'.', force
     for path, callback in _ci_save_callbacks_.items():
         del _ci_save_callbacks_[path]
         callback(path)
+    # saving and culling cached parts of the database:
+    _ci_save_ -= 1
+    if _ci_mgr_:
+        if _ci_save_ % 2 == 0 or force:
+            _ci_mgr_.db.save() # Save every 6 seconds
+            if _ci_save_ == 0 or force:
+                _ci_mgr_.db.cull_mem() # Every 30 seconds
+    if _ci_save_ <= 0:
+        _ci_save_ = 30
     if not force:
         sublime.set_timeout(codeintel_save, 3000)
-    # saving and culling cached parts of the database:
-    if _ci_mgr_:
-        _ci_save_ -= 1
-        if _ci_save_ == 0 or force:
-            _ci_mgr_.db.save()
-            _ci_mgr_.db.cull_mem()
-        if _ci_save_ <= 0:
-            _ci_save_ = 3
 sublime.set_timeout(codeintel_save, 3000)
 
 def codeintel_cleanup(path):
@@ -258,7 +269,11 @@ def codeintel_scan(view, path, content, lang, callback=None):
     is_dirty = view.is_dirty()
     def _codeintel_scan():
         global _ci_mgr_
-
+        current_thread = threading.current_thread()
+        for thread in threading.enumerate():
+            if thread.name == "scanning thread" and thread != current_thread:
+                logger(view, 'info', "Updating indexes... The first time this can take a while. Do not despair!", timeout=20000)
+                return
         try:
             env = _ci_envs_[path]
             mgr = _ci_mgr_
@@ -266,6 +281,9 @@ def codeintel_scan(view, path, content, lang, callback=None):
             if _ci_mgr_:
                 mgr = _ci_mgr_
             else:
+                for thread in threading.enumerate():
+                    if thread.name == "CodeIntel Manager":
+                        thread.finalize() # this finalizes the index, citadel and the manager and waits them to end (join)
                 mgr = Manager(
                     extra_module_dirs = _ci_extra_module_dirs_,
                     db_base_dir = _ci_db_base_dir_,
@@ -299,7 +317,8 @@ def codeintel_scan(view, path, content, lang, callback=None):
             for conf in [ 'pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths' ]:
                 v = config.get(conf)
                 if v and isinstance(v, (list, tuple)):
-                    config[conf] = os.pathsep.join(p if p.startswith('/') else os.path.abspath(os.path.join(project_dir, '..', p)) for p in v)
+                    v = [ p.strip() for p in v if p.strip() ]
+                    config[conf] = os.pathsep.join(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join(project_dir, '..', p)) for p in v if p.strip())
 
             env = SimplePrefsEnvironment(**config)
 
@@ -310,7 +329,7 @@ def codeintel_scan(view, path, content, lang, callback=None):
         encoding = None
         buf = mgr.buf_from_content(content, lang, env, path or "<Unsaved>", encoding)
         if isinstance(buf, CitadelBuffer):
-            logger(view, 'warning', "Updating indexes... The first time this can take a while. Do not despair!", timeout=20000)
+            logger(view, 'info', "Updating indexes... The first time this can take a while.", timeout=20000, delay=2000)
             if not path or is_scratch:
                 buf.scan() #FIXME: Always scanning unsaved files (since many tabs can have unsaved files, or find other path as ID)
             else:
@@ -321,7 +340,7 @@ def codeintel_scan(view, path, content, lang, callback=None):
                 buf.scan(mtime=mtime, skip_scan_time_check=is_dirty)
         if callback:
             callback(buf)
-    threading.Thread(target=_codeintel_scan).start()
+    threading.Thread(target=_codeintel_scan, name="scanning thread").start()
 
 
 def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000):
@@ -332,7 +351,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000
         defns = None
 
         if not buf:
-            logger(view, 'error', "`%s' (%s) is not a language that uses CIX" % (path, buf.lang))
+            logger(view, 'warning', "`%s' (%s) is not a language that uses CIX" % (path, buf.lang))
             return [None] * len(forms)
 
         try:
@@ -344,7 +363,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000
         else:
             eval_log_stream = StringIO()
             hdlr = logging.StreamHandler(eval_log_stream)
-            hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
+            hdlr.setFormatter(logging.Formatter("%(message)s"))
             codeintel_log.addHandler(hdlr)
             ctlr = LogEvalController(codeintel_log)
             try:
@@ -358,7 +377,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000
                 codeintel_log.removeHandler(hdlr)
             msg = eval_log_stream.getvalue()
             if msg:
-                logger(view, 'error', msg)
+                logger(view, 'warning', msg)
 
         ret = []
         l = locals()
@@ -366,10 +385,10 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000
             ret.append(l.get(f))
         total = (time.time() - start)
         if total * 1000 < timeout:
-            logger(view, 'warning', "")
+            logger(view, 'info', "")
             callback(*ret)
         else:
-            logger(view, 'warning', "Just finished indexing! Please try again. Scan took %s" % total, timeout=3000)
+            logger(view, 'info', "Just finished indexing! Please try again. Scan took %s" % total, timeout=3000)
     codeintel_scan(view, path, content, lang, _codeintel)
 
 def find_folder(start_at, look_for):
