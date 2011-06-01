@@ -76,9 +76,9 @@ codeintel_log = logging.getLogger("codeintel")
 log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [ codeintel_hdlr ]
 log.handlers = [ stderr_hdlr ]
-logging.getLogger("codeintel.db").setLevel(logging.INFO)
 codeintel_log.setLevel(logging.ERROR)
-log.setLevel(logging.DEBUG)
+logging.getLogger("codeintel.db").setLevel(logging.INFO)
+log.setLevel(logging.ERROR)
 
 cpln_fillup_chars = {
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ ",
@@ -100,46 +100,48 @@ cpln_stop_chars = {
 def pos2bytes(content, pos):
     return len(content[:pos].encode('utf-8'))
 
-status_order = 0
 status_msg = {}
 status_lineno ={}
 status_lock = threading.Lock()
 def calltip(view, type, msg=None, timeout=15000, delay=0, id='CodeIntel', logger=None):
-    global status_msg, status_order
-    if msg == status_msg.get(id, (None, None, None))[1]:
-        return
-    status_lock.acquire()
-    try:
-        status_order += 1
-        order = status_order
-    finally:
-        status_lock.release()
     if msg is None:
         msg, type = type, 'debug'
     msg = msg.strip()
+    status_msg.setdefault(id, [ None, None, 0 ])
+    if msg == status_msg[id][1]:
+        return
+    status_lock.acquire()
+    try:
+        status_msg[id][2] += 1
+        order = status_msg[id][2]
+    finally:
+        status_lock.release()
     def _calltip_erase():
         status_lock.acquire()
         try:
-            if msg == status_msg.get(id, (None, None, None))[1]:
+            if msg == status_msg.get(id, [ None, None, 0 ])[1]:
                 view.erase_status(id)
-                status_msg[id] = (None, None, None)
+                status_msg[id][1] = None
+                if id in status_lineno:
+                    del status_lineno[id]
         finally:
             status_lock.release()
     def _calltip_set():
         lineno = view.rowcol(view.sel()[0].end())[0]
         status_lock.acquire()
         try:
-            if order == status_order:
-                current_msg = status_msg.get(id, (None, None, None))[1]
-                if msg != current_msg:
-                    if msg:
-                        view.set_status(id, "%s: %s" % (type.capitalize(), msg))
-                        (logger or log.debug)(msg)
-                    else:
-                        view.erase_status(id)
-                    status_msg[id] = (type, msg, order)
-                    if 'warning' not in id:
-                        status_lineno[id] = lineno
+            current_type, current_msg, current_order = status_msg.get(id, [ None, None, 0 ])
+            if msg != current_msg and order == current_order:
+                if msg:
+                    view.set_status(id, "%s: %s" % (type.capitalize(), msg))
+                    (logger or log.debug)(msg)
+                else:
+                    view.erase_status(id)
+                status_msg[id][0] = [ type, msg, order ]
+                if 'warning' not in id and msg:
+                    status_lineno[id] = lineno
+                elif id in status_lineno:
+                    del status_lineno[id]
         finally:
             status_lock.release()
     try:
@@ -207,13 +209,12 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         finally:
             status_lock.release()
         for id in slns:
-                calltip(view, "", id=id)
+            calltip(view, "", id=id)
 
     def on_query_completions(self, view, prefix, locations):
         completions = getattr(self, 'completions', [])
         self.completions = []
         return completions
-
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
     def run(self, edit, block=False):
@@ -236,7 +237,6 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                             window.open_file(path, sublime.ENCODED_POSITION)
                         sublime.set_timeout(__trigger, 0)
         codeintel(view, path, content, lang, pos, ('defns',), _trigger)
-
 
 _ci_mgr_ = None
 _ci_envs_ = {}
@@ -359,8 +359,9 @@ def codeintel_scan(view, path, content, lang, callback=None):
                 buf.scan(mtime=mtime, skip_scan_time_check=is_dirty)
         if callback:
             callback(buf)
+        else:
+            logger(view, 'info', "")
     threading.Thread(target=_codeintel_scan, name="scanning thread").start()
-
 
 def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000):
     start = time.time()
@@ -395,8 +396,10 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000
             finally:
                 codeintel_log.removeHandler(hdlr)
             msg = eval_log_stream.getvalue()
-            if msg:
+            if msg and not msg.startswith('event: scanning '):
                 logger(view, 'warning', msg)
+            else:
+                logger(view, 'warning', "")
 
         ret = []
         l = locals()
