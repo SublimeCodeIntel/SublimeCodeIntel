@@ -322,7 +322,7 @@ def codeintel_scan(view, path, content, lang, callback=None):
             for catalog in mgr.db.get_catalogs_zone().avail_catalogs():
                 if catalog['lang'] == lang:
                     catalogs.append(catalog['name'])
-            log.debug("Catalogs for '%s': %s", lang, ', '.join(catalogs) or None)
+            codeintel_log.debug("Catalogs for '%s': %s", lang, ', '.join(catalogs) or None)
             config = {
                 "codeintel_selected_catalogs": catalogs,
                 "codeintel_max_recursive_dir_depth": 10,
