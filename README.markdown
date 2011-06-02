@@ -87,6 +87,4 @@ LICENSE
 -------
 The plugin is based in code from the Open Komodo Editor and has a MPL license.
 
-The Original Code is Komodo code.
-
-Port by German M. Bravo (Kronuz).
+Ported from Open Komodo by German M. Bravo (Kronuz).
