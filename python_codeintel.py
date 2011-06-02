@@ -63,7 +63,7 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
         }
     }
 """
-import os, sys, stat, time
+import os, sys, stat, time, datetime
 import sublime_plugin, sublime
 import threading
 import logging
@@ -73,7 +73,9 @@ except ImportError:
     from StringIO import StringIO
 
 CODEINTEL_HOME_DIR = os.path.expanduser(os.path.join('~', '.codeintel'))
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'libs'))
+__file__ = os.path.normpath(os.path.abspath(__file__))
+__path__ = os.path.dirname(__file__)
+sys.path.insert(0, os.path.join(__path__, 'libs'))
 
 from codeintel2.common import *
 from codeintel2.manager import Manager
@@ -315,10 +317,6 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             logger(view, 'info', "Updating indexes... The first time this can take a while. Do not despair!", timeout=20000, delay=despair)
             despair = 0
             return
-    if forms:
-        calltip(view, 'tip', "")
-        calltip(view, 'event', "")
-        codeintel_log.info("\n%s\nStarting CodeIntel for %s@%s [%s] (%s)" % ("="*80, path, pos, lang, ', '.join(forms)))
     try:
         lang = lang or guess_lang_from_path(path)
     except CodeIntelError:
@@ -383,6 +381,8 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
 
                 # Connect the logging file to the handler
                 codeintel_log.handlers = [ logging.StreamHandler(open(os.path.join(mgr.db.base_dir, 'codeintel.log'), 'w', 1)) ]
+                msg = "Starting logging SublimeCodeIntel rev %s (%s) on %s" % (get_git_revision()[:12], os.stat(__file__)[stat.ST_MTIME], datetime.datetime.now().ctime())
+                codeintel_log.info("%s\n%s" % (msg, "="*len(msg)))
 
                 _ci_mgr_ = mgr
 
@@ -391,7 +391,6 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             for catalog in mgr.db.get_catalogs_zone().avail_catalogs():
                 if catalog['lang'] == lang:
                     catalogs.append(catalog['name'])
-            codeintel_log.info("Catalogs for '%s': %s", lang, ', '.join(catalogs) or None)
             config = {
                 "codeintel_selected_catalogs": catalogs,
                 "codeintel_max_recursive_dir_depth": 10,
@@ -414,9 +413,18 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             env._project_dir = project_dir
             env._project_base_dir = project_base_dir
             env._config_file = config_file
+            env._catalogs = catalogs
             env.__class__.get_proj_base_dir = lambda self: project_base_dir
             _ci_envs_[path] = env
         env._time = now + 5 # don't check again in less than five seconds
+
+        if forms:
+            calltip(view, 'tip', "")
+            calltip(view, 'event', "")
+            msg = "CodeIntel(%s) for %s@%s [%s]" % (', '.join(forms), path, pos, lang)
+            codeintel_log.info("\n%s\n%s" % (msg, "-"*len(msg)))
+
+        codeintel_log.info("Catalogs for '%s': %s", lang, ', '.join(env._catalogs) or None)
 
         buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
         if isinstance(buf, CitadelBuffer):
@@ -520,3 +528,28 @@ def tryGetMTime(filename):
     if filename:
         return os.stat(filename)[stat.ST_MTIME]
     return 0
+
+def _get_git_revision(path):
+    path = os.path.join(path, '.git')
+    revision_file = os.path.join(path, 'refs', 'heads', 'master')
+    if not os.path.exists(revision_file):
+        return None
+    fh = open(revision_file, 'r')
+    try:
+        return fh.read().strip()
+    finally:
+        fh.close()
+
+def get_git_revision(path=None):
+    """
+    :returns: Revision number of this branch/checkout, if available. None if
+        no revision number can be determined.
+    """
+    path = os.path.abspath(os.path.normpath(__path__ if path is None else path))
+    while path and path != '/' and path != '\\':
+        rev = _get_git_revision(path)
+        print ':',path, rev
+        if rev:
+            return u'GIT-%s' % rev
+        path = os.path.abspath(os.path.join(path, '..'))
+    return u'GIT-unknown'
