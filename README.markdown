@@ -40,11 +40,11 @@ This will allow you to jump around symbol definitions across files with just a c
 
 * Setup in User Key Bindings (Packages/User/Default.sublime-keymap):
 
-        `{ "keys": ["super+f3"], "command": "goto_python_definition" }`
+        { "keys": ["super+f3"], "command": "goto_python_definition" }
 
 * ...or in User Mouse Bindings (Packages/User/Default.sublime-mousemap):
 
-        `{ "button": "button1", "modifiers": ["super"], "command": "goto_python_definition", "press_command": "drag_select" }`
+        { "button": "button1", "modifiers": ["super"], "command": "goto_python_definition", "press_command": "drag_select" }
 
 Configuration files (`~/.codeintel/config` or `project_root/.codeintel/config`). All configurations are optional. Example::
 
