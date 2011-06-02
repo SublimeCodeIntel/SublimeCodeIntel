@@ -548,7 +548,6 @@ def get_git_revision(path=None):
     path = os.path.abspath(os.path.normpath(__path__ if path is None else path))
     while path and path != '/' and path != '\\':
         rev = _get_git_revision(path)
-        print ':',path, rev
         if rev:
             return u'GIT-%s' % rev
         path = os.path.abspath(os.path.join(path, '..'))
