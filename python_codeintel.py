@@ -123,8 +123,9 @@ despaired = False
 def pos2bytes(content, pos):
     return len(content[:pos].encode('utf-8'))
 
+centinel = {}
 status_msg = {}
-status_lineno ={}
+status_lineno = {}
 status_lock = threading.Lock()
 def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=None):
     if timeout is None:
@@ -187,42 +188,73 @@ def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
 class PythonCodeIntel(sublime_plugin.EventListener):
     def on_close(self, view):
         path = view.file_name()
+        if path in centinel:
+            del centinel[path]
+        if path in status_msg:
+            del status_msg[path]
+        if path in status_lineno:
+            del status_lineno[path]
         codeintel_cleanup(path)
 
     def on_modified(self, view):
-        pos = view.sel()[0].end()
-        text = view.substr(sublime.Region(pos-7, pos))
-
+        global _ci_callbacks_signaled_
         path = view.file_name()
-
+        now = time.time()
         lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
         try:
             lang = lang or guess_lang_from_path(path)
         except CodeIntelError:
             pass
-
-        if text and text[-1] in cpln_fillup_chars.get(lang, ''):
-            content = view.substr(sublime.Region(0, view.size()))
-            lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
-            pos = view.sel()[0].end()
-            def _trigger(cplns, calltips):
-                if cplns is not None:
-                    # Show autocompletions:
-                    self.completions = sorted(
-                        [ ('%s  (%s)' % (name, type), name) for type, name in cplns ], 
-                        cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
-                    )
-                    sublime.set_timeout(lambda: view.run_command('auto_complete'), 0)
-                elif calltips is not None:
-                    # Triger a tooltip
-                    calltip(view, 'tip', calltips[0])
-            codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
+        live = view.settings().get('codeinte_live', True)
+        pos = view.sel()[0].end()
+        text = view.substr(sublime.Region(pos-1, pos))
+        _centinel = centinel.get(path)
+        centinel[path] = _centinel if _centinel is not None else pos if (text and text[-1] in cpln_fillup_chars.get(lang, '')) else None
+        if not live and text and centinel[path] is not None:
+            live = True
+        if live:
+            def _autocomplete_callback(path):
+                def __autocomplete_callback():
+                    content = view.substr(sublime.Region(0, view.size()))
+                    if content:
+                        pos = view.sel()[0].end()
+                        #pos = centinel[path] if centinel[path] is not None else view.sel()[0].end()
+                        lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
+                        def _trigger(cplns, calltips):
+                            if cplns is not None:
+                                # Show autocompletions:
+                                self.completions = sorted(
+                                    [ ('%s  (%s)' % (name, type), name) for type, name in cplns ], 
+                                    cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
+                                )
+                                sublime.set_timeout(lambda: view.run_command('auto_complete'), 0)
+                            elif calltips is not None:
+                                # Triger a tooltip
+                                calltip(view, 'tip', calltips[0])
+                        centinel[path] = None
+                        codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
+                sublime.set_timeout(__autocomplete_callback, 0)
+            _ci_lock_.acquire()
+            try:
+                _ci_autocomplete_callbacks_[path] = _autocomplete_callback
+                sublime.set_timeout(lambda: _ci_sem_.release(), 200)
+                _ci_callbacks_signaled_ = now + 0.2
+            finally:
+                _ci_lock_.release()
         else:
-            def save_callback(path):
-                content = view.substr(sublime.Region(0, view.size()))
-                lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
-                codeintel_scan(view, path, content, lang)
-            _ci_save_callbacks_[path] = save_callback
+            def _scan_callback(path):
+                def __scan_callback():
+                    content = view.substr(sublime.Region(0, view.size()))
+                    lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
+                    codeintel_scan(view, path, content, lang)
+                sublime.set_timeout(__scan_callback, 0)
+            _ci_lock_.acquire()
+            try:
+                _ci_scan_callbacks_[path] = _scan_callback
+                sublime.set_timeout(lambda: _ci_sem_.release(), 3000)
+                _ci_callbacks_signaled_ = now + 3
+            finally:
+                _ci_lock_.release()
 
     def on_selection_modified(self, view):
         global despair, despaired, old_pos
@@ -272,41 +304,77 @@ _ci_db_base_dir_ = None
 _ci_db_catalog_dirs_ = []
 _ci_db_import_everything_langs = None
 _ci_extra_module_dirs_ = None
-_ci_save_callbacks_ = {}
-_ci_next_save_ = 0
+_ci_autocomplete_callbacks_ = {}
+_ci_scan_callbacks_ = {}
+_ci_callbacks_signaled_ = 0
 _ci_next_savedb_ = 0
 _ci_next_cullmem_ = 0
+_ci_loop_ = False
+_ci_sem_ = threading.Semaphore(0)
+_ci_lock_ = threading.Lock()
 
-def codeintel_save(force=False):
-    global _ci_next_save_, _ci_next_savedb_, _ci_next_cullmem_
+def codeintel_loop():
+    while _ci_loop_:
+        _ci_sem_.acquire()
+        codeintel_callbacks()
+
+def codeintel_callbacks(force=False):
+    global _ci_next_savedb_, _ci_next_cullmem_, _ci_callbacks_signaled_
     now = time.time()
-    if now >= _ci_next_save_:
-        if _ci_next_save_:
-            for path, callback in _ci_save_callbacks_.items():
-                del _ci_save_callbacks_[path]
-                callback(path)
-        _ci_next_save_ = now + 3
+    callbacks = []
+    _ci_lock_.acquire()
+    try:
+        if now < _ci_callbacks_signaled_:
+            return
+        _ci_callbacks_signaled_ = 0
+        callbacks += _ci_scan_callbacks_.items()
+        _ci_scan_callbacks_.clear()
+        callbacks += _ci_autocomplete_callbacks_.items()
+        _ci_autocomplete_callbacks_.clear()
+    finally:
+        _ci_lock_.release()
+    for path, callback in callbacks:
+        callback(path)
     # saving and culling cached parts of the database:
     if _ci_mgr_:
-        if now >= _ci_next_savedb_:
+        if now >= _ci_next_savedb_ or force:
             if _ci_next_savedb_:
                 log.debug('Saving database')
                 _ci_mgr_.db.save() # Save every 6 seconds
             _ci_next_savedb_ = now + 6
-        if now >= _ci_next_cullmem_:
+        if now >= _ci_next_cullmem_ or force:
             if _ci_next_cullmem_:
                 log.debug('Culling memory')
                 _ci_mgr_.db.cull_mem() # Every 30 seconds
             _ci_next_cullmem_ = now + 30
-    if not force:
-        sublime.set_timeout(codeintel_save, 3100)
-sublime.set_timeout(codeintel_save, 3100)
+
+_pre_initialized = False
+def codeintel_finalize(timeout=None):
+    global _ci_loop_, _pre_initialized
+    for thread in threading.enumerate():
+        if thread.isAlive() and thread.name == "loop thread":
+            _pre_initialized = True
+            _ci_loop_ = False
+            thread._ci_sem_.release()
+            thread.join(timeout)
+codeintel_finalize()
+
+if not _pre_initialized:
+    def signal_loop():
+        _ci_sem_.release()
+        sublime.set_timeout(signal_loop, 20000)
+    signal_loop()
+_ci_loop_ = True    
+_loop_thread = threading.Thread(target=codeintel_loop, name="loop thread")
+_loop_thread.start()
+_loop_thread._ci_sem_ = _ci_sem_
 
 def codeintel_cleanup(path):
     global _ci_mgr_
     if _ci_envs_.pop(path, None):
         if not _ci_envs_:
-            codeintel_save(True)
+            codeintel_callbacks(True)
+            codeintel_finalize()
             _ci_mgr_.finalize()
             _ci_mgr_ = None
 
@@ -328,6 +396,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         global _ci_mgr_, despair, despaired
         env = None
         mtime = None
+        catalogs = []
         now = time.time()
         try:
             env = _ci_envs_[path]
@@ -387,7 +456,6 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 _ci_mgr_ = mgr
 
             # Load configuration files:
-            catalogs = []
             for catalog in mgr.db.get_catalogs_zone().avail_catalogs():
                 if catalog['lang'] == lang:
                     catalogs.append(catalog['name'])
@@ -413,18 +481,19 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             env._project_dir = project_dir
             env._project_base_dir = project_base_dir
             env._config_file = config_file
-            env._catalogs = catalogs
             env.__class__.get_proj_base_dir = lambda self: project_base_dir
             _ci_envs_[path] = env
         env._time = now + 5 # don't check again in less than five seconds
 
+        msgs = []
         if forms:
             calltip(view, 'tip', "")
             calltip(view, 'event', "")
             msg = "CodeIntel(%s) for %s@%s [%s]" % (', '.join(forms), path, pos, lang)
-            codeintel_log.info("\n%s\n%s" % (msg, "-"*len(msg)))
+            msgs.append(('info', "\n%s\n%s" % (msg, "-"*len(msg))))
 
-        codeintel_log.info("Catalogs for '%s': %s", lang, ', '.join(env._catalogs) or None)
+        if catalogs:
+            msgs.append(('info', "New env with atalogs for '%s': %s", lang, ', '.join(catalogs) or None))
 
         buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
         if isinstance(buf, CitadelBuffer):
@@ -440,14 +509,14 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                     mtime = os.stat(path)[stat.ST_MTIME]
                 buf.scan(mtime=mtime, skip_scan_time_check=is_dirty)
         if callback:
-            callback(buf)
+            callback(buf, msgs)
         else:
             logger(view, 'info', "")
     threading.Thread(target=_codeintel_scan, name="scanning thread").start()
 
 def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000):
     start = time.time()
-    def _codeintel(buf):
+    def _codeintel(buf, msgs):
         cplns = None
         calltips = None
         defns = None
@@ -459,14 +528,15 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
         try:
             trg = buf.trg_from_pos(pos2bytes(content, pos))
             defn_trg = buf.defn_trg_from_pos(pos2bytes(content, pos))
-        except CodeIntelError:
+        except (CodeIntelError, AttributeError):
             trg = None
             defn_trg = None
         else:
             eval_log_stream = StringIO()
+            _hdlrs = codeintel_log.handlers
             hdlr = logging.StreamHandler(eval_log_stream)
-            hdlr.setFormatter(logging.Formatter("%(message)s"))
-            codeintel_log.addHandler(hdlr)
+            hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
+            codeintel_log.handlers = [ hdlr ]
             ctlr = LogEvalController(codeintel_log)
             try:
                 if 'cplns' in forms and trg and trg.form == TRG_FORM_CPLN:
@@ -476,14 +546,20 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
                 if 'defns' in forms and defn_trg and defn_trg.form == TRG_FORM_DEFN:
                     defns = buf.defns_from_trg(defn_trg, ctlr=ctlr)
             finally:
-                codeintel_log.removeHandler(hdlr)
+                codeintel_log.handlers = _hdlrs
             logger(view, 'warning', "")
-            msg = eval_log_stream.getvalue()
-            msgs = msg.strip().split('\n')
-            for msg in reversed(msgs):
-                if msg and msg.startswith('evaluating '):
-                    calltip(view, 'warning', msg)
-                    break
+            result = False
+            for msg in reversed(eval_log_stream.getvalue().strip().split('\n')):
+                if msg:
+                    name, levelname, msg = msg.split(':', 2)
+                    levelname = levelname.strip().lower()
+                    msgs.append((levelname, name + ':' + msg))
+                    if not result and msg.startswith('evaluating '):
+                        calltip(view, 'warning', msg)
+                        result = True
+            if any((cplns, calltips, defns, result)):
+                for msg in msgs:
+                    getattr(codeintel_log, msg[0], codeintel_log.info)(msg[1])
 
         ret = []
         l = locals()
