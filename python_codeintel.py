@@ -93,7 +93,7 @@ codeintel_log = logging.getLogger("codeintel")
 log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [ codeintel_hdlr ]
 log.handlers = [ stderr_hdlr ]
-codeintel_log.setLevel(logging.ERROR) # or DEBUG
+codeintel_log.setLevel(logging.DEBUG) # or DEBUG
 logging.getLogger("codeintel.db").setLevel(logging.INFO)
 log.setLevel(logging.ERROR)
 
@@ -382,7 +382,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 mgr.initialize()
 
                 # Connect the logging file to the handler
-                codeintel_log.handlers = [ logging.StreamHandler(open(os.path.join(mgr.db.base_dir, 'codeintel.log'), 'w', 0)) ]
+                codeintel_log.handlers = [ logging.StreamHandler(open(os.path.join(mgr.db.base_dir, 'codeintel.log'), 'w', 1)) ]
 
                 _ci_mgr_ = mgr
 
