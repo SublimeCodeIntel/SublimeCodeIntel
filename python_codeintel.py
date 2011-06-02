@@ -126,7 +126,7 @@ status_lineno ={}
 status_lock = threading.Lock()
 def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=None):
     if timeout is None:
-        timeout = { None: 3000, 'error': 3000, 'warning': 5000, 'info': 10000, 'tip': 15000 }.get(type)
+        timeout = { None: 3000, 'error': 3000, 'warning': 5000, 'info': 10000, 'event': 10000, 'tip': 15000 }.get(type)
     if msg is None:
         msg, type = type, 'debug'
     msg = msg.strip()
@@ -214,7 +214,6 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                 elif calltips is not None:
                     # Triger a tooltip
                     calltip(view, 'tip', calltips[0])
-            calltip(view, 'tip', "")
             codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
         else:
             def save_callback(path):
@@ -262,7 +261,6 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                             window.open_file(path, sublime.ENCODED_POSITION)
                             window.open_file(path, sublime.ENCODED_POSITION)
                         sublime.set_timeout(__trigger, 0)
-        calltip(view, 'tip', "")
         codeintel(view, path, content, lang, pos, ('defns',), _trigger)
 
 _ci_mgr_ = None
@@ -324,11 +322,32 @@ def codeintel_scan(view, path, content, lang, callback=None):
     is_scratch = view.is_scratch()
     is_dirty = view.is_dirty()
     def _codeintel_scan():
-        global _ci_mgr_
+        global _ci_mgr_, despair
+        env = None
+        mtime = None
+        now = time.time()
         try:
             env = _ci_envs_[path]
             mgr = _ci_mgr_
+            if now > env._time:
+                mtime = max(tryGetMTime(env._config_file), tryGetMTime(env._config_default_file))
+                if env._mtime < mtime:
+                    raise KeyError
         except KeyError:
+            if env is not None:
+                config_default_file = env._config_default_file
+                project_dir = env._project_dir
+                config_file = env._config_file
+            else:
+                config_default_file = os.path.join(CODEINTEL_HOME_DIR, 'config')
+                if not (config_default_file and os.path.exists(config_default_file)):
+                    config_default_file = None
+                project_dir = path and find_folder(path, '.codeintel')
+                if not (project_dir and os.path.exists(project_dir)):
+                    project_dir = None
+                config_file = project_dir and os.path.join(project_dir, 'config')
+                if not (config_file and os.path.exists(config_file)):
+                    config_file = None
             if _ci_mgr_:
                 mgr = _ci_mgr_
             else:
@@ -340,7 +359,7 @@ def codeintel_scan(view, path, content, lang, callback=None):
                     db_base_dir = _ci_db_base_dir_,
                     db_catalog_dirs = _ci_db_catalog_dirs_,
                     db_import_everything_langs = _ci_db_import_everything_langs,
-                    db_event_reporter = lambda m: logger(view, m),
+                    db_event_reporter = lambda m: logger(view, 'event', m),
                 )
                 mgr.upgrade()
                 mgr.initialize()
@@ -361,25 +380,32 @@ def codeintel_scan(view, path, content, lang, callback=None):
                 "codeintel_max_recursive_dir_depth": 10,
                 "codeintel_scan_files_in_project": True,
             }
+
+            project_base_dir = project_dir and os.path.abspath(os.path.join(project_dir, '..'))
+
             _config = {}
-            tryReadCodeIntelDict(os.path.join(CODEINTEL_HOME_DIR, 'config'), _config)
-            project_dir = path and find_folder(path, '.codeintel')
-            if project_dir:
-                tryReadCodeIntelDict(os.path.join(project_dir, 'config'), _config)
+            tryReadDict(config_default_file, _config)
+            tryReadDict(config_file, _config)
             config.update(_config.get(lang, {}))
             for conf in [ 'pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths' ]:
                 v = config.get(conf)
                 if v and isinstance(v, (list, tuple)):
                     v = [ p.strip() for p in v if p.strip() ]
-                    config[conf] = os.pathsep.join(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join(project_dir, '..', p)) for p in v if p.strip())
+                    config[conf] = os.pathsep.join(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join(project_base_dir, p)) if project_base_dir else p for p in v if p.strip())
 
             env = SimplePrefsEnvironment(**config)
+            env._mtime = mtime or max(tryGetMTime(config_file), tryGetMTime(config_default_file))
+            env._config_default_file = config_default_file
+            env._project_dir = project_dir
+            env._config_file = config_file
+            env.__class__.get_proj_base_dir = lambda self: project_base_dir
             _ci_envs_[path] = env
+        env._time = now + 5 # don't check again in less than five seconds
 
         buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
         if isinstance(buf, CitadelBuffer):
             despair = 0
-            logger(view, 'info', "Updating indexes... The first time this can take a while.", timeout=20000, delay=2000)
+            logger(view, 'info', "Updating indexes... The first time this can take a while.", timeout=20000, delay=1000)
             if not path or is_scratch:
                 buf.scan() #FIXME: Always scanning unsaved files (since many tabs can have unsaved files, or find other path as ID)
             else:
@@ -395,6 +421,9 @@ def codeintel_scan(view, path, content, lang, callback=None):
     threading.Thread(target=_codeintel_scan, name="scanning thread").start()
 
 def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000):
+    calltip(view, 'tip', "")
+    calltip(view, 'event', "")
+    codeintel_log.info("\n%s\nStarting CodeIntel for %s@%s [%s] (%s)" % ("="*80, path, pos, lang, ', '.join(forms)))
     start = time.time()
     def _codeintel(buf):
         cplns = None
@@ -439,7 +468,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000
         for f in forms:
             ret.append(l.get(f))
         total = (time.time() - start)
-        if total * 1000 < timeout:
+        if total * 3000 < timeout:
             logger(view, 'info', "")
             callback(*ret)
         else:
@@ -465,10 +494,15 @@ def updateCodeIntelDict(master, partial):
         elif isinstance(value, (list, tuple)):
             master.setdefault(key, []).extend(value)
 
-def tryReadCodeIntelDict(filename, dictToUpdate):
-    if os.path.exists(filename):
+def tryReadDict(filename, dictToUpdate):
+    if filename:
         file = open(filename, 'r')
         try:
             updateCodeIntelDict(dictToUpdate, eval(file.read()))
         finally:
             file.close()
+
+def tryGetMTime(filename):
+    if filename:
+        return os.stat(filename)[stat.ST_MTIME]
+    return 0
