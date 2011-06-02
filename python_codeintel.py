@@ -156,7 +156,7 @@ def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=
             if msg != current_msg and order == current_order:
                 if msg:
                     view.set_status(id, "%s: %s" % (type.capitalize(), msg))
-                    (logger or log.debug)(msg)
+                    (logger or log.info)(msg)
                 else:
                     view.erase_status(id)
                 status_msg[id][0] = [ type, msg, order ]
@@ -306,13 +306,17 @@ def codeintel_cleanup(path):
             _ci_mgr_.finalize()
             _ci_mgr_ = None
 
-def codeintel_scan(view, path, content, lang, callback=None):
+def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=None):
     global despair
     for thread in threading.enumerate():
         if thread.isAlive() and thread.name == "scanning thread":
             logger(view, 'info', "Updating indexes... The first time this can take a while. Do not despair!", timeout=20000, delay=despair)
             despair = 0
             return
+    if forms:
+        calltip(view, 'tip', "")
+        calltip(view, 'event', "")
+        codeintel_log.info("\n%s\nStarting CodeIntel for %s@%s [%s] (%s)" % ("="*80, path, pos, lang, ', '.join(forms)))
     try:
         lang = lang or guess_lang_from_path(path)
     except CodeIntelError:
@@ -336,12 +340,24 @@ def codeintel_scan(view, path, content, lang, callback=None):
             if env is not None:
                 config_default_file = env._config_default_file
                 project_dir = env._project_dir
+                project_base_dir = env._project_base_dir
                 config_file = env._config_file
             else:
                 config_default_file = os.path.join(CODEINTEL_HOME_DIR, 'config')
                 if not (config_default_file and os.path.exists(config_default_file)):
                     config_default_file = None
-                project_dir = path and find_folder(path, '.codeintel')
+                project_dir = None
+                project_base_dir = None
+                if path:
+                    # Try to find a suitable project directory (or best guess):
+                    for folder in ['.codeintel', '.git', '.hg', 'trunk']:
+                        project_dir = find_folder(path, folder)
+                        if project_dir and (folder != '.codeintel' or not os.path.exists(os.path.join(project_dir, 'db'))):
+                            if folder.startswith('.'):
+                                project_base_dir = os.path.abspath(os.path.join(project_dir, '..'))
+                            else:
+                                project_base_dir = project_dir
+                            break
                 if not (project_dir and os.path.exists(project_dir)):
                     project_dir = None
                 config_file = project_dir and os.path.join(project_dir, 'config')
@@ -380,8 +396,6 @@ def codeintel_scan(view, path, content, lang, callback=None):
                 "codeintel_scan_files_in_project": True,
             }
 
-            project_base_dir = project_dir and os.path.abspath(os.path.join(project_dir, '..'))
-
             _config = {}
             tryReadDict(config_default_file, _config)
             tryReadDict(config_file, _config)
@@ -396,6 +410,7 @@ def codeintel_scan(view, path, content, lang, callback=None):
             env._mtime = mtime or max(tryGetMTime(config_file), tryGetMTime(config_default_file))
             env._config_default_file = config_default_file
             env._project_dir = project_dir
+            env._project_base_dir = project_base_dir
             env._config_file = config_file
             env.__class__.get_proj_base_dir = lambda self: project_base_dir
             _ci_envs_[path] = env
@@ -420,9 +435,6 @@ def codeintel_scan(view, path, content, lang, callback=None):
     threading.Thread(target=_codeintel_scan, name="scanning thread").start()
 
 def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000):
-    calltip(view, 'tip', "")
-    calltip(view, 'event', "")
-    codeintel_log.info("\n%s\nStarting CodeIntel for %s@%s [%s] (%s)" % ("="*80, path, pos, lang, ', '.join(forms)))
     start = time.time()
     def _codeintel(buf):
         cplns = None
@@ -472,7 +484,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             callback(*ret)
         else:
             logger(view, 'info', "Just finished indexing! Please try again. Scan took %s" % total, timeout=3000)
-    codeintel_scan(view, path, content, lang, _codeintel)
+    codeintel_scan(view, path, content, lang, _codeintel, pos, forms)
 
 def find_folder(start_at, look_for):
     start_at = os.path.abspath(start_at)
