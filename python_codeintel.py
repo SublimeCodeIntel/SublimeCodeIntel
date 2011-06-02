@@ -1,4 +1,3 @@
-# -*- coding: UTF-8 -*-
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 # 
@@ -28,7 +27,7 @@
 """
 CodeIntel is a plugin intended to display "code intelligence" information.
 The plugin is based in code from the Open Komodo Editor and has a MPL license.
-Port by Germán M. Bravo (Kronuz). May 30, 2011
+Port by German M. Bravo (Kronuz). May 30, 2011
 
 For "Jump to symbol declaration":
     Setup in User Key Bindings (Packages/User/Default.sublime-keymap):
