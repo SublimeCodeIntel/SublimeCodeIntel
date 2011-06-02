@@ -93,7 +93,7 @@ codeintel_log = logging.getLogger("codeintel")
 log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [ codeintel_hdlr ]
 log.handlers = [ stderr_hdlr ]
-codeintel_log.setLevel(logging.DEBUG) # or DEBUG
+codeintel_log.setLevel(logging.INFO) # ERROR/INFO
 logging.getLogger("codeintel.db").setLevel(logging.INFO)
 log.setLevel(logging.ERROR)
 
