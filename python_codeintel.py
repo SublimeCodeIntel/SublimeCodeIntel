@@ -419,7 +419,7 @@ def codeintel_scan(view, path, content, lang, callback=None):
             logger(view, 'info', "")
     threading.Thread(target=_codeintel_scan, name="scanning thread").start()
 
-def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000):
+def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000):
     calltip(view, 'tip', "")
     calltip(view, 'event', "")
     codeintel_log.info("\n%s\nStarting CodeIntel for %s@%s [%s] (%s)" % ("="*80, path, pos, lang, ', '.join(forms)))
@@ -467,7 +467,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=4000
         for f in forms:
             ret.append(l.get(f))
         total = (time.time() - start)
-        if total * 3000 < timeout:
+        if total * 1000 < timeout:
             logger(view, 'info', "")
             callback(*ret)
         else:
