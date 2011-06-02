@@ -116,6 +116,7 @@ cpln_stop_chars = {
 
 old_pos = None
 despair = 0
+despaired = False
 
 def pos2bytes(content, pos):
     return len(content[:pos].encode('utf-8'))
@@ -222,11 +223,12 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             _ci_save_callbacks_[path] = save_callback
 
     def on_selection_modified(self, view):
-        global despair, old_pos
+        global despair, despaired, old_pos
         pos = view.rowcol(view.sel()[0].end())
         if old_pos != pos:
             old_pos = pos
             despair = 1000
+            despaired = True
             status_lock.acquire()
             try:
                 slns = [ id for id, sln in status_lineno.items() if sln != pos[0] ]
@@ -325,7 +327,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     is_scratch = view.is_scratch()
     is_dirty = view.is_dirty()
     def _codeintel_scan():
-        global _ci_mgr_, despair
+        global _ci_mgr_, despair, despaired
         env = None
         mtime = None
         now = time.time()
@@ -419,6 +421,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
         if isinstance(buf, CitadelBuffer):
             despair = 0
+            despaired = False
             logger(view, 'info', "Updating indexes... The first time this can take a while.", timeout=20000, delay=1000)
             if not path or is_scratch:
                 buf.scan() #FIXME: Always scanning unsaved files (since many tabs can have unsaved files, or find other path as ID)
@@ -479,7 +482,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
         for f in forms:
             ret.append(l.get(f))
         total = (time.time() - start)
-        if total * 1000 < timeout:
+        if not despaired or total * 1000 < timeout:
             logger(view, 'info', "")
             callback(*ret)
         else:
