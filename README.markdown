@@ -11,11 +11,11 @@ Provides the following features:
 * Imports autocomplete - Shows autocomplet with the available modules/symbols in real time.
 * Function Call tooltips - Displays information in the status bar about the working function.
 
-Currently it only works on MacOS X. Two libraries need to be compiled for it to work in other platforms: `SilverCity` and `ciElements`
+Currently it only works on MacOS X. Two libraries need to be compiled for it to work in other platforms: `SilverCity` and `ciElements`.
+
 
 Installing
------
-
+----------
 *Without Git:* Download the latest source from http://github.com/Kronuz/SublimeCodeIntel and copy the whole directory into the Packages directory.
 
 *With Git:* Clone the repository in your Sublime Text Packages directory (located one folder above the "User" directory)
@@ -33,18 +33,20 @@ The "User" packages directory is located at:
     ~/.Sublime Text 2/Packages/
 
 
-Don't forget to add key or mouse bindings. For "Jump to Symbol Declaration":
+Configuring
+-----------
+Don't forget to add key or mouse bindings. For "Jump to Symbol Declaration".
+This will allow you to jump around symbol definitions across files with just a click.
 
-    Setup in User Key Bindings (Packages/User/Default.sublime-keymap):
+* Setup in User Key Bindings (Packages/User/Default.sublime-keymap):
 
         `{ "keys": ["super+f3"], "command": "goto_python_definition" }`
 
-    ...or in User Mouse Bindings (Packages/User/Default.sublime-mousemap):
+* ...or in User Mouse Bindings (Packages/User/Default.sublime-mousemap):
 
         `{ "button": "button1", "modifiers": ["super"], "command": "goto_python_definition", "press_command": "drag_select" }`
 
-
-Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config'). All configurations are optional. Example::
+Configuration files (`~/.codeintel/config` or `project_root/.codeintel/config`). All configurations are optional. Example::
 
     {
         "PHP": {
