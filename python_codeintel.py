@@ -95,9 +95,9 @@ codeintel_log = logging.getLogger("codeintel")
 log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [ codeintel_hdlr ]
 log.handlers = [ stderr_hdlr ]
-codeintel_log.setLevel(logging.INFO) # ERROR/INFO
-logging.getLogger("codeintel.db").setLevel(logging.INFO)
-log.setLevel(logging.ERROR)
+codeintel_log.setLevel(logging.INFO) # INFO/ERROR
+logging.getLogger("codeintel.db").setLevel(logging.INFO) # INFO
+log.setLevel(logging.ERROR) # ERROR
 
 cpln_fillup_chars = {
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ ",
@@ -123,7 +123,7 @@ despaired = False
 def pos2bytes(content, pos):
     return len(content[:pos].encode('utf-8'))
 
-centinel = {}
+sentinel = {}
 status_msg = {}
 status_lineno = {}
 status_lock = threading.Lock()
@@ -188,8 +188,8 @@ def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
 class PythonCodeIntel(sublime_plugin.EventListener):
     def on_close(self, view):
         path = view.file_name()
-        if path in centinel:
-            del centinel[path]
+        if path in sentinel:
+            del sentinel[path]
         if path in status_msg:
             del status_msg[path]
         if path in status_lineno:
@@ -208,9 +208,9 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         live = view.settings().get('codeinte_live', True)
         pos = view.sel()[0].end()
         text = view.substr(sublime.Region(pos-1, pos))
-        _centinel = centinel.get(path)
-        centinel[path] = _centinel if _centinel is not None else pos if (text and text[-1] in cpln_fillup_chars.get(lang, '')) else None
-        if not live and text and centinel[path] is not None:
+        _sentinel = sentinel.get(path)
+        sentinel[path] = _sentinel if _sentinel is not None else pos if (text and text[-1] in cpln_fillup_chars.get(lang, '')) else None
+        if not live and text and sentinel[path] is not None:
             live = True
         if live:
             def _autocomplete_callback(path):
@@ -218,7 +218,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                     content = view.substr(sublime.Region(0, view.size()))
                     if content:
                         pos = view.sel()[0].end()
-                        #pos = centinel[path] if centinel[path] is not None else view.sel()[0].end()
+                        #pos = sentinel[path] if sentinel[path] is not None else view.sel()[0].end()
                         lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
                         def _trigger(cplns, calltips):
                             if cplns is not None:
@@ -231,7 +231,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                             elif calltips is not None:
                                 # Triger a tooltip
                                 calltip(view, 'tip', calltips[0])
-                        centinel[path] = None
+                        sentinel[path] = None
                         codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
                 sublime.set_timeout(__autocomplete_callback, 0)
             _ci_lock_.acquire()
@@ -493,7 +493,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             msgs.append(('info', "\n%s\n%s" % (msg, "-"*len(msg))))
 
         if catalogs:
-            msgs.append(('info', "New env with atalogs for '%s': %s", lang, ', '.join(catalogs) or None))
+            msgs.append(('info', "New env with atalogs for '%s': %s" % (lang, ', '.join(catalogs) or None)))
 
         buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
         if isinstance(buf, CitadelBuffer):
@@ -548,17 +548,29 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             finally:
                 codeintel_log.handlers = _hdlrs
             logger(view, 'warning', "")
+            logger(view, 'event', "")
             result = False
+            merge = ''
+            _msgs = []
             for msg in reversed(eval_log_stream.getvalue().strip().split('\n')):
+                msg = msg.strip()
                 if msg:
-                    name, levelname, msg = msg.split(':', 2)
-                    levelname = levelname.strip().lower()
-                    msgs.append((levelname, name + ':' + msg))
+                    try:
+                        name, levelname, msg = msg.split(':', 2)
+                        name = name.strip()
+                        levelname = levelname.strip().lower()
+                        msg = msg.strip()
+                    except:
+                        merge = (msg + ' ' + merge) if merge else msg
+                        continue
+                    _msgs.append((levelname, name + ':' + ((msg + ' ' + merge) if merge else msg)))
+                    merge = ''
                     if not result and msg.startswith('evaluating '):
                         calltip(view, 'warning', msg)
                         result = True
             if any((cplns, calltips, defns, result)):
-                for msg in msgs:
+                _msgs.reverse()
+                for msg in msgs + _msgs:
                     getattr(codeintel_log, msg[0], codeintel_log.info)(msg[1])
 
         ret = []
