@@ -429,7 +429,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                             break
                 if not (project_dir and os.path.exists(project_dir)):
                     project_dir = None
-                config_file = project_dir and os.path.join(project_dir, 'config')
+                config_file = project_dir and folder=='.codeintel' and os.path.join(project_dir, 'config')
                 if not (config_file and os.path.exists(config_file)):
                     config_file = None
             if _ci_mgr_:
@@ -466,8 +466,14 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             }
 
             _config = {}
-            tryReadDict(config_default_file, _config)
-            tryReadDict(config_file, _config)
+            try:
+                tryReadDict(config_default_file, _config)
+            except Exception, e:
+                log.error("Malformed configuration file '%s': %s" % (config_default_file, e))
+            try:
+                tryReadDict(config_file, _config)
+            except Exception, e:
+                log.error("Malformed configuration file '%s': %s" % (config_default_file, e))
             config.update(_config.get(lang, {}))
             for conf in [ 'pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths' ]:
                 v = config.get(conf)
@@ -507,7 +513,10 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                     mtime = 1
                 else:
                     mtime = os.stat(path)[stat.ST_MTIME]
-                buf.scan(mtime=mtime, skip_scan_time_check=is_dirty)
+                try:
+                    buf.scan(mtime=mtime, skip_scan_time_check=is_dirty)
+                except KeyError:
+                    log.debug("Invalid language: %s. Available: %s" % (lang, ', '.join(mgr.citadel._cile_driver_from_lang)))
         if callback:
             callback(buf, msgs)
         else:
