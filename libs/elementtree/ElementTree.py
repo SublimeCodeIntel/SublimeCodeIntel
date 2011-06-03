@@ -139,6 +139,7 @@ except ImportError:
 # TODO: add improved support for incremental parsing
 
 VERSION = "1.2.6"
+_patched_for_komodo_ = True
 
 ##
 # Internal element class.  This class defines the Element interface,
@@ -751,14 +752,18 @@ def _encode(s, encoding):
 
 if sys.version[:3] == "1.5":
     _escape = re.compile(r"[&<>\"\x80-\xff]+") # 1.5.2
+    _escape_attrib_pat = re.compile(r"[&<>\"\n\r\x80-\xff]+") # 1.5.2
 else:
     _escape = re.compile(eval(r'u"[&<>\"\u0080-\uffff]+"'))
+    _escape_attrib_pat = re.compile(eval(r'u"[&<>\"\n\r\u0080-\uffff]+"'))
 
 _escape_map = {
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
     '"': "&quot;",
+    "\n": "&#xA;",
+    "\r": "&#xD;",
 }
 
 _namespace_map = {
@@ -816,12 +821,14 @@ def _escape_attrib(text, encoding=None, replace=string.replace):
             try:
                 text = _encode(text, encoding)
             except UnicodeError:
-                return _encode_entity(text)
+                return _encode_entity(text, _escape_attrib_pat)
         text = replace(text, "&", "&amp;")
         text = replace(text, "'", "&apos;") # FIXME: overkill
         text = replace(text, "\"", "&quot;")
         text = replace(text, "<", "&lt;")
         text = replace(text, ">", "&gt;")
+        text = replace(text, "\n", "&#xA;")
+        text = replace(text, "\r", "&#xD;")
         return text
     except (TypeError, AttributeError):
         _raise_serialization_error(text)

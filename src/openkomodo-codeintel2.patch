@@ -1,5 +1,5 @@
---- codeintel2/database/database.py
-+++ codeintel2/database/database.py
+--- openkomodo/src/codeintel/lib/codeintel2/database/database.py
++++ openkomodo/src/codeintel/lib/codeintel2/database/database.py
 @@ -445,15 +445,19 @@ class Database(object):
          self.acquire_lock()
          try:
