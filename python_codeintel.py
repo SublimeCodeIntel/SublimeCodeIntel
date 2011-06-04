@@ -83,6 +83,8 @@ from codeintel2.citadel import CitadelBuffer
 from codeintel2.environment import SimplePrefsEnvironment
 from codeintel2.util import guess_lang_from_path
 
+QUEUE = {}     # views waiting to be processed by linter
+
 # Setup the complex logging (status bar gets stuff from there):
 class NullHandler(logging.Handler):
     def emit(self, record):
@@ -188,18 +190,20 @@ def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
 class PythonCodeIntel(sublime_plugin.EventListener):
     def on_close(self, view):
         path = view.file_name()
-        if path in sentinel:
-            del sentinel[path]
-        if path in status_msg:
-            del status_msg[path]
-        if path in status_lineno:
-            del status_lineno[path]
+        status_lock.acquire()
+        try:
+            if path in sentinel:
+                del sentinel[path]
+            if path in status_msg:
+                del status_msg[path]
+            if path in status_lineno:
+                del status_lineno[path]
+        finally:
+            status_lock.release()
         codeintel_cleanup(path)
 
     def on_modified(self, view):
-        global _ci_callbacks_signaled_
         path = view.file_name()
-        now = time.time()
         lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
         try:
             lang = lang or guess_lang_from_path(path)
@@ -213,48 +217,32 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         if not live and text and sentinel[path] is not None:
             live = True
         if live:
-            def _autocomplete_callback(path):
-                def __autocomplete_callback():
-                    content = view.substr(sublime.Region(0, view.size()))
-                    if content:
-                        pos = view.sel()[0].end()
-                        #pos = sentinel[path] if sentinel[path] is not None else view.sel()[0].end()
-                        lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
-                        def _trigger(cplns, calltips):
-                            if cplns is not None:
-                                # Show autocompletions:
-                                self.completions = sorted(
-                                    [ ('%s  (%s)' % (name, type), name) for type, name in cplns ], 
-                                    cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
-                                )
-                                sublime.set_timeout(lambda: view.run_command('auto_complete'), 0)
-                            elif calltips is not None:
-                                # Triger a tooltip
-                                calltip(view, 'tip', calltips[0])
-                        sentinel[path] = None
-                        codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
-                sublime.set_timeout(__autocomplete_callback, 0)
-            _ci_lock_.acquire()
-            try:
-                _ci_autocomplete_callbacks_[path] = _autocomplete_callback
-                sublime.set_timeout(lambda: _ci_sem_.release(), 200)
-                _ci_callbacks_signaled_ = now + 0.2
-            finally:
-                _ci_lock_.release()
-        else:
-            def _scan_callback(path):
-                def __scan_callback():
-                    content = view.substr(sublime.Region(0, view.size()))
+            def _autocomplete_callback(view, path):
+                content = view.substr(sublime.Region(0, view.size()))
+                if content:
+                    pos = view.sel()[0].end()
+                    #pos = sentinel[path] if sentinel[path] is not None else view.sel()[0].end()
                     lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
-                    codeintel_scan(view, path, content, lang)
-                sublime.set_timeout(__scan_callback, 0)
-            _ci_lock_.acquire()
-            try:
-                _ci_scan_callbacks_[path] = _scan_callback
-                sublime.set_timeout(lambda: _ci_sem_.release(), 3000)
-                _ci_callbacks_signaled_ = now + 3
-            finally:
-                _ci_lock_.release()
+                    def _trigger(cplns, calltips):
+                        if cplns is not None:
+                            # Show autocompletions:
+                            self.completions = sorted(
+                                [ ('%s  (%s)' % (name, type), name) for type, name in cplns ], 
+                                cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
+                            )
+                            sublime.set_timeout(lambda: view.run_command('auto_complete'), 0)
+                        elif calltips is not None:
+                            # Triger a tooltip
+                            calltip(view, 'tip', calltips[0])
+                    sentinel[path] = None
+                    codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
+            queue(view, _autocomplete_callback, 200, 400, args=[path])
+        else:
+            def _scan_callback(view, path):
+                content = view.substr(sublime.Region(0, view.size()))
+                lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
+                codeintel_scan(view, path, content, lang)
+            queue(view, _scan_callback, 3000, args=[path])
 
     def on_selection_modified(self, view):
         global despair, despaired, old_pos
@@ -298,45 +286,31 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                         sublime.set_timeout(__trigger, 0)
         codeintel(view, path, content, lang, pos, ('defns',), _trigger)
 
-_ci_mgr_ = None
 _ci_envs_ = {}
+_ci_mgr_ = None
 _ci_db_base_dir_ = None
 _ci_db_catalog_dirs_ = []
 _ci_db_import_everything_langs = None
 _ci_extra_module_dirs_ = None
-_ci_autocomplete_callbacks_ = {}
-_ci_scan_callbacks_ = {}
-_ci_callbacks_signaled_ = 0
+
 _ci_next_savedb_ = 0
 _ci_next_cullmem_ = 0
-_ci_loop_ = False
-_ci_sem_ = threading.Semaphore(0)
-_ci_lock_ = threading.Lock()
-
-def codeintel_loop():
-    while _ci_loop_:
-        _ci_sem_.acquire()
-        codeintel_callbacks()
 
 def codeintel_callbacks(force=False):
-    global _ci_next_savedb_, _ci_next_cullmem_, _ci_callbacks_signaled_
-    now = time.time()
-    callbacks = []
-    _ci_lock_.acquire()
+    global _ci_next_savedb_, _ci_next_cullmem_
+    __lock_.acquire()
     try:
-        if now < _ci_callbacks_signaled_:
-            return
-        _ci_callbacks_signaled_ = 0
-        callbacks += _ci_scan_callbacks_.items()
-        _ci_scan_callbacks_.clear()
-        callbacks += _ci_autocomplete_callbacks_.items()
-        _ci_autocomplete_callbacks_.clear()
+        views = QUEUE.values()
+        QUEUE.clear()
     finally:
-        _ci_lock_.release()
-    for path, callback in callbacks:
-        callback(path)
+        __lock_.release()
+    for view, callback, args, kwargs in views:
+        def _callback():
+            callback(view, *args, **kwargs)
+        sublime.set_timeout(_callback, 0)
     # saving and culling cached parts of the database:
     if _ci_mgr_:
+        now = time.time()
         if now >= _ci_next_savedb_ or force:
             if _ci_next_savedb_:
                 log.debug('Saving database')
@@ -348,35 +322,75 @@ def codeintel_callbacks(force=False):
                 _ci_mgr_.db.cull_mem() # Every 30 seconds
             _ci_next_cullmem_ = now + 30
 
-_pre_initialized = False
-def codeintel_finalize(timeout=None):
-    global _ci_loop_, _pre_initialized
-    for thread in threading.enumerate():
-        if thread.isAlive() and thread.name == "loop thread":
-            _pre_initialized = True
-            _ci_loop_ = False
-            thread._ci_sem_.release()
-            thread.join(timeout)
-codeintel_finalize()
+################################################################################
+# Queue dispatcher system:
 
-if not _pre_initialized:
-    def signal_loop():
-        _ci_sem_.release()
-        sublime.set_timeout(signal_loop, 20000)
-    signal_loop()
-_ci_loop_ = True    
-_loop_thread = threading.Thread(target=codeintel_loop, name="loop thread")
-_loop_thread.start()
-_loop_thread._ci_sem_ = _ci_sem_
+queue_dispatcher = codeintel_callbacks
+queue_thread_name = "codeintel callbacks"
+
+def queue_loop():
+    '''An infinite loop running the linter in a background thread meant to
+        update the view after user modifies it and then does no further
+        modifications for some time as to not slow down the UI with linting.'''
+    while __loop_:
+        __semaphore_.acquire()
+        queue_dispatcher()
+
+def queue(view, callback, timeout, busy_timeout=None, args=[], kwargs={}):
+    #TODO: Add smart queues (faster if line changes or last character was not part of a whole word)
+    global __signaled_
+    now = time.time()
+    __lock_.acquire()
+    try:
+        QUEUE[view.id()] = (view, callback, args, kwargs)
+        if now < __signaled_ + timeout * 4:
+            next = busy_timeout or timeout
+        else:
+            next = timeout
+        __signaled_ = now + float(next) / 1000 - 0.01
+        def _signal():
+            if time.time() < __signaled_:
+                return
+            __semaphore_.release()
+        sublime.set_timeout(_signal, next)
+    finally:
+        __lock_.release()
+
+# only start the thread once - otherwise the plugin will get laggy
+# when saving it often.
+__semaphore_ = threading.Semaphore(0)
+__lock_ = threading.Lock()
+__signaled_ = 0
+# First finalize old standing threads:
+__loop_ = False
+__pre_initialized_ = False
+def queue_finalize(timeout=None):
+    global __pre_initialized_
+    for thread in threading.enumerate():
+        if thread.isAlive() and thread.name == queue_thread_name:
+            __pre_initialized_ = True
+            thread.__semaphore_.release()
+            thread.join(timeout)
+queue_finalize()
+
+# Initialize background thread:
+__loop_ = True
+__active_linter_thread = threading.Thread(target=queue_loop, name=queue_thread_name)
+__active_linter_thread.__semaphore_ = __semaphore_
+__active_linter_thread.start()
+
+################################################################################
+
+if not __pre_initialized_:
+    # Start a timer
+    def _signal_loop():
+        __semaphore_.release()
+        sublime.set_timeout(_signal_loop, 20000)
+    _signal_loop()
 
 def codeintel_cleanup(path):
-    global _ci_mgr_
-    if _ci_envs_.pop(path, None):
-        if not _ci_envs_:
-            codeintel_callbacks(True)
-            codeintel_finalize()
-            _ci_mgr_.finalize()
-            _ci_mgr_ = None
+    if path in _ci_envs_:
+        del _ci_envs_[path]
 
 def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=None):
     global despair
