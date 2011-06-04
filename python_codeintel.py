@@ -155,7 +155,7 @@ def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=
         finally:
             status_lock.release()
     def _calltip_set():
-        lineno = view.rowcol(view.sel()[0].end())[0]
+        lineno = view.line(view.sel()[0])
         status_lock.acquire()
         try:
             current_type, current_msg, current_order = status_msg.get(id, [ None, None, 0 ])
@@ -221,6 +221,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                 content = view.substr(sublime.Region(0, view.size()))
                 if content:
                     pos = view.sel()[0].end()
+                    #TODO: For the centinel to work, we need to send a prefix to the completions... but no show_completions() currently available
                     #pos = sentinel[path] if sentinel[path] is not None else view.sel()[0].end()
                     lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
                     def _trigger(cplns, calltips):
@@ -246,14 +247,14 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
     def on_selection_modified(self, view):
         global despair, despaired, old_pos
-        pos = view.rowcol(view.sel()[0].end())
-        if old_pos != pos:
-            old_pos = pos
+        rowcol = view.rowcol(view.sel()[0].end())
+        if old_pos != rowcol:
+            old_pos = rowcol
             despair = 1000
             despaired = True
             status_lock.acquire()
             try:
-                slns = [ id for id, sln in status_lineno.items() if sln != pos[0] ]
+                slns = [id for id, sln in status_lineno.items() if sln != rowcol[0]]
             finally:
                 status_lock.release()
             for id in slns:
@@ -603,7 +604,8 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
         total = (time.time() - start)
         if not despaired or total * 1000 < timeout:
             logger(view, 'info', "")
-            callback(*ret)
+            if view.line(view.sel()[0]) == view.line(pos):
+                callback(*ret)
         else:
             logger(view, 'info', "Just finished indexing! Please try again. Scan took %s" % total, timeout=3000)
     codeintel_scan(view, path, content, lang, _codeintel, pos, forms)
