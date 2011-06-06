@@ -251,7 +251,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                     sentinel[path] = None
                     codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
             # If it's a fill char, queue using lower values and preemptive behavior
-            queue(view, _autocomplete_callback, 50 if is_fill_char else 200, 100 if is_fill_char else 400, is_fill_char, args=[path])
+            queue(view, _autocomplete_callback, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path])
         else:
             def _scan_callback(view, path):
                 content = view.substr(sublime.Region(0, view.size()))
@@ -261,7 +261,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
     def on_selection_modified(self, view):
         global despair, despaired, old_pos
-        delay_queue(200)  # on movement, delay queue (to make movement responsive)
+        delay_queue(600)  # on movement, delay queue (to make movement responsive)
 
         rowcol = view.rowcol(view.sel()[0].end())
         if old_pos != rowcol:
@@ -348,7 +348,7 @@ def codeintel_callbacks(force=False):
 
 queue_dispatcher = codeintel_callbacks
 queue_thread_name = "codeintel callbacks"
-MAX_DELAY = 2
+MAX_DELAY = -1  # Does not apply
 
 
 def queue_loop():
@@ -375,7 +375,7 @@ def queue(view, callback, timeout, busy_timeout=None, preemptive=False, args=[],
             timeout = busy_timeout or timeout
 
         __signaled_ = now
-        _delay_queue(timeout, True)
+        _delay_queue(timeout, preemptive)
         if not __signaled_first_:
             __signaled_first_ = __signaled_
             #print 'first',
@@ -385,11 +385,14 @@ def queue(view, callback, timeout, busy_timeout=None, preemptive=False, args=[],
 
 
 def _delay_queue(timeout, preemptive):
-    global __signaled_
+    global __signaled_, __queued_
     now = time.time()
+    if not preemptive and now <= __queued_ + 0.01:
+        return  # never delay queues too fast (except preemptively)
+    __queued_ = now
     _timeout = float(timeout) / 1000
     if __signaled_first_:
-        if now - __signaled_first_ + _timeout > MAX_DELAY:
+        if MAX_DELAY > 0 and now - __signaled_first_ + _timeout > MAX_DELAY:
             _timeout -= now - __signaled_first_
             if _timeout < 0:
                 _timeout = 0
@@ -397,7 +400,7 @@ def _delay_queue(timeout, preemptive):
     new__signaled_ = now + _timeout - 0.01
     if __signaled_ >= now - 0.01 and (preemptive or new__signaled_ >= __signaled_ - 0.01):
         __signaled_ = new__signaled_
-        #print 'delayed to', (__signaled_ - now)
+        #print 'delayed to', (preemptive, __signaled_ - now)
 
         def _signal():
             if time.time() < __signaled_:
@@ -418,6 +421,7 @@ def delay_queue(timeout):
 # when saving it often.
 __semaphore_ = threading.Semaphore(0)
 __lock_ = threading.Lock()
+__queued_ = 0
 __signaled_ = 0
 __signaled_first_ = 0
 
