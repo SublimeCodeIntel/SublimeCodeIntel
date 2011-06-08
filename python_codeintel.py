@@ -474,6 +474,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         return
     is_scratch = view.is_scratch()
     is_dirty = view.is_dirty()
+    folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
 
     def _codeintel_scan():
         global _ci_mgr_, despair, despaired
@@ -483,6 +484,8 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         now = time.time()
         try:
             env = _ci_envs_[path]
+            if env._folders != folders:
+                raise KeyError
             mgr = _ci_mgr_
             if now > env._time:
                 mtime = max(tryGetMTime(env._config_file), tryGetMTime(env._config_default_file))
@@ -559,13 +562,12 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 log.error("Malformed configuration file '%s': %s" % (config_default_file, e))
             config.update(_config.get(lang, {}))
             for conf in ['pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths']:
-                v = config.get(conf)
-                if v and isinstance(v, (list, tuple)):
-                    v = [p.strip() for p in v if p.strip()]
-                    config[conf] = os.pathsep.join(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join(project_base_dir, p)) if project_base_dir else p for p in v if p.strip())
+                v = [p.strip() for p in config.get(conf, []) + folders if p.strip()]
+                config[conf] = os.pathsep.join(set(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join(project_base_dir, p)) if project_base_dir else p for p in v if p.strip()))
 
             env = SimplePrefsEnvironment(**config)
             env._mtime = mtime or max(tryGetMTime(config_file), tryGetMTime(config_default_file))
+            env._folders = folders
             env._config_default_file = config_default_file
             env._project_dir = project_dir
             env._project_base_dir = project_base_dir
