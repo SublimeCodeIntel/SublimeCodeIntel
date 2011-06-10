@@ -77,7 +77,7 @@ __file__ = os.path.normpath(os.path.abspath(__file__))
 __path__ = os.path.dirname(__file__)
 libs_path = os.path.join(__path__, 'libs')
 if libs_path not in sys.path:
-    sys.path.append(libs_path)
+    sys.path.insert(0, libs_path)
 
 from codeintel2.common import *
 from codeintel2.manager import Manager

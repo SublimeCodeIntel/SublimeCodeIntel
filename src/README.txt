@@ -6,6 +6,7 @@ Patches applied to 3rd-party modules to be used by SublimeCodeIntel.
 * SilverCity patched to compile with scintilla 210
 * scintilla patched to add User Language Definitions and XML, using 210 instead 
 	of the older bundled version with SilverCity.
+* sgmlop patched to have '%' symbol as PI and send positions to Parsers.
 
 For platforms with a *nix shell, use ./build.sh to build and "deploy" the needed 
 binary files (_SilverCity.so and ciElementTree.so) for SublimeCodeIntel to work. 

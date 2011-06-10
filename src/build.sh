@@ -1,4 +1,9 @@
 #!/bin/sh
+unzip sgmlop-1.1.1-20040207.zip && \
+cd sgmlop-1.1.1-20040207 && \
+cat ../sgmlop*.patch | patch -sup1 && \
+python setup.py build && \
+cd .. && \
 tar xzf scintilla210.tgz && \
 cd scintilla && \
 cat ../scintilla*.patch | patch -sup1 && \
@@ -13,6 +18,7 @@ cd cElementTree-1.0.5-20051216 && \
 cat ../cElementTree-1.0.5-20051216.patch/*.patch | patch -sup1 && \
 python setup.py build && \
 cd .. && \
+find . -type f -name sgmlop.so -exec cp {} ../libs/_local_arch \; && \
 find . -type f -name _SilverCity.so -exec cp {} ../libs/_local_arch \; && \
 find . -type f -name ciElementTree.so -exec cp {} ../libs/_local_arch \; &&\
 rm -rf cElementTree-1.0.5-20051216 &&\
