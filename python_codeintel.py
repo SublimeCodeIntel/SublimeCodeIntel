@@ -29,6 +29,10 @@ CodeIntel is a plugin intended to display "code intelligence" information.
 The plugin is based in code from the Open Komodo Editor and has a MPL license.
 Port by German M. Bravo (Kronuz). May 30, 2011
 
+For Manual autocompletion:
+    Setup in User Key Bindings (Packages/User/Default.sublime-keymap):
+        { "keys": ["super+j"], "command": "code_intel_auto_complete" }
+
 For "Jump to symbol declaration":
     Setup in User Key Bindings (Packages/User/Default.sublime-keymap):
         { "keys": ["super+f3"], "command": "goto_python_definition" }
@@ -86,7 +90,7 @@ from codeintel2.environment import SimplePrefsEnvironment
 from codeintel2.util import guess_lang_from_path
 
 
-QUEUE = {}     # views waiting to be processed by linter
+QUEUE = {}  # views waiting to be processed by linter
 
 
 # Setup the complex logging (status bar gets stuff from there):
@@ -126,6 +130,7 @@ old_pos = None
 despair = 0
 despaired = False
 
+completions = {}
 sentinel = {}
 status_msg = {}
 status_lineno = {}
@@ -198,7 +203,35 @@ def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
     calltip(view, type, msg, timeout=timeout, delay=delay, id=id + '-' + type, logger=getattr(log, type, None))
 
 
+def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs={}):
+    def _autocomplete_callback(view, path):
+        id = view.id()
+        content = view.substr(sublime.Region(0, view.size()))
+        if content:
+            pos = view.sel()[0].end()
+            #TODO: For the sentinel to work, we need to send a prefix to the completions... but no show_completions() currently available
+            #pos = sentinel[path] if sentinel[path] is not None else view.sel()[0].end()
+            lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
+
+            def _trigger(cplns, calltips):
+                if cplns is not None:
+                    # Show autocompletions:
+                    completions[id] = sorted(
+                        [('%s  (%s)' % (name, type), name) for type, name in cplns],
+                        cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
+                    )
+                    sublime.set_timeout(lambda: view.run_command('auto_complete', {'disable_auto_insert': True}), 0)
+                elif calltips is not None:
+                    # Trigger a tooltip
+                    calltip(view, 'tip', calltips[0])
+            sentinel[path] = None
+            codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
+    # If it's a fill char, queue using lower values and preemptive behavior
+    queue(view, _autocomplete_callback, timeout, busy_timeout, preemptive, args=args, kwargs=kwargs)
+
+
 class PythonCodeIntel(sublime_plugin.EventListener):
+
     def on_close(self, view):
         path = view.file_name()
         status_lock.acquire()
@@ -229,29 +262,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         if not live and text and sentinel[path] is not None:
             live = True
         if live:
-            def _autocomplete_callback(view, path):
-                content = view.substr(sublime.Region(0, view.size()))
-                if content:
-                    pos = view.sel()[0].end()
-                    #TODO: For the sentinel to work, we need to send a prefix to the completions... but no show_completions() currently available
-                    #pos = sentinel[path] if sentinel[path] is not None else view.sel()[0].end()
-                    lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
-
-                    def _trigger(cplns, calltips):
-                        if cplns is not None:
-                            # Show autocompletions:
-                            self.completions = sorted(
-                                [('%s  (%s)' % (name, type), name) for type, name in cplns],
-                                cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
-                            )
-                            sublime.set_timeout(lambda: view.run_command('auto_complete'), 0)
-                        elif calltips is not None:
-                            # Trigger a tooltip
-                            calltip(view, 'tip', calltips[0])
-                    sentinel[path] = None
-                    codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
-            # If it's a fill char, queue using lower values and preemptive behavior
-            queue(view, _autocomplete_callback, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path])
+            autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path])
         else:
             def _scan_callback(view, path):
                 content = view.substr(sublime.Region(0, view.size()))
@@ -277,10 +288,17 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                 calltip(view, "", id=id)
 
     def on_query_completions(self, view, prefix, locations):
-        completions = getattr(self, 'completions', [])
-        self.completions = []
-        return completions
+        id = view.id()
+        _completions = completions.get(id, [])
+        del completions[id]
+        return _completions
 
+
+class CodeIntelAutoComplete(sublime_plugin.TextCommand):
+    def run(self, edit, block=False):
+        view = self.view
+        path = view.file_name()
+        autocomplete(view, 0, 0, True, args=[path])
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
     def run(self, edit, block=False):
