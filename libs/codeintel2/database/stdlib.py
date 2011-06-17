@@ -576,39 +576,36 @@ class StdLibsZone(object):
         LEN_PREFIX = self.db.LEN_PREFIX
         is_hits_from_lpath_lang = lang in self.db.import_everything_langs
         blob_index = {} # {blobname -> dbfile}
-        if is_hits_from_lpath_lang:
-            toplevelname_index = {} # {ilk -> toplevelname -> blobnames}
-            toplevelprefix_index = {} # {ilk -> prefix -> toplevelnames}
+        toplevelname_index = {} # {ilk -> toplevelname -> blobnames}
+        toplevelprefix_index = {} # {ilk -> prefix -> toplevelnames}
         for blob in tree.findall("file/scope"):
             assert lang == blob.get("lang")
             blobname = blob.get("name")
             dbfile = self.db.bhash_from_blob_info(cix_path, lang, blobname)
             blob_index[blobname] = dbfile
             ET.ElementTree(blob).write(join(dbdir, dbfile+".blob"))
-            if is_hits_from_lpath_lang:
-                for toplevelname, elem in blob.names.iteritems():
-                    if "__local__" in elem.get("attributes", "").split():
-                        # this is internal to the stdlib
-                        continue
-                    ilk = elem.get("ilk") or elem.tag
-                    bft = toplevelname_index.setdefault(ilk, {})
-                    if toplevelname not in bft:
-                        bft[toplevelname] = set([blobname])
-                    else:
-                        bft[toplevelname].add(blobname)
-                    prefix = toplevelname[:LEN_PREFIX]
-                    tfp = toplevelprefix_index.setdefault(ilk, {})
-                    if prefix not in tfp:
-                        tfp[prefix] = set([toplevelname])
-                    else:
-                        tfp[prefix].add(toplevelname)
+            for toplevelname, elem in blob.names.iteritems():
+                if "__local__" in elem.get("attributes", "").split():
+                    # this is internal to the stdlib
+                    continue
+                ilk = elem.get("ilk") or elem.tag
+                bft = toplevelname_index.setdefault(ilk, {})
+                if toplevelname not in bft:
+                    bft[toplevelname] = set([blobname])
+                else:
+                    bft[toplevelname].add(blobname)
+                prefix = toplevelname[:LEN_PREFIX]
+                tfp = toplevelprefix_index.setdefault(ilk, {})
+                if prefix not in tfp:
+                    tfp[prefix] = set([toplevelname])
+                else:
+                    tfp[prefix].add(toplevelname)
 
         self.db.save_pickle(join(dbdir, "blob_index"), blob_index)
-        if is_hits_from_lpath_lang:
-            self.db.save_pickle(join(dbdir, "toplevelname_index"),
-                                toplevelname_index)
-            self.db.save_pickle(join(dbdir, "toplevelprefix_index"),
-                                toplevelprefix_index)
+        self.db.save_pickle(join(dbdir, "toplevelname_index"),
+                            toplevelname_index)
+        self.db.save_pickle(join(dbdir, "toplevelprefix_index"),
+                            toplevelprefix_index)
 
         mtime = os.stat(cix_path).st_mtime
         self.res_index[res.area_path] = mtime

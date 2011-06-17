@@ -145,21 +145,29 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         'started_in_builtin_window_scope' is used for.
         """
         blob, lpath = scoperef
+        global_var = self._global_var
         if not started_in_builtin_window_scope \
-           and lpath == ["Window"] and blob is self.built_in_blob:
+           and lpath == [global_var] and blob is self.built_in_blob:
             return None
         elif lpath:
             return (blob, lpath[:-1])
         elif blob is self.built_in_blob:
             if started_in_builtin_window_scope:
                 return None
-            elif self.lang != "JavaScript":
-                # not JavaScript, don't assume Window is toplevel
-                return None
-            else:
-                return (self.built_in_blob, ["Window"])
+            elif global_var is not None:
+                return (self.built_in_blob, [global_var])
         else:
             return (self.built_in_blob, [])
+
+    @property
+    def _global_var(self):
+        """
+        The type of the global variable
+        """
+        return {
+            "JavaScript": "Window",
+            "Node.js":    "global",
+        }.get(self.lang)
 
     _langintel = None
     @property
@@ -219,7 +227,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                     self.log("push scope to class ctor %s", scoperef)
 
         started_in_builtin_window_scope = (scoperef[0] is self.built_in_blob
-            and scoperef[1] and scoperef[1][0] == "Window")
+            and scoperef[1] and scoperef[1][0] == self._global_var)
         while 1:
             try:
                 elem = self._elem_from_scoperef(scoperef)
@@ -466,9 +474,9 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             if requirename is not None:
                 import codeintel2.lang_javascript
                 requirename = codeintel2.lang_javascript.Utils.unquoteJsString(requirename)
-                self.log("_hits_from_call: resolving CommonJS require(%s)",
+                self.log("_hits_from_call: resolving CommonJS require(%r)",
                          requirename)
-                hits = self._hits_from_commonjs_require(requirename)
+                hits = self._hits_from_commonjs_require(requirename, scoperef)
                 if len(hits) > 0:
                     return hits
 
@@ -613,7 +621,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             self.log("_hits_from_variable_type_inference: resolving require(%r)",
                      requirename)
             if requirename:
-                hits = self._hits_from_commonjs_require(requirename)
+                hits = self._hits_from_commonjs_require(requirename, scoperef)
                 if hits:
                     return hits
         return self._hits_from_citdl(citdl, scoperef)
@@ -716,7 +724,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
 
         return hits, nconsumed
 
-    def _hits_from_commonjs_require(self, requirename):
+    def _hits_from_commonjs_require(self, requirename, scoperef):
         """Resolve hits from a CommonJS require() invocation"""
         # Files usually end with a ".js" suffix, though others are like
         # ".node" are possible.
@@ -780,6 +788,8 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                         hit_elem = elem.names[name]
                         if "__local__" in hit_elem.get("attributes", "").split():
                             # Skip things that should be local to the parent scope
+                            #self.log("_completion_names_from_scope:: skipping local %r",
+                            #         name)
                             continue
                         all_completions[name] = hit_elem.get("ilk") or hit_elem.tag
             # Continue walking up the scope chain...

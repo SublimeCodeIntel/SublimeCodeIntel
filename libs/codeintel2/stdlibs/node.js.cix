@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <codeintel version="2.0">
-  <file lang="Node.js" mtime="1306528981" path="node_globals.cix">
+  <file lang="Node.js" mtime="1306788389" path="node_globals.cix">
     <scope doc="These object are available in all modules. Some of these objects aren't actually in the global scope but in the module scope - this will be noted." ilk="blob" lang="Node.js" name="*">
       <variable citdl="require()" doc="Used to print to stdout and stderr. See the stdio section." name="console" required_library_name="console"/>
       <variable citdl="require()" doc="The process object. See the process object section." name="process" required_library_name="process"/>
@@ -16,6 +16,11 @@
       <variable citdl="timers.clearInterval" name="clearInterval"/>
       <variable citdl="String" doc="The filename of the script being executed. This is the absolute path, and not necessarily the same filename passed in as a command line argument." name="__filename"/>
       <variable citdl="String" doc="The dirname of the script being executed." name="__dirname"/>
+      <scope doc="A reference to the current module. In particular module.exports is the same as the exports object. See src/node.js for more information. module isn't actually a global but rather local to each module." ilk="namespace" name="module">
+        <scope ilk="namespace" name="exports"/>
+      </scope>
+      <variable citdl="module.exports" name="exports"/>
+      <variable citdl="*" name="global"/>
       <variable name="Infinity"/>
       <variable name="NaN"/>
       <variable name="undefined"/>
