@@ -4,27 +4,27 @@ Sublime CodeIntel
 Code intelligence plugin ported from Open Komodo Editor to the [Sublime Text 2](http://sublimetext.com "Sublime Text 2") editor.
 
 Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2):
-    PHP, Python, RHTML, JavaScript, Smarty, Mason, Node.js, XBL, Tcl, HTML, HTML5, TemplateToolkit, XUL, Django, Perl, Ruby, Python3
+    PHP, Python, RHTML, JavaScript, Smarty, Mason, Node.js, XBL, Tcl, HTML, HTML5, TemplateToolkit, XUL, Django, Perl, Ruby, Python3.
 
 Provides the following features:
 
 * Jump to Symbol Definition - Jump to the file and line of the definition of a symbol.
-* Imports autocomplete - Shows autocomplet with the available modules/symbols in real time.
+* Imports autocomplete - Shows autocomplete with the available modules/symbols in real time.
 * Function Call tooltips - Displays information in the status bar about the working function.
 
-Currently it only works on MacOS X. Two libraries need to be compiled for it to work in other platforms: `SilverCity` and `ciElements`.
+Plugin should work in all three platforms (MacOS X, Windows and Linux).
 
 
 Installing
 ----------
 *Without Git:* Download the latest source from http://github.com/Kronuz/SublimeCodeIntel and copy the whole directory into the Packages directory.
 
-*With Git:* Clone the repository in your Sublime Text Packages directory (located one folder above the "User" directory)
+*With Git:* Clone the repository in your Sublime Text 2 Packages directory, located somewhere in user's "Home" directory:
 
 > git clone git://github.com/Kronuz/SublimeCodeIntel.git
 
 
-The "User" packages directory is located at:
+The "Packages" packages directory is located at:
 
 * Windows:
     %APPDATA%/Sublime Text 2/Packages/
@@ -36,16 +36,19 @@ The "User" packages directory is located at:
 
 Configuring
 -----------
-Don't forget to add key or mouse bindings. For "Jump to Symbol Declaration".
-This will allow you to jump around symbol definitions across files with just a click.
+Don't forget to add key and/or mouse bindings. For "Jump to Symbol Declaration" and manual completion.
+These will allow you to jump around symbol definitions across files with just a click.
 
 * Setup in User Key Bindings (Packages/User/Default.sublime-keymap):
 
+        { "keys": ["super+j"], "command": "code_intel_auto_complete" },
         { "keys": ["super+f3"], "command": "goto_python_definition" }
 
-* ...or in User Mouse Bindings (Packages/User/Default.sublime-mousemap):
+* ...and in User Mouse Bindings (Packages/User/Default.sublime-mousemap):
 
         { "button": "button1", "modifiers": ["super"], "command": "goto_python_definition", "press_command": "drag_select" }
+
+For adding additional library paths (django and extra libs paths for Python or extra paths to look for .js files for JavaScript for example), either add those paths as folders to your project, or create an optional codeintel configuration file in your home or in your project's root.
 
 Configuration files (`~/.codeintel/config` or `project_root/.codeintel/config`). All configurations are optional. Example::
 
@@ -76,13 +79,15 @@ Configuration files (`~/.codeintel/config` or `project_root/.codeintel/config`).
         }
     }
 
+
 Using
 -----
-Start typing, use the `goto_python_definition` with the key or mouse bindings.
+Start typing or use the `goto_python_definition` with the key or mouse bindings.
 
 Don't despair! The first time you use it it needs to build some indexes and it can take more than a few seconds (around six in my configuration).
 
 It just works!
+
 
 LICENSE
 -------
