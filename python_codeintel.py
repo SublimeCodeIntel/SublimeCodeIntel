@@ -105,7 +105,7 @@ codeintel_log = logging.getLogger("codeintel")
 log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [codeintel_hdlr]
 log.handlers = [stderr_hdlr]
-codeintel_log.setLevel(logging.INFO)  # INFO/ERROR
+codeintel_log.setLevel(logging.DEBUG)  # INFO/ERROR
 logging.getLogger("codeintel.db").setLevel(logging.INFO)  # INFO
 log.setLevel(logging.ERROR)  # ERROR
 
@@ -214,6 +214,8 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
             lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
 
             def _trigger(cplns, calltips):
+                if cplns is not None or calltips is not None:
+                    codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
                 if cplns is not None:
                     # Show autocompletions:
                     completions[id] = sorted(
@@ -315,7 +317,9 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                 if defn.path and defn.line:
                     if defn.line != 1 or defn.path != file_name:
                         path = defn.path + ':' + str(defn.line)
-                        log.debug('Jumping to: %s', path)
+                        msg = 'Jumping to: %s' % path
+                        log.debug(msg)
+                        codeintel_log.debug(msg)
 
                         def __trigger():
                             window = sublime.active_window()
@@ -573,11 +577,15 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             try:
                 tryReadDict(config_default_file, _config)
             except Exception, e:
-                log.error("Malformed configuration file '%s': %s" % (config_default_file, e))
+                msg = "Malformed configuration file '%s': %s" % (config_default_file, e)
+                log.error(msg)
+                codeintel_log.error(msg)
             try:
                 tryReadDict(config_file, _config)
             except Exception, e:
-                log.error("Malformed configuration file '%s': %s" % (config_default_file, e))
+                msg = "Malformed configuration file '%s': %s" % (config_default_file, e)
+                log.error(msg)
+                codeintel_log.error(msg)
             config.update(_config.get(lang, {}))
             for conf in ['pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths']:
                 v = [p.strip() for p in config.get(conf, []) + folders if p.strip()]
@@ -619,7 +627,9 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 try:
                     buf.scan(mtime=mtime, skip_scan_time_check=is_dirty)
                 except KeyError:
-                    log.debug("Invalid language: %s. Available: %s" % (lang, ', '.join(mgr.citadel._cile_driver_from_lang)))
+                    msg = "Invalid language: %s. Available: %s" % (lang, ', '.join(mgr.citadel._cile_driver_from_lang))
+                    log.debug(msg)
+                    codeintel_log.debug(msg)
         if callback:
             callback(buf, msgs)
         else:
@@ -643,8 +653,12 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             trg = buf.trg_from_pos(pos2bytes(content, pos))
             defn_trg = buf.defn_trg_from_pos(pos2bytes(content, pos))
         except (CodeIntelError, AttributeError):
+            codeintel_log.exception("Exception! %s:%s (%s)" % (path or '<Unsaved>', pos, lang))
             trg = None
             defn_trg = None
+        except:
+            codeintel_log.exception("Exception! %s:%s (%s)" % (path or '<Unsaved>', pos, lang))
+            raise
         else:
             eval_log_stream = StringIO()
             _hdlrs = codeintel_log.handlers
