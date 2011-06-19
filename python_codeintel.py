@@ -102,11 +102,16 @@ codeintel_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(messag
 stderr_hdlr = logging.StreamHandler(sys.stderr)
 stderr_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
 codeintel_log = logging.getLogger("codeintel")
+condeintel_log_file = ''
 log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [codeintel_hdlr]
 log.handlers = [stderr_hdlr]
-codeintel_log.setLevel(logging.DEBUG)  # INFO/ERROR
+codeintel_log.setLevel(logging.INFO)  # INFO/ERROR
 logging.getLogger("codeintel.db").setLevel(logging.INFO)  # INFO
+for lang in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
+             'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
+             'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
+    logging.getLogger("codeintel."+lang).setLevel(logging.DEBUG)  # DEBUG
 log.setLevel(logging.ERROR)  # ERROR
 
 cpln_fillup_chars = {
@@ -557,7 +562,8 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 mgr.initialize()
 
                 # Connect the logging file to the handler
-                codeintel_log.handlers = [logging.StreamHandler(open(os.path.join(mgr.db.base_dir, 'codeintel.log'), 'w', 1))]
+                condeintel_log_file = os.path.join(mgr.db.base_dir, 'codeintel.log')
+                codeintel_log.handlers = [logging.StreamHandler(open(condeintel_log_file, 'w', 1))]
                 msg = "Starting logging SublimeCodeIntel rev %s (%s) on %s" % (get_git_revision()[:12], os.stat(__file__)[stat.ST_MTIME], datetime.datetime.now().ctime())
                 codeintel_log.info("%s\n%s" % (msg, "=" * len(msg)))
 
@@ -650,14 +656,16 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             return [None] * len(forms)
 
         try:
-            trg = buf.trg_from_pos(pos2bytes(content, pos))
-            defn_trg = buf.defn_trg_from_pos(pos2bytes(content, pos))
-        except (CodeIntelError, AttributeError):
+            trg = getattr(buf, 'trg_from_pos', lambda p: None)(pos2bytes(content, pos))
+            defn_trg = getattr(buf, 'defn_trg_from_pos', lambda p: None)(pos2bytes(content, pos))
+        except (CodeIntelError):
             codeintel_log.exception("Exception! %s:%s (%s)" % (path or '<Unsaved>', pos, lang))
+            logger(view, 'info', "Error indexing! Please send the log file: '%s" % condeintel_log_file)
             trg = None
             defn_trg = None
         except:
             codeintel_log.exception("Exception! %s:%s (%s)" % (path or '<Unsaved>', pos, lang))
+            logger(view, 'info', "Error indexing! Please send the log file: '%s" % condeintel_log_file)
             raise
         else:
             eval_log_stream = StringIO()
