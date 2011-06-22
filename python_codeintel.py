@@ -296,9 +296,11 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
         id = view.id()
-        _completions = completions.get(id, [])
-        del completions[id]
-        return _completions
+        if id in completions:
+            _completions = completions[id]
+            del completions[id]
+            return _completions
+        return []
 
 
 class CodeIntelAutoComplete(sublime_plugin.TextCommand):
