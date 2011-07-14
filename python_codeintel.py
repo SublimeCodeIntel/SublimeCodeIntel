@@ -227,7 +227,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                         [('%s  (%s)' % (name, type), name) for type, name in cplns],
                         cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
                     )
-                    sublime.set_timeout(lambda: view.run_command('auto_complete', {'disable_auto_insert': True}), 0)
+                    view.run_command('auto_complete', {'disable_auto_insert': True})
                 elif calltips is not None:
                     # Trigger a tooltip
                     calltip(view, 'tip', calltips[0])
@@ -328,11 +328,9 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                         log.debug(msg)
                         codeintel_log.debug(msg)
 
-                        def __trigger():
-                            window = sublime.active_window()
-                            window.open_file(path, sublime.ENCODED_POSITION)
-                            window.open_file(path, sublime.ENCODED_POSITION)
-                        sublime.set_timeout(__trigger, 0)
+                        window = sublime.active_window()
+                        window.open_file(path, sublime.ENCODED_POSITION)
+                        window.open_file(path, sublime.ENCODED_POSITION)
         codeintel(view, path, content, lang, pos, ('defns',), _trigger)
 
 _ci_envs_ = {}
@@ -717,9 +715,11 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             ret.append(l.get(f))
         total = (time.time() - start)
         if not despaired or total * 1000 < timeout:
+            def _callback():
+                if view.line(view.sel()[0]) == view.line(pos):
+                    callback(*ret)
             logger(view, 'info', "")
-            if view.line(view.sel()[0]) == view.line(pos):
-                callback(*ret)
+            sublime.set_timeout(_callback, 0)
         else:
             logger(view, 'info', "Just finished indexing! Please try again. Scan took %s" % total, timeout=3000)
     codeintel_scan(view, path, content, lang, _codeintel, pos, forms)
