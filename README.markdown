@@ -39,7 +39,7 @@ Using
 
 * Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click. To "Jump to Symbol Declaration" use `super+f3` or `alt+click` over the symbol.
 
-* Start typing code as usuarl, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use `super+j`.
+* Start typing code as usual, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use `super+j`.
 
 Don't despair! The first time you use it it needs to build some indexes and it can take more than a few seconds (around six in my configuration).
 
@@ -86,7 +86,7 @@ Additional settings can be configured in the User File Settings:
 * A list of disabled languages can be set using "codeintel_disabled_languages". Ex. ``"codeintel_disabled_languages": ['css']`
 
 
-LICENSE
+License
 -------
 The plugin is based in code from the Open Komodo Editor and has a MPL license.
 
