@@ -36,17 +36,11 @@ The "Packages" packages directory is located at:
 
 Configuring
 -----------
-Don't forget to add key and/or mouse bindings. For "Jump to Symbol Declaration" and manual completion.
-These will allow you to jump around symbol definitions across files with just a click.
+Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click.
 
-* Setup in User Key Bindings (Packages/User/Default.sublime-keymap):
+* To "Jump to Symbol Declaration" use `super+f3` or `alt+click` over the symbol.
 
-        { "keys": ["super+j"], "command": "code_intel_auto_complete" },
-        { "keys": ["super+f3"], "command": "goto_python_definition" }
-
-* ...and in User Mouse Bindings (Packages/User/Default.sublime-mousemap):
-
-        { "button": "button1", "modifiers": ["super"], "command": "goto_python_definition", "press_command": "drag_select" }
+* To trigger manual codeintel autocompletion use `super+j`.
 
 For adding additional library paths (django and extra libs paths for Python or extra paths to look for .js files for JavaScript for example), either add those paths as folders to your project, or create an optional codeintel configuration file in your home or in your project's root.
 
