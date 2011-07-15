@@ -214,7 +214,11 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
         content = view.substr(sublime.Region(0, view.size()))
         sel = view.sel()[0]
         pos = sel.end()
-        if pos and content and content[view.line(sel).begin():pos].strip():
+        try:
+            next = content[pos].strip()
+        except IndexError:
+            next = ''
+        if pos and content and content[view.line(sel).begin():pos].strip() and not next.isalnum() and next != '_':
             #TODO: For the sentinel to work, we need to send a prefix to the completions... but no show_completions() currently available
             #pos = sentinel[path] if sentinel[path] is not None else view.sel()[0].end()
             lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
