@@ -226,7 +226,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
             def _trigger(cplns, calltips):
                 if cplns is not None or calltips is not None:
                     codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
-                if cplns is not None:
+                if cplns:
                     # Show autocompletions:
                     completions[id] = sorted(
                         [('%s  (%s)' % (name, type), name) for type, name in cplns],
