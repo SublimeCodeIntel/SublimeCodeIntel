@@ -80,6 +80,15 @@ Configuration files (`~/.codeintel/config` or `project_root/.codeintel/config`).
     }
 
 
+Settings
+--------
+Additional settings can be configured in the User File Settings:
+
+* Live autocomplete can be disabled by setting "codeintel_live" to false.
+
+* A list of disabled languages can be set using "codeintel_disabled_languages". Ex. ``"codeintel_disabled_languages": ['css']`
+
+
 Using
 -----
 Start typing or use the `goto_python_definition` with the key or mouse bindings.

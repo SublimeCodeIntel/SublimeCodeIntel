@@ -260,7 +260,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             lang = lang or guess_lang_from_path(path)
         except CodeIntelError:
             pass
-        live = view.settings().get('codeinte_live', True)
+        live = view.settings().get('codeintel_live', True)
         pos = view.sel()[0].end()
         text = view.substr(sublime.Region(pos - 1, pos))
         _sentinel = sentinel.get(path)
@@ -498,6 +498,8 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         lang = lang or guess_lang_from_path(path)
     except CodeIntelError:
         logger(view, 'warning', "skip `%s': couldn't determine language" % path)
+        return
+    if lang.lower() in [l.lower() for l in view.settings().get('codeintel_disabled_languages', [])]:
         return
     is_scratch = view.is_scratch()
     is_dirty = view.is_dirty()
