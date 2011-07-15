@@ -874,7 +874,7 @@ for attr, details in CSS3_DATA.items():
     if attr_completions:
         CSS3_SPECIFIC_ATTRS_DICT[attr] = attr_completions
     else:
-        CSS3_SPECIFIC_ATTRS_DICT[attr] = None
+        CSS3_SPECIFIC_ATTRS_DICT[attr] = {}
     description = details.get("description")
     if description:
         desc_lines = textwrap.wrap(description, width=60)
