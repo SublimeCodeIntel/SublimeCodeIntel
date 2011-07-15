@@ -34,14 +34,20 @@ The "Packages" packages directory is located at:
     ~/.Sublime Text 2/Packages/
 
 
+Using
+-----
+
+* Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click. To "Jump to Symbol Declaration" use `super+f3` or `alt+click` over the symbol.
+
+* Start typing code as usuarl, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use `super+j`.
+
+Don't despair! The first time you use it it needs to build some indexes and it can take more than a few seconds (around six in my configuration).
+
+It just works!
+
+
 Configuring
 -----------
-Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click.
-
-* To "Jump to Symbol Declaration" use `super+f3` or `alt+click` over the symbol.
-
-* To trigger manual codeintel autocompletion use `super+j`.
-
 For adding additional library paths (django and extra libs paths for Python or extra paths to look for .js files for JavaScript for example), either add those paths as folders to your project, or create an optional codeintel configuration file in your home or in your project's root.
 
 Configuration files (`~/.codeintel/config` or `project_root/.codeintel/config`). All configurations are optional. Example::
@@ -73,23 +79,11 @@ Configuration files (`~/.codeintel/config` or `project_root/.codeintel/config`).
         }
     }
 
-
-Settings
---------
 Additional settings can be configured in the User File Settings:
 
 * Live autocomplete can be disabled by setting "codeintel_live" to false.
 
 * A list of disabled languages can be set using "codeintel_disabled_languages". Ex. ``"codeintel_disabled_languages": ['css']`
-
-
-Using
------
-Start typing or use the `goto_python_definition` with the key or mouse bindings.
-
-Don't despair! The first time you use it it needs to build some indexes and it can take more than a few seconds (around six in my configuration).
-
-It just works!
 
 
 LICENSE
