@@ -212,8 +212,9 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
     def _autocomplete_callback(view, path):
         id = view.id()
         content = view.substr(sublime.Region(0, view.size()))
-        pos = view.sel()[0].end()
-        if pos and content and content[pos-1].strip():
+        sel = view.sel()[0]
+        pos = sel.end()
+        if pos and content and content[view.line(sel).begin():pos].strip():
             #TODO: For the sentinel to work, we need to send a prefix to the completions... but no show_completions() currently available
             #pos = sentinel[path] if sentinel[path] is not None else view.sel()[0].end()
             lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
@@ -308,6 +309,7 @@ class CodeIntelAutoComplete(sublime_plugin.TextCommand):
         view = self.view
         path = view.file_name()
         autocomplete(view, 0, 0, True, args=[path])
+
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
     def run(self, edit, block=False):
@@ -499,6 +501,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     except CodeIntelError:
         logger(view, 'warning', "skip `%s': couldn't determine language" % path)
         return
+    lang = {'SCSS': 'CSS'}.get(lang, lang)  # Languages equivalent map
     if lang.lower() in [l.lower() for l in view.settings().get('codeintel_disabled_languages', [])]:
         return
     is_scratch = view.is_scratch()
