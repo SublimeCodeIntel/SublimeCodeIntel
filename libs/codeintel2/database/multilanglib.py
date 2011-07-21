@@ -560,6 +560,17 @@ class MultiLangZone(LangZone):
                             toplevelnames_from_ilk[ilk] = set([toplevelname])
                         else:
                             toplevelnames_from_ilk[ilk].add(toplevelname)
+                        # For PHP namespaces, we also want to add all namespace
+                        # child items, as this will make it easy for tree_php
+                        # to lookup a Fully Qualified Namespace (FQN).
+                        if ilk == "namespace" and lang == "PHP":
+                            for childname, childelem in elem.names.iteritems():
+                                child_ilk = childelem.get("ilk") or childelem.tag
+                                child_fqn = "%s\\%s" % (toplevelname, childname)
+                                if child_ilk not in toplevelnames_from_ilk:
+                                    toplevelnames_from_ilk[child_ilk] = set([child_fqn])
+                                else:
+                                    toplevelnames_from_ilk[child_ilk].add(child_fqn)
 
             # Determine necessary changes to res_index.
             if scan_error:
@@ -792,6 +803,7 @@ class MultiLangDirsLib(object):
             # is elsewhere.
             self.ensure_dir_scanned(dir, ctlr=ctlr)
 
+            hit_lpath = lpath
             toplevelname_index = self.lang_zone.load_index(
                     dir, "toplevelname_index", {})
             for blobname in toplevelname_index.get_blobnames(
@@ -799,18 +811,28 @@ class MultiLangDirsLib(object):
                 if curr_buf and curr_buf_dir == dir and blobname == curr_blobname:
                     continue
                 blob = self.get_blob(blobname, ctlr=ctlr, specific_dir=dir)
+                elem = blob
                 try:
-                    elem = blob
-                    for p in lpath:
+                    for i, p in enumerate(lpath):
                         #LIMITATION: *Imported* names at each scope are
                         # not being included here. This *should* be okay for
                         # PHP because imports only add symbols to the
                         # top-level. Worse case: the user has to add another
                         # dir to his "extra-dirs" pref.
-                        elem = elem.names[p]
+                        try:
+                            elem = elem.names[p]
+                        except KeyError:
+                            if i == 0 and "\\" in p and self.lang == "PHP":
+                                # Deal with PHP namespaces.
+                                namespace, elemname = p.rsplit("\\", 1)
+                                elem = blob.names[namespace].names[elemname]
+                                # The actual hit namespace has a different hit lpath.
+                                hit_lpath = (namespace, elemname) + hit_lpath[1:]
+                            else:
+                                raise
                 except KeyError:
                     continue
-                hits.append( (elem, (blob, list(lpath[:-1]))) )
+                hits.append( (elem, (blob, list(hit_lpath[:-1]))) )
 
         return hits
 

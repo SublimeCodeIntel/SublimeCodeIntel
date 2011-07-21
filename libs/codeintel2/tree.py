@@ -336,6 +336,10 @@ class TreeEvaluator(CitadelEvaluator):
             #XXX Should we have an error handling hook here?
             self.ctlr.error("evaluating %s: %s", self, ex)
             self.ctlr.done("eval error")
+        except Exception:
+            log.exception("Unexpected error with evaluator: %s", self)
+            # Must still mark done on the ctlr to avoid leaks - bug 65502.
+            self.ctlr.done("eval error")
 
     def scope_stack_from_tree_and_linenum(self, tree, linenum):
         """Get the start scope for the given line.

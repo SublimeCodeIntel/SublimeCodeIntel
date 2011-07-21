@@ -4,9 +4,6 @@ Mozilla CSS extensions.
 
 import textwrap
 
-from codeintel2.util import CompareNPunctLast
-
-
 # Auto generated from:
 #  'src/codeintel/support/gencix/css/gen_moz_css_properties.py'
 

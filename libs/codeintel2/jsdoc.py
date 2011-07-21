@@ -234,6 +234,7 @@ class JSDoc:
     A_STATIC = 0x08
     A_CONSTANT = 0x10
     A_DEPRECATED = 0x20
+    A___LOCAL__ = 0x40
 
     def __init__(self, comment=None, strip_html_tags=False):
         self._reset()
@@ -393,6 +394,9 @@ class JSDoc:
     def _handle_deprecated(self, value):
         self.attributes |= self.A_DEPRECATED
 
+    def _handle___local__(self, value):
+        self.attributes |= self.A___LOCAL__
+
     def _handle_param(self, value):
         paramname = None
         paramtype = None
@@ -528,6 +532,10 @@ class JSDoc:
 
     def isDeprecated(self):
         return self.attributes & self.A_DEPRECATED
+
+    def is__local__(self):
+        """Komodo extension: __local__ (see cix-2.0.rng)"""
+        return self.attributes & self.A___LOCAL__
 
 
 ############################################################

@@ -105,6 +105,7 @@ lang = "JavaScript"
 log = logging.getLogger("codeintel.javascript")
 #log.setLevel(logging.DEBUG)
 #log.setLevel(logging.INFO)
+util.makePerformantLogger(log)
 
 # When enabled, will add a specific path attribute to each cix element for where
 # this element was originally created from, good for debugging gencix JavaScript
@@ -271,7 +272,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
                 return None
             if DEBUG:
                 print "Matched trigger for jsdoc completion"
-            return Trigger("JavaScript", TRG_FORM_CPLN,
+            return Trigger(lang, TRG_FORM_CPLN,
                            "jsdoc-tags", pos, implicit)
 
         # JSDoc calltip
@@ -303,7 +304,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
                     jsdoc_field = accessor.text_range(p+2, ident_found_pos+1)
                     if DEBUG:
                         print "Matched trigger for jsdoc calltip: '%s'" % (jsdoc_field, )
-                    return Trigger("JavaScript", TRG_FORM_CALLTIP,
+                    return Trigger(lang, TRG_FORM_CALLTIP,
                                    "jsdoc-tags", ident_found_pos, implicit,
                                    jsdoc_field=jsdoc_field)
                 elif not _isident(ch):
@@ -427,7 +428,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
 
             if last_char == ".":
                 if style in jsClassifier.string_styles:
-                    return Trigger("JavaScript", TRG_FORM_CPLN,
+                    return Trigger(lang, TRG_FORM_CPLN,
                                    "literal-members", pos, implicit,
                                    citdl_expr="String")
                 elif style == jsClassifier.keyword_style:
@@ -458,7 +459,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
                     if prev_text in ("function", ):
                         # Don't trigger here
                         return None
-                return Trigger("JavaScript", TRG_FORM_CALLTIP,
+                return Trigger(lang, TRG_FORM_CALLTIP,
                                "call-signature", pos, implicit)
 
         elif last_style in jsClassifier.string_styles and last_char in "\"'":
@@ -474,7 +475,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
                 # We're good to go.
                 if DEBUG:
                     print "Matched trigger for array completions"
-                return Trigger("JavaScript", TRG_FORM_CPLN,
+                return Trigger(lang, TRG_FORM_CPLN,
                                "array-members", pos, implicit,
                                bracket_pos=prev_pos, trg_char=last_char)
 
@@ -574,14 +575,14 @@ class JavaScriptLangIntel(CitadelLangIntel,
         ctlr.start(buf, trg)
 
         # JSDoc completions
-        if trg.id == ("JavaScript", TRG_FORM_CPLN, "jsdoc-tags"):
+        if trg.id == (self.lang, TRG_FORM_CPLN, "jsdoc-tags"):
             #TODO: Would like a "javadoc tag" completion image name.
             ctlr.set_cplns(self._jsdoc_cplns)
             ctlr.done("success")
             return
 
         # JSDoc calltip
-        elif trg.id == ("JavaScript", TRG_FORM_CALLTIP, "jsdoc-tags"):
+        elif trg.id == (self.lang, TRG_FORM_CALLTIP, "jsdoc-tags"):
             #TODO: Would like a "javadoc tag" completion image name.
             jsdoc_field = trg.extra.get("jsdoc_field")
             if jsdoc_field:
@@ -635,6 +636,10 @@ class JavaScriptLangIntel(CitadelLangIntel,
             extra_dirs = () # ensure retval is a tuple
         return extra_dirs
 
+    @property
+    def stdlibs(self):
+        return [self.mgr.db.get_stdlib(self.lang)]
+
     def libs_from_buf(self, buf):
         env = buf.env
 
@@ -645,7 +650,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
         cache = env.cache["javascript-buf-libs"] # <buf-weak-ref> -> <libs>
 
         if buf not in cache:
-            env.add_pref_observer("javascriptExtraPaths",
+            env.add_pref_observer(self.extraPathsPrefName,
                 self._invalidate_cache_and_rescan_extra_dirs)
             env.add_pref_observer("codeintel_selected_catalogs",
                                   self._invalidate_cache)
@@ -675,9 +680,10 @@ class JavaScriptLangIntel(CitadelLangIntel,
             # might slow down completion.
             num_import_dirs = len(extra_dirs)
             if num_import_dirs > 100:
-                db.report_event("This buffer is configured with %d JavaScript "
+                db.report_event("This buffer is configured with %d %s "
                                 "import dirs: this may result in poor "
-                                "completion performance" % num_import_dirs)
+                                "completion performance" %
+                                (num_import_dirs, self.lang))
 
             if buf.lang == self.lang:
                 # - curdirlib (before extradirslib; only if pure JS file)
@@ -685,28 +691,16 @@ class JavaScriptLangIntel(CitadelLangIntel,
                 if cwd not in extra_dirs:
                     libs.insert(0, db.get_lang_lib(self.lang, "curdirlib", [cwd]))
 
-            # - cataloglib, stdlib
-            catalog_selections = env.get_pref("codeintel_selected_catalogs")
+            # - cataloglibs
             if buf.lang == "HTML5":
                 # Implicit HTML 5 catalog additions.
                 libs.append(db.get_catalog_lib("JavaScript", ["html5"]))
+            catalog_selections = env.get_pref("codeintel_selected_catalogs")
+            libs.append(db.get_catalog_lib(self.lang, catalog_selections))
 
-            if buf.lang == "Node.js":
-                # Implicit Node.js standard library import
-                libdir = os.path.join(dirname(__file__),
-                                      "lib_srcs",
-                                      "node.js")
-                libs += [
-                    db.get_lang_lib(lang="Node.js",
-                                    name="node.js stdlib",
-                                    dirs=(libdir,)),
-                    db.get_stdlib("Node.js"),
-                ]
-            else:
-                libs += [
-                    db.get_catalog_lib("JavaScript", catalog_selections),
-                    db.get_stdlib("JavaScript"),
-                ]
+            # - stdlibs
+            libs += self.stdlibs
+
             cache[buf] = libs
         return cache[buf]
 
@@ -1240,7 +1234,7 @@ class JSObject:
         if not self.name:
             log.info("%s has no name, line: %d, ignoring it.",
                      self.cixname, self.line)
-            return
+            return None
         if self.cixname == "function":
             cixobject = createCixFunction(cixelement, self.name)
         elif self.cixname in ("object", "variable"):
@@ -1281,6 +1275,10 @@ class JSObject:
                 attributeDocs.append("CONSTRUCTOR")
                 if "__ctor__" not in self.attributes:
                     self.attributes.append("__ctor__")
+            if jsdoc.is__local__():
+                attributeDocs.append("__LOCAL__")
+                if "__local__" not in self.attributes:
+                    self.attributes.append("__local__")
             if jsdoc.tags:
                 cixobject.attrib["tags"] = jsdoc.tags
             if jsdoc.doc:
@@ -1347,13 +1345,14 @@ class JSObject:
            cixobject.get("citdl") != "Object":
             log.info("Variable of type: %r contains %d child elements, "
                      "ignoring them.", cixobject.get("citdl"), len(allValues))
-            return
+            return None
 
         # Sort and include contents
         for v in sortByLine(allValues):
             if not v.isHidden:
                 v.toElementTree(cixobject)
 
+        return cixobject
 
 class JSVariable(JSObject):
     def __init__(self, name, parent, line, depth, vartype='', doc=None,
@@ -1406,11 +1405,27 @@ class JSFunction(JSObject):
         if isinstance(parent, JSClass):
             self._class = parent
         self._parent_assigned_vars = []
+        self._callers = set()
 
     ##
     # @rtype {string or JSObject} add this possible return type
     def addReturnType(self, rtype):
         self.returnTypes.append(rtype)
+
+    def addCaller(self, caller, pos, line):
+        """Add caller information to this function"""
+        if isinstance(caller, (list, tuple)):
+            caller = ".".join(caller)
+        self._callers.add((pos, caller, line))
+
+    def toElementTree(self, cixelement):
+        cixobject = JSObject.toElementTree(self, cixelement)
+        if not cixobject:
+            return cixobject
+        for pos, caller, line in self._callers:
+            SubElement(cixobject, "caller", citdl=caller,
+                       pos=str(pos), line=str(line), attributes="__hidden__")
+        return cixobject
 
 class JSClass(JSObject):
     """A JavaScript class object (a function with a non-default .prototype)"""
@@ -1722,6 +1737,8 @@ class JavaScriptCiler:
         self.bracket_depth = 0
         self.lastText = []
         self.lastScope = None
+
+        self._metadata = {}
 
         # Document styles used for deciding what to do
         # Note: Can be customized by calling setStyleValues()
@@ -3174,6 +3191,11 @@ class JavaScriptCiler:
             else:
                 log.debug("_variableHandler:: Line %d, calling scoped variable: %r",
                           lineno, namelist)
+                for pos, obj in self.objectArguments:
+                    if not isinstance(obj, JSFunction):
+                        continue
+                    # we have a function, tell it about the caller
+                    obj.addCaller(caller=namelist, pos=pos, line=lineno)
             already_looped = True
 
     def createObjectArgument(self, styles, text):
@@ -3390,6 +3412,19 @@ class JavaScriptCiler:
                          "keeping %r", jsother.cixname, jsother.name, name,
                          d_members[name])
 
+    def _handleDefineProperty(self, styles, text, p):
+        # text example:
+        #   ['(', 'namespace', ',', '"propname"', ',', '{', ')']
+        namelist, p = self._getIdentifiersFromPos(styles, text, p+1)
+        if namelist and p+3 < len(styles) and styles[p+1] in self.JS_STRINGS:
+            propertyname = self._unquoteJsString(text[p+1])
+            if namelist == ["this"]:
+                scope = self.currentScope
+            else:
+                scope = self._findOrCreateScope(namelist, ('variables', 'classes', 'functions'))
+            v = JSVariable(propertyname, scope, self.lineno, self.depth)
+            scope.addVariable(propertyname, value=v)
+            
     def _handleYAHOOExtension(self, styles, text, p):
         # text example:
         #   ['(', 'Dog', ',', 'Mammal', ',', '{', ')']
@@ -3556,7 +3591,10 @@ class JavaScriptCiler:
             if not namelist:
                 return
             #print "namelist: %r" % (namelist, )
-            if namelist[0] == "YAHOO" and \
+            if namelist == ["Object", "defineProperty"]:
+                # Defines a property on a given scope.
+                self._handleDefineProperty(styles, text, p)
+            elif namelist[0] == "YAHOO" and \
                namelist[1:] in (["extend"], ["lang", "extend"]):
                 # XXX - Should YAHOO API catalog be enabled then?
                 self._handleYAHOOExtension(styles, text, p)
@@ -3748,17 +3786,35 @@ class JavaScriptCiler:
                         if self.state == S_IN_ARGS:
                             # __defineGetter__("num", function() { return this._num });
                             argTextPos = self.argumentTextPosition
-                            if len(self.text) > argTextPos and \
-                               self.styles[argTextPos] == self.JS_WORD and \
-                               self.text[argTextPos] == "function" and \
-                               self.text[-2] == ")":
-                                # Passing a function as one of the arguments,
-                                # need to create a JSFunction scope for this,
-                                # as various information may be needed, i.e.
-                                # a getter function return type.
-                                obj = self.addAnonymousFunction()
-                                self.objectArguments.append((self.argumentPosition, obj))
-                                self._pushAndSetState(S_DEFAULT)
+                            if len(self.text) >= 2 and self.text[-2] == ")":
+                                # foo( ... ( ... ) {
+                                # this really only makes sense as a function expression definition
+                                # foo( ... function (...) {
+                                # this function may have multiple arguments, so we can't trust
+                                # self.argumentTextPosition (which was clobbered)
+                                try:
+                                    argsStart = len(self.text) - list(reversed(self.text)).index("(")
+                                    if argsStart > 1:
+                                        functionPos = argsStart - 2 # position of "function" keyword
+                                        if self.styles[functionPos] == self.JS_IDENTIFIER: # named function
+                                            functionPos -= 1
+                                        if functionPos > -1 and \
+                                           self.styles[functionPos] == self.JS_WORD and \
+                                           self.text[functionPos] == "function":
+                                            # this is indeed a function; check arguments for sanity
+                                            args = self.text[argsStart:-2]
+                                            if all(x == ',' for x in args[1::2]):
+                                                # Passing a function as one of the arguments,
+                                                # need to create a JSFunction scope for this,
+                                                # as various information may be needed, i.e.
+                                                # a getter function return type.
+                                                obj = self.addAnonymousFunction(args=args[::2])
+                                                # don't append to self.objectArguments here, we do
+                                                # it later when we see the closing brace
+                                                self._pushAndSetState(S_DEFAULT)
+                                except ValueError:
+                                    # no "(" found in self.text
+                                    pass
                             elif len(self.text) >= 2 and \
                                ((self.text[-2] == "(" and
                                  self.argumentPosition == 0) or

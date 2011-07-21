@@ -397,7 +397,7 @@ class Manager(threading.Thread, Queue):
     #   off the queue.
     # - [self._put()] Can be aborted (via sess.ctlr.abort()) if a new eval
     #   request comes in.
-    # - [self._handle_eval_sess()] Done when the session completes either by
+    # - [eval_sess.eval()] Done when the session completes either by
     #   (1) an unexpected error during sess.eval() or (2) sess.ctlr.is_done()
     #   after sess.eval().
     _curr_eval_sess = None
@@ -434,12 +434,14 @@ class Manager(threading.Thread, Queue):
             if eval_sess is None: # Sentinel to stop.
                 break
             try:
-                self._handle_eval_sess(eval_sess)
+                eval_sess.eval(self)
             except:
                 try:
                     self._handle_eval_sess_error(eval_sess)
                 except:
                     pass
+            finally:
+                self._curr_eval_sess = None
     
     def _handle_eval_sess_error(self, eval_sess):
         exc_info = sys.exc_info()
@@ -454,24 +456,6 @@ class Manager(threading.Thread, Queue):
                              tb_path, tb_lineno, tb_func)
         log.exception("error evaluating %s" % eval_sess)
         eval_sess.ctlr.done("unexpected eval error")
-
-    def _release_curr_eval_sess(self):
-        if self._curr_eval_sess is not None:
-            # We are done with the evaluator, cleanup all references, otherwise
-            # Komodo will be leaking memory - bug 65502.
-            self._curr_eval_sess.close()
-            self._curr_eval_sess = None
-
-    def _handle_eval_sess(self, eval_sess):
-        try:
-            eval_sess.eval(self)
-        except Exception:
-            self._release_curr_eval_sess()
-            raise
-        else:
-            if eval_sess.ctlr.is_done():
-                self._release_curr_eval_sess()
-
 
     def _put(self, (eval_sess, is_reeval)):
         # Only consider re-evaluation if we are still on the same eval
@@ -499,7 +483,6 @@ class Manager(threading.Thread, Queue):
         if is_reeval:
             assert self._curr_eval_sess is eval_sess
         else:
-            self._release_curr_eval_sess()
             self._curr_eval_sess = eval_sess
         return eval_sess, is_reeval
 

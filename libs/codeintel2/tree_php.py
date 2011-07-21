@@ -956,9 +956,30 @@ class PHPTreeEvaluator(TreeEvaluator):
         hits = []
         elem = global_blob.names.get(fqn)
         if elem is not None:
-            self.log("_hits_from_namespace:: found locally: %r", elem)
+            self.log("_hits_from_namespace:: found %r locally: %r", fqn, elem)
             hit_scoperef = [global_scoperef[0], global_scoperef[1] + [elem.get("name")]]
             hits.append((elem, hit_scoperef))
+        else:
+            # The last token in the namespace may be a class or a constant, instead
+            # of being part of the namespace itself.
+            tokens = fqn.split("\\")
+            if len(tokens) > 1:
+                partial_fqn = "\\".join(tokens[:-1])
+                last_token = tokens[-1]
+                self.log("_hits_from_namespace:: checking for sub-namespace match: %r",
+                         partial_fqn)
+        
+                elem = global_blob.names.get(partial_fqn)
+                if elem is not None:
+                    self.log("_hits_from_namespace:: found sub-namespace locally, now find %r",
+                             last_token)
+                    try:
+                        hit_scoperef = [global_scoperef[0], (partial_fqn, )]
+                        hits.append((elem.names[last_token], hit_scoperef))
+                    except KeyError:
+                        # Fall through to other possible library matches (bug 85643).
+                        self.debug("_hits_from_namespace:: no subsequent hit found locally for %r",
+                                   last_token)
 
         lpath = (fqn, )
         libs = [self.buf.stdlib] + self.libs
@@ -968,45 +989,6 @@ class PHPTreeEvaluator(TreeEvaluator):
                 self.log("_hits_from_namespace:: found in lib: %r", lib)
                 hits += lib_hits
 
-        # The last token in the namespace may be a class or a constant, instead
-        # of being part of the namespace itself.
-        tokens = fqn.split("\\")
-        if len(tokens) <= 1:
-            return hits
-
-        fqn = "\\".join(tokens[:-1])
-        last_token = tokens[-1]
-        self.log("_hits_from_namespace:: checking for sub-namespace match: %r",
-                 fqn)
-
-        elem = global_blob.names.get(fqn)
-        if elem is not None:
-            self.log("_hits_from_namespace:: found locally(2): %r", elem)
-            hit_scoperef = [global_scoperef[0], global_scoperef[1] + [elem.get("name")]]
-            try:
-                hit = self._hit_from_citdl(last_token, hit_scoperef)
-                if hit and hit[0] is not None:
-                    hits.append(hit)
-            except CodeIntelError, ex:
-                # Fall through to other possible library matches (bug 85643).
-                self.debug("no subsequent hit found locally: %s", ex)
-        lpath = (fqn, )
-        libs = [self.buf.stdlib] + self.libs
-        for lib in libs:
-            lib_hits = lib.hits_from_lpath(lpath)
-            if lib_hits:
-                self.log("_hits_from_namespace:: found %d hits in lib(2): %r",
-                         len(lib_hits), lib)
-                for hit in lib_hits:
-                    hit_scoperef = hit[1]
-                    hit_scoperef = (hit_scoperef[0], hit_scoperef[1] + [fqn])
-                    try:
-                        hit = self._hit_from_citdl(last_token, hit_scoperef)
-                    except CodeIntelError, ex:
-                        self.debug("no subsequent hit found: %s", ex)
-                        continue
-                    if hit and hit[0] is not None:
-                        hits.append(hit)
         return hits
 
     def _hits_from_first_part(self, tokens, scoperef):
@@ -1033,6 +1015,7 @@ class PHPTreeEvaluator(TreeEvaluator):
             if hits:
                 nconsumed = 1
                 return (hits, nconsumed)
+            self.log("_hits_from_first_part:: no namespace hits")
             if self.trg.type == "namespace-members":
                 return (None, 1)
 
@@ -1072,7 +1055,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                 first_token_elem = elem.names[first_token]
                 if self._return_with_hit((first_token_elem, scoperef), 1):
                     #TODO: skip __hidden__ names
-                    self.log("_hits_from_first_part:: is '%s' accessible on %s? "
+                    self.log("_hits_from_first_part:: pt1: is '%s' accessible on %s? "
                              "yes: %s", first_token, scoperef, first_token_elem)
                     return ([(first_token_elem, scoperef)], 1)
 
@@ -1087,7 +1070,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                              ", alias: %r", module, symbol, alias)
                     if alias == first_token or \
                             (alias is None and symbol == first_token):
-                        self.log("_hits_from_first_part:: is '%s' accessible on "
+                        self.log("_hits_from_first_part:: pt2: is '%s' accessible on "
                                  "%s? yes: %s", first_token, scoperef, child)
                         # Aliases always use a fully qualified namespace.
                         expr = "\\%s\\%s" % (module, symbol)
@@ -1095,7 +1078,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                         if hit:
                             return ([hit], 1)
                         break
-            self.log("_hits_from_first_part:: is '%s' accessible on %s? no",
+            self.log("_hits_from_first_part:: pt3: is '%s' accessible on %s? no",
                      first_token, scoperef)
             # Do not go past the global scope reference
             if len(scoperef[1]) >= 1:
@@ -1109,7 +1092,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         # elem and scoperef *are* for the global level
         hit, nconsumed = self._hit_from_elem_imports(tokens, elem)
         if hit is not None and self._return_with_hit(hit, nconsumed):
-            self.log("_hits_from_first_part:: is '%s' accessible on %s? yes, "
+            self.log("_hits_from_first_part:: pt4: is '%s' accessible on %s? yes, "
                      "imported: %s",
                      '.'.join(tokens[:nconsumed]), scoperef, hit[0])
             return ([hit], nconsumed)

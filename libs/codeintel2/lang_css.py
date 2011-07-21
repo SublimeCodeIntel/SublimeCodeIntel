@@ -62,7 +62,8 @@ from SilverCity import Keywords
 
 from codeintel2.common import *
 from codeintel2.buffer import Buffer
-from codeintel2.util import CompareNPunctLast, make_short_name_dict
+from codeintel2.util import (OrdPunctLast, make_short_name_dict,
+                             makePerformantLogger)
 from codeintel2.langintel import LangIntel, ParenStyleCalltipIntelMixin
 from codeintel2.udl import UDLBuffer, is_udl_css_style
 from codeintel2.accessor import AccessorCache
@@ -80,6 +81,7 @@ if _xpcom_:
 
 lang = "CSS"
 log = logging.getLogger("codeintel.css")
+makePerformantLogger(log)
 WHITESPACE = tuple(" \t\r\n")  # care about '\v', '\f'?
 
 
@@ -418,8 +420,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
     CSS_ATTRIBUTES.update(constants_css_moz_extensions.CSS_MOZ_SPECIFIC_ATTRS_DICT)
     CSS_ATTRIBUTES.update(constants_css_webkit_extensions.CSS_WEBKIT_SPECIFIC_ATTRS_DICT)
     # Setup the names triggered for "property-names"
-    CSS_PROPERTY_NAMES = CSS_ATTRIBUTES.keys()
-    CSS_PROPERTY_NAMES.sort(CompareNPunctLast)
+    CSS_PROPERTY_NAMES = sorted(CSS_ATTRIBUTES.keys(), key=OrdPunctLast)
 
     # Calltips for css property attributes
     CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT = constants_css.CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.copy()
@@ -431,12 +432,11 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
     CSS_HTML_TAG_NAMES = sorted(Keywords.hypertext_elements.split())
 
     # pseudo-class-names
-    CSS_PSEUDO_CLASS_NAMES = constants_css.CSS_PSEUDO_CLASS_NAMES
-    CSS_PSEUDO_CLASS_NAMES.sort(CompareNPunctLast)
+    CSS_PSEUDO_CLASS_NAMES = sorted(constants_css.CSS_PSEUDO_CLASS_NAMES, key=OrdPunctLast)
 
     # at rules
-    CSS_AT_RULE_NAMES = ["import", "media", "charset", "font-face", "page", "namespace"]
-    CSS_AT_RULE_NAMES.sort(CompareNPunctLast)
+    CSS_AT_RULE_NAMES = sorted(["import", "media", "charset", "font-face", "page", "namespace"],
+                               key=OrdPunctLast)
 
 
     def preceding_trg_from_pos(self, buf, pos, curr_pos):
@@ -783,6 +783,8 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                 if cplns:
                     # Note: we add the colon as well - see bug 89913.
                     ctlr.set_cplns( [ ("property", v + ": ") for v in cplns ] )
+                    # We want to show the property values after autocompleting.
+                    trg.retriggerOnCompletion = True
                     #print "  _async_eval_at_trg:: cplns:", cplns
                 ctlr.done("success")
             elif trg.id == ("CSS", TRG_FORM_CALLTIP, "property-values"):
@@ -812,7 +814,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                 try:
                     #print "\ndict:", self.CSS_ATTRIBUTES[property]
                     property_values = sorted(self.CSS_ATTRIBUTES[property],
-                                             cmp=CompareNPunctLast)
+                                             key=OrdPunctLast)
                     # Check if it matches anything, if not, dismiss the list
                     if current_value:
                         clen = len(current_value)

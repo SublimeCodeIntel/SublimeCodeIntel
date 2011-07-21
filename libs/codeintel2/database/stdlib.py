@@ -471,20 +471,27 @@ class StdLibsZone(object):
         else:
             cix_path = join(self.stdlibs_dir,
                              "%s.cix" % (safe_lang_from_lang(lang), ))
-        todo = []
-        res = AreaResource(cix_path, "ci-pkg-dir")
-        try:
-            last_updated = self.res_index[res.area_path]
-        except KeyError:
-            todo.append(("add", res))
-        else:
-            mtime = os.stat(cix_path).st_mtime
-            if last_updated != mtime: # epsilon? '>=' instead of '!='?
-                todo.append(("update", res))
 
-        # ... and then do them.
-        self._handle_res_todos(lang, todo, progress_cb)
-        self.save()
+        # Need to acquire db lock, as the indexer and main thread may both be
+        # calling into _update_lang_with_ver at the same time.
+        self.db.acquire_lock()
+        try:
+            todo = []
+            res = AreaResource(cix_path, "ci-pkg-dir")
+            try:
+                last_updated = self.res_index[res.area_path]
+            except KeyError:
+                todo.append(("add", res))
+            else:
+                mtime = os.stat(cix_path).st_mtime
+                if last_updated != mtime: # epsilon? '>=' instead of '!='?
+                    todo.append(("update", res))
+
+            # ... and then do them.
+            self._handle_res_todos(lang, todo, progress_cb)
+            self.save()
+        finally:
+            self.db.release_lock()
 
     def update_lang(self, lang, progress_cb=None, ver=None):
         vers_and_names = self.vers_and_names_from_lang(lang)

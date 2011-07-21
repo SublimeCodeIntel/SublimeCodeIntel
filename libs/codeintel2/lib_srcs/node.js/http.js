@@ -8,9 +8,11 @@ var http = {};
  * convenience method. The only difference between this method and
  * http.request() is that it sets the method to GET and calls req.end()
  * automatically.
+ * @param options
+ * @param callback
  * @returns http.ClientRequest
  */
-http.get = function() {}
+http.get = function(options, callback) {}
 
 /**
  * This object is created internally by a HTTP server -- not by the user --
@@ -26,8 +28,9 @@ http.ServerRequest.prototype.pause = function() {}
  * Set the encoding for the request body. Either 'utf8' or 'binary'.
  * Defaults to null, which means that the 'data' event will emit a Buffer
  * object..
+ * @param encoding=null
  */
-http.ServerRequest.prototype.setEncoding = function() {}
+http.ServerRequest.prototype.setEncoding = function(encoding) {}
 /**
  * Resumes a paused request.
  */
@@ -76,8 +79,9 @@ http.ClientResponse.prototype.pause = function() {}
  * Set the encoding for the response body. Either 'utf8', 'ascii', or
  * 'base64'. Defaults to null, which means that the 'data' event will emit
  * a Buffer object..
+ * @param encoding=null
  */
-http.ClientResponse.prototype.setEncoding = function() {}
+http.ClientResponse.prototype.setEncoding = function(encoding) {}
 /**
  * Resumes a paused response.
  */
@@ -104,9 +108,11 @@ http.ClientResponse.prototype.httpVersion = 0;
 /**
  * Node maintains several connections per server to make HTTP requests.
  * This function allows one to transparently issue requests.
+ * @param options
+ * @param callback
  * @returns http.ClientRequest
  */
-http.request = function() {}
+http.request = function(options, callback) {}
 
 http.Agent = function() {}
 http.Agent.prototype = {}
@@ -135,14 +141,17 @@ http.Server.prototype = {}
 http.Server.prototype.close = function() {}
 /**
  * Start a UNIX socket server listening for connections on the given path.
+ * @param path
+ * @param callback
  */
-http.Server.prototype.listen = function() {}
+http.Server.prototype.listen = function(path, callback) {}
 
 /**
  * Returns a new web server object.
+ * @param requestListener {__events__.request}
  * @returns http.Server
  */
-http.createServer = function() {}
+http.createServer = function(requestListener) {}
 
 /**
  * This object is created internally by a HTTP server--not by the user. It
@@ -153,32 +162,41 @@ http.ServerResponse = function() {}
 http.ServerResponse.prototype = {}
 /**
  * Removes a header that's queued for implicit sending.
+ * @param name
  */
-http.ServerResponse.prototype.removeHeader = function() {}
+http.ServerResponse.prototype.removeHeader = function(name) {}
 /**
  * This method signals to the server that all of the response headers and
  * body has been sent; that server should consider this message complete.
  * The method, response.end(), MUST be called on each response.
+ * @param data
+ * @param encoding
  */
-http.ServerResponse.prototype.end = function() {}
+http.ServerResponse.prototype.end = function(data, encoding) {}
 /**
  * Reads out a header that's already been queued but not sent to the
  * client. Note that the name is case insensitive. This can only be called
  * before headers get implicitly flushed.
+ * @param name
  */
-http.ServerResponse.prototype.getHeader = function() {}
+http.ServerResponse.prototype.getHeader = function(name) {}
 /**
  * Sends a response header to the request. The status code is a 3-digit
  * HTTP status code, like 404. The last argument, headers, are the response
  * headers. Optionally one can give a human-readable reasonPhrase as the
  * second argument.
+ * @param statusCode
+ * @param reasonPhrase
+ * @param headers
  */
-http.ServerResponse.prototype.writeHead = function() {}
+http.ServerResponse.prototype.writeHead = function(statusCode, reasonPhrase, headers) {}
 /**
  * If this method is called and response.writeHead() has not been called,
  * it will switch to implicit header mode and flush the implicit headers.
+ * @param chunk
+ * @param encoding='utf8'
  */
-http.ServerResponse.prototype.write = function() {}
+http.ServerResponse.prototype.write = function(chunk, encoding) {}
 /**
  * Sends a HTTP/1.1 100 Continue message to the client, indicating that the
  * request body should be sent. See the checkContinue event on Server.
@@ -187,15 +205,18 @@ http.ServerResponse.prototype.writeContinue = function() {}
 /**
  * This method adds HTTP trailing headers (a header but at the end of the
  * message) to the response.
+ * @param headers
  */
-http.ServerResponse.prototype.addTrailers = function() {}
+http.ServerResponse.prototype.addTrailers = function(headers) {}
 /**
  * Sets a single header value for implicit headers. If this header already
  * exists in the to-be-sent headers, it's value will be replaced. Use an
  * array of strings here if you need to send multiple headers with the same
  * name.
+ * @param name
+ * @param value
  */
-http.ServerResponse.prototype.setHeader = function() {}
+http.ServerResponse.prototype.setHeader = function(name, value) {}
 /**
  * When using implicit headers (not calling response.writeHead()
  * explicitly), this property controls the status code that will be send to
@@ -217,8 +238,10 @@ http.ClientRequest.prototype = {}
  * can stream a request body to a server--in that case it is suggested to
  * use the ['Transfer-Encoding', 'chunked'] header line when creating the
  * request.
+ * @param chunk
+ * @param encoding='utf8'
  */
-http.ClientRequest.prototype.write = function() {}
+http.ClientRequest.prototype.write = function(chunk, encoding) {}
 /**
  * Aborts a request. (New since v0.3.8.)
  */
@@ -227,18 +250,115 @@ http.ClientRequest.prototype.abort = function() {}
  * Finishes sending the request. If any parts of the body are unsent, it
  * will flush them to the stream. If the request is chunked, this will send
  * the terminating '0\r\n\r\n'.
+ * @param data
+ * @param encoding
  */
-http.ClientRequest.prototype.end = function() {}
+http.ClientRequest.prototype.end = function(data, encoding) {}
 
 /**
  * http.request() uses a special Agent for managing multiple connections to
  * an HTTP server. Normally Agent instances should not be exposed to user
  * code, however in certain situations it's useful to check the status of
  * the agent. The http.getAgent() function allows you to access the agents.
+ * @param host
+ * @param port
  * @returns http.Agent
  */
-http.getAgent = function() {}
+http.getAgent = function(host, port) {}
 
+
+/** @__local__ */ var __events__ = {};
+/**
+ * Emitted each time there is request. Note that there may be multiple
+ * requests per connection (in the case of keep-alive connections). request
+ * is an instance of http.ServerRequest and response is an instance of
+ * http.ServerResponse
+ * @param request {http.ServerRequest}
+ * @param response {http.ServerResponse}
+ */
+__events__.request = function(request, response) {};
+/**
+ * When a new TCP stream is established. stream is an object of type
+ * net.Stream. Usually users will not want to access this event. The stream
+ * can also be accessed at request.connection.
+ * @param stream {net.Stream}
+ */
+__events__.connection = function(stream) {};
+/**
+ * Emitted when the server closes.
+ * @param errno {Number}
+ */
+__events__.close = function(errno) {};
+/**
+ * Emitted each time a request with an http Expect: 100-continue is
+ * received. If this event isn't listened for, the server will
+ * automatically respond with a 100 Continue as appropriate.
+ * @param request {http.ServerRequest}
+ * @param response {http.ServerResponse}
+ */
+__events__.checkContinue = function(request, response) {};
+/**
+ * Emitted each time a client requests a http upgrade. If this event isn't
+ * listened for, then clients requesting an upgrade will have their
+ * connections closed.
+ * @param head {buffer.Buffer}
+ * @param request {http.ServerRequest}
+ * @param socket {net.Socket}
+ */
+__events__.upgrade = function(head, request, socket) {};
+/**
+ * If a client connection emits an 'error' event - it will forwarded here.
+ * @param exception {Error}
+ */
+__events__.clientError = function(exception) {};
+/**
+ * Emitted when a piece of the message body is received.
+ * @param chunk {String}
+ */
+__events__.data = function(chunk) {};
+/**
+ * Emitted exactly once for each request. After that, no more 'data' events
+ * will be emitted on the request.
+ */
+__events__.end = function() {};
+/**
+ * Indicates that the underlaying connection was terminated before
+ * response.end() was called or able to flush.
+ * @param err {Error}
+ */
+__events__.close = function(err) {};
+/**
+ * Emitted each time a server responds to a request with an upgrade. If
+ * this event isn't being listened for, clients receiving an upgrade header
+ * will have their connections closed.
+ * @param head {buffer.Buffer}
+ * @param response {http.ServerResponse}
+ * @param socket {net.Socket}
+ */
+__events__.upgrade = function(head, response, socket) {};
+/**
+ * Emitted when the server sends a '100 Continue' HTTP response, usually
+ * because the request contained 'Expect: 100-continue'. This is an
+ * instruction that the client should send the request body.
+ */
+__events__.continue = function() {};
+/**
+ * Emitted when a response is received to this request. This event is
+ * emitted only once. The response argument will be an instance of
+ * http.ClientResponse.
+ * @param response {http.ClientResponse}
+ */
+__events__.response = function(response) {};
+/**
+ * Emitted when a piece of the message body is received.
+ * @param chunk {String}
+ */
+__events__.data = function(chunk) {};
+/**
+ * Emitted exactly once for each message. No arguments. After emitted no
+ * other events will be emitted on the response.
+ */
+__events__.end = function() {};
 
                 var events = require('events');
                 http.Server.prototype = new events.EventEmitter();

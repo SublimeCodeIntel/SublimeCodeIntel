@@ -31,20 +31,23 @@ console.error = function() {}
 
 /**
  * Finish timer, record output. Example
+ * @param label
  */
-console.timeEnd = function() {}
+console.timeEnd = function(label) {}
 
 console.warn = function() {}
 
 /**
  * Mark a time.
+ * @param label
  */
-console.time = function() {}
+console.time = function(label) {}
 
 /**
  * Uses util.inspect on obj and prints resulting string to stderr.
+ * @param obj
  */
-console.dir = function() {}
+console.dir = function(obj) {}
 
 
 exports = console;

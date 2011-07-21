@@ -4,8 +4,6 @@ CSS 1 definitions.
 
 import textwrap
 
-from codeintel2.util import CompareNPunctLast
-
 CSS_PSEUDO_CLASS_NAMES = """first-letter first-line link active visited
         first-child focus hover lang before after left right first""".split()
 

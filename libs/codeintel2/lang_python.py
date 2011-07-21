@@ -61,7 +61,8 @@ from codeintel2.citadel import (CitadelBuffer, CitadelEvaluator, ImportHandler,
                                 CitadelLangIntel)
 from codeintel2.indexer import PreloadLibRequest
 from codeintel2 import pythoncile
-from codeintel2.util import banner, indent, markup_text, isident, isdigit
+from codeintel2.util import (banner, indent, markup_text, isident, isdigit,
+                             makePerformantLogger)
 from codeintel2 import tree
 from codeintel2.tree_python import PythonTreeEvaluator, PythonImportLibGenerator
 from codeintel2.langintel import (ParenStyleCalltipIntelMixin,
@@ -82,6 +83,7 @@ _SCAN_BINARY_FILES = False
 lang = "Python"
 log = logging.getLogger("codeintel.python")
 #log.setLevel(logging.DEBUG)
+makePerformantLogger(log)
 
 CACHING = True #DEPRECATED: kill it
 
@@ -601,8 +603,7 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
             if cwd == "<Unsaved>":
                 libs = []
             else:
-                libs = [ self.mgr.db.get_lang_lib(self.lang, "curdirlib",
-                                                  [dirname(buf.path)]) ]
+                libs = [ self.mgr.db.get_lang_lib(self.lang, "curdirlib", [cwd]) ]
 
             libs += self._buf_indep_libs_from_env(env)
             cache[buf] = libs

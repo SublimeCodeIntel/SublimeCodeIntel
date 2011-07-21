@@ -4,8 +4,6 @@ Microsoft CSS extensions.
 
 import textwrap
 
-from codeintel2.util import CompareNPunctLast
-
 ### START: Auto generated
 
 CSS_MICROSOFT_DATA = {

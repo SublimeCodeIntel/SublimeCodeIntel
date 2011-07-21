@@ -265,6 +265,7 @@ class Trigger(object):
     #       Foo::Bar-><|>   # trigger token is '->', length = 2
     # This default to 1.
     length = None
+    retriggerOnCompletion = False
 
     def __init__(self, lang, form, type, pos, implicit, length=1,
                  **extra):

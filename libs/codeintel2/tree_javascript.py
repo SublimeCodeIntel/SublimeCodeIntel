@@ -435,8 +435,12 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         for elem, scoperef in hits:
             if elem.tag == "variable" and not defn_only:
                 try:
-                    subhits = self._hits_from_variable_type_inference(
-                                elem, scoperef)
+                    if (not elem.get("citdl")) and elem.get("ilk") == "argument":
+                        # this is an argument, try to infer things from the caller
+                        subhits = self._hits_from_argument(elem, scoperef)
+                    else:
+                        subhits = self._hits_from_variable_type_inference(
+                                    elem, scoperef)
                 except CodeIntelError, ex:
                     self.warn("could not resolve %r: %s", elem, ex)
                 else:
@@ -445,6 +449,59 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                 resolved_hits.append( (elem, scoperef) )
 
         return resolved_hits
+
+    def _hits_from_argument(self, elem, scoperef):
+        """
+        Return hits for an argument of a function based on its caller
+        @param elem The argument; must have ilk=argument
+        @param scoperef The scope containing the element
+        @returns list of hits
+        """
+        assert elem.get("ilk") == "argument", \
+           "_hits_from_argument expects an argument, got a %r" % elem.get("ilk")
+        hits = []
+        scope = self._elem_from_scoperef(scoperef) # the function the argument is in
+
+        args = [arg for arg in scope.findall("variable") if arg.get("ilk") == "argument"]
+        for pos in range(len(args)):
+            if args[pos].get("name") == elem.get("name"):
+                break
+        else:
+            # can't find the argument?
+            return []
+
+        for caller in scope.getiterator("caller"):
+            citdl = caller.get("citdl")
+            caller_pos = int(caller.get("pos") or 0) # 1-indexed
+            if citdl is None or caller_pos < 1:
+                # invalid caller
+                continue
+            for caller_hit in self._hits_from_citdl(citdl, scoperef):
+                caller_func = caller_hit[0] # the calling function
+                if caller_func.get("ilk") != "function":
+                    # nevermind, not a function
+                    continue
+                caller_args = [arg for arg in caller_func.getiterator("variable") if arg.get("ilk") == "argument"]
+                if caller_pos > len(caller_args):
+                    # no such argument
+                    continue
+                caller_arg = caller_args[caller_pos - 1]
+                citdl = caller_arg.get("citdl")
+                if not citdl:
+                    continue
+                for citdl_hit in self._hits_from_citdl(citdl, caller_hit[1]):
+                    # got the function being called, now look up the argument by pos
+                    func = citdl_hit[0]
+                    if func.get("ilk") != "function":
+                        continue
+                    args = [arg for arg in func.getiterator("variable") if arg.get("ilk") == "argument"]
+                    if pos >= len(args):
+                        continue
+                    citdl = args[pos].get("citdl")
+                    if not citdl:
+                        continue
+                    hits += self._hits_from_citdl(citdl, citdl_hit[1])
+        return hits
 
     def _hits_from_call(self, elem, scoperef):
         """Resolve the function call inference for 'elem' at 'scoperef'."""

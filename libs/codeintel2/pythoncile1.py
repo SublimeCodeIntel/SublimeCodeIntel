@@ -113,6 +113,7 @@ class PythonCILEError(CILEError):
 _version_ = (0, 3, 0)
 log = logging.getLogger("pythoncile")
 #log.setLevel(logging.DEBUG)
+util.makePerformantLogger(log)
 
 _gClockIt = 0   # if true then we are gathering timing data
 _gClock = None  # if gathering timing data this is set to time retrieval fn

@@ -8,14 +8,16 @@ var process = {};
  * Sets the user identity of the process. (See setuid(2).) This accepts
  * either a numerical ID or a username string. If a username is specified,
  * this method blocks while resolving it to a numerical ID.
+ * @param id
  */
-process.setuid = function() {}
+process.setuid = function(id) {}
 
 /**
  * On the next loop around the event loop call this callback. This is not a
  * simple alias to setTimeout(fn, 0), it's much more efficient.
+ * @param callback
  */
-process.nextTick = function() {}
+process.nextTick = function(callback) {}
 
 /**
  * A Writable Stream to stdout.
@@ -37,8 +39,10 @@ process.memoryUsage = function() {}
  * string describing the signal to send. Signal names are strings like
  * 'SIGINT' or 'SIGUSR1'. If omitted, the signal will be 'SIGTERM'. See
  * kill(2) for more information.
+ * @param pid
+ * @param signal='SIGTERM'
  */
-process.kill = function() {}
+process.kill = function(pid, signal) {}
 
 /**
  * Gets the group identity of the process. (See getgid(2).) This is the
@@ -55,8 +59,9 @@ process.title = 0;
  * Sets or reads the process's file mode creation mask. Child processes
  * inherit the mask from the parent process. Returns the old mask if mask
  * argument is given, otherwise returns the current mask.
+ * @param mask
  */
-process.umask = function() {}
+process.umask = function(mask) {}
 
 /**
  * What platform you're running on. 'linux2', 'darwin', etc.
@@ -71,8 +76,9 @@ process.version = 0;
 /**
  * Ends the process with the specified code. If omitted, exit uses the
  * 'success' code 0.
+ * @param code=0
  */
-process.exit = function() {}
+process.exit = function(code) {}
 
 /**
  * An object containing the user environment. See environ(7).
@@ -93,8 +99,9 @@ process.installPrefix = 0;
  * Sets the group identity of the process. (See setgid(2).) This accepts
  * either a numerical ID or a groupname string. If a groupname is
  * specified, this method blocks while resolving it to a numerical ID.
+ * @param id
  */
-process.setgid = function() {}
+process.setgid = function(id) {}
 
 /**
  * An array containing the command line arguments. The first element will
@@ -106,8 +113,9 @@ process.argv = 0;
 /**
  * Changes the current working directory of the process or throws an
  * exception if that fails.
+ * @param directory
  */
-process.chdir = function() {}
+process.chdir = function(directory) {}
 
 /**
  * Gets the user identity of the process. (See getuid(2).) This is the
@@ -132,6 +140,22 @@ process.stderr = 0;
  */
 process.execPath = 0;
 
+
+/** @__local__ */ var __events__ = {};
+/**
+ * Emitted when the process is about to exit. This is a good hook to
+ * perform constant time checks of the module's state (like for unit
+ * tests). The main event loop will no longer be run after the 'exit'
+ * callback finishes, so timers may not be scheduled.
+ */
+__events__.exit = function() {};
+/**
+ * Emitted when an exception bubbles all the way back to the event loop. If
+ * a listener is added for this exception, the default action (which is to
+ * print a stack trace and exit) will not occur.
+ * @param err {Object}
+ */
+__events__.uncaughtException = function(err) {};
 
 exports = process;
 

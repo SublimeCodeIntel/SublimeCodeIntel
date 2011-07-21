@@ -4,9 +4,6 @@ Safari/Webkit CSS extensions.
 
 import textwrap
 
-from codeintel2.util import CompareNPunctLast
-
-
 ### START: Auto generated
 
 CSS_WEBKIT_DATA = {

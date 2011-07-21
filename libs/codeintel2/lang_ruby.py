@@ -74,7 +74,8 @@ from codeintel2.langintel import (ParenStyleCalltipIntelMixin,
                                   ProgLangTriggerIntelMixin)
 
 from codeintel2.lang_ruby_common import RubyCommonBufferMixin
-from codeintel2.util import isident, isdigit, banner, indent, markup_text, hotshotit
+from codeintel2.util import (isident, isdigit, banner, indent, markup_text,
+                             hotshotit, makePerformantLogger)
 from codeintel2.tree import tree_2_0_from_tree_0_1
 from codeintel2.tree_ruby import RubyTreeEvaluator
 
@@ -88,6 +89,8 @@ if _xpcom_:
 lang = "Ruby"
 log = logging.getLogger("codeintel.ruby")
 #log.setLevel(logging.DEBUG)
+makePerformantLogger(log)
+
 CACHING = True #XXX obsolete, kill it
 
 _trg_type_to_trg_char = {'lib-paths': ['\'', True],
@@ -322,8 +325,7 @@ class RubyLangIntel(CitadelLangIntel,
             # - curdirlib (in Ruby '.' is *last* in the import path)
             cwd = dirname(buf.path)
             if cwd != "<Unsaved>":
-                libs.append( self.mgr.db.get_lang_lib("Ruby", "curdirlib",
-                                                  [dirname(buf.path)]) )
+                libs.append( self.mgr.db.get_lang_lib("Ruby", "curdirlib", [cwd]) )
 
             cache[buf] = libs
         return cache[buf]

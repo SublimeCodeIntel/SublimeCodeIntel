@@ -43,6 +43,7 @@ import sys
 import re
 import stat
 import textwrap
+import logging
 import types
 from pprint import pprint, pformat
 import time
@@ -610,6 +611,37 @@ def hotshotit(func):
         return profiler.runcall(func, *args, **kw)
     return wrapper
 
+_koCProfiler = None
+def getProfiler():
+    global _koCProfiler
+    if _koCProfiler is None:
+        class _KoCProfileManager(object):
+            def __init__(self):
+                import atexit
+                import cProfile
+                from codeintel2.common import _xpcom_
+                self.prof = cProfile.Profile()
+                if _xpcom_:
+                    from xpcom import components
+                    from xpcom.server import WrapObject
+                    _KoCProfileManager._com_interfaces_ = [components.interfaces.nsIObserver]
+                    obsSvc = components.classes["@mozilla.org/observer-service;1"].\
+                                   getService(components.interfaces.nsIObserverService)
+                    obsSvc.addObserver(self, 'xpcom-shutdown', False)
+                else:
+                    atexit.register(self.atexit_handler)
+            def atexit_handler(self):
+                self.prof.print_stats(sort="time")
+            def observe(self, subject, topic, data):
+                if topic == "xpcom-shutdown":
+                    self.atexit_handler()
+        _koCProfiler = _KoCProfileManager()
+    return _koCProfiler.prof
+
+def profile_method(func):
+    def wrapper(*args, **kw):
+        return getProfiler().runcall(func, *args, **kw)
+    return wrapper
 
 # Utility functions to perform sorting the same way as scintilla does it
 # for the code-completion list.
@@ -669,6 +701,18 @@ class Memoize:
     
     def _getKey(self,*args,**kwds):
         return kwds and (args, set(kwds)) or args    
+
+def makePerformantLogger(logger):
+    """Replaces the info() and debug() methods with dummy methods.
+
+    Assumes that the logging level does not change during runtime.
+    """
+    if not logger.isEnabledFor(logging.INFO):
+        def _log_ignore(self, *args, **kwargs):
+            pass
+        logger.info = _log_ignore
+        if not logger.isEnabledFor(logging.DEBUG):
+            logger.debug = _log_ignore
 
 
 #---- mainline self-test

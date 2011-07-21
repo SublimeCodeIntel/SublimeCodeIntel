@@ -4,7 +4,6 @@ CSS 3 definitions - requires CSS 1 module.
 
 import textwrap
 
-from codeintel2.util import CompareNPunctLast
 from codeintel2.constants_css1 import CSS_ATTR_DICT as CSS1_ATTR_DICT
 from codeintel2.constants_css1 import CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT as CSS1_PROPERTY_ATTRIBUTE_CALLTIPS_DICT
 
@@ -581,6 +580,7 @@ css2_system_colors = {
 }
 
 # Add the css2 system colors.
+#from codeintel2.util import CompareNPunctLast
 #for attr, values in CSS_ATTR_DICT.items():
 #    if '#' in values or 'rbg(' in values:
 #        CSS_ATTR_DICT[attr] = sorted(values + css2_system_colors.keys(),

@@ -752,7 +752,7 @@ class PythonCITDLExtractorMixin(object):
             print banner("Python-style citdl_expr_from_trg @ %d" % trg.pos)
         if trg.form == TRG_FORM_DEFN:
             pos = trg.pos
-            expr = self._citdl_expr_from_pos(buf, pos, implicit=True,
+            expr = self._citdl_expr_from_pos(buf, pos, implicit=True, trg=trg,
                                              include_forwards=True, DEBUG=DEBUG)
             if expr:
                 # Chop off any trailing "." characters

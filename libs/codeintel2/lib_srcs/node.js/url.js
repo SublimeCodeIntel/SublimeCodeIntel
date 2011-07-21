@@ -7,20 +7,25 @@ var url = {};
 /**
  * Take a URL string, and return an object. Pass true as the second
  * argument to also parse the query string using the querystring module.
+ * @param urlStr
+ * @param parseQueryString=false
  * @returns URL
  */
-url.parse = function() {}
+url.parse = function(urlStr, parseQueryString) {}
 
 /**
  * Take a base URL, and a href URL, and resolve them as a browser would for
  * an anchor tag.
+ * @param from
+ * @param to
  */
-url.resolve = function() {}
+url.resolve = function(from, to) {}
 
 /**
  * Take a parsed URL object, and return a formatted URL string.
+ * @param urlObj
  */
-url.format = function() {}
+url.format = function(urlObj) {}
 
 
                 /* see http://nodejs.org/docs/v0.4.2/api/url.html#uRL */

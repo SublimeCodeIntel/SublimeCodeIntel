@@ -33,12 +33,13 @@ global_objects.require = function() {}
  */
 global_objects.__filename = 0;
 
-global_objects.clearTimeout = function() {}
+global_objects.clearTimeout = function(t) {}
 
 /**
  * The timer functions are global variables. See the timers section.
+ * @param t
  */
-global_objects.clearInterval = function() {}
+global_objects.clearInterval = function(t) {}
 
 /**
  * A reference to the current module. In particular module.exports is the
@@ -47,14 +48,14 @@ global_objects.clearInterval = function() {}
  */
 global_objects.module = 0;
 
-global_objects.setInterval = function() {}
+global_objects.setInterval = function(cb, ms) {}
 
 /**
  * The dirname of the script being executed.
  */
 global_objects.__dirname = 0;
 
-global_objects.setTimeout = function() {}
+global_objects.setTimeout = function(cb, ms) {}
 
 
 exports = global_objects;

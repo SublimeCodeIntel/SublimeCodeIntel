@@ -37,8 +37,11 @@
 
 """NodeJS support for CodeIntel"""
 
-import json, logging, os
+import os
+import json
+import logging
 
+from codeintel2.util import makePerformantLogger
 from codeintel2.lang_javascript import (JavaScriptLexer,
                                         JavaScriptLangIntel,
                                         JavaScriptBuffer,
@@ -51,6 +54,7 @@ from codeintel2.tree_javascript import JavaScriptTreeEvaluator
 lang = "Node.js"
 log = logging.getLogger("codeintel.nodejs")
 #log.setLevel(logging.DEBUG)
+makePerformantLogger(log)
 
 
 #---- language support
@@ -93,6 +97,28 @@ class NodeJSTreeEvaluator(JavaScriptTreeEvaluator):
             self.log("no source directory found, can't resolve require(%r)", requirename)
             return []
 
+        def get_hits_from_lib(lib, filename):
+            """Get the hits from a given LangDirsLib, or None"""
+            hits = []
+            basename = os.path.basename(filename)
+            blobs = lib.blobs_with_basename(basename, ctlr=self.ctlr)
+            for blob in blobs or []:
+                if os.path.normpath(blob.get("src")) != filename:
+                    # wrong file
+                    continue
+                self.log("require() found at %s", filename)
+                exports = blob.names.get("exports")
+                if exports is not None and exports.tag == "variable":
+                    hits += self._hits_from_variable_type_inference(exports, [blob, ["exports"]])
+                else:
+                    # try module.exports
+                    module = blob.names.get("module")
+                    if module is not None:
+                        exports = module.names.get("exports")
+                        if exports is not None and exports.tag == "variable":
+                            hits += self._hits_from_variable_type_inference(exports, [blob, ["module", "exports"]])
+            return hits or None
+
         def load_as_file(path):
             """Load "path" as a file and return hits from there
             If it does not exist / isn't a valid node.js module, return None
@@ -106,9 +132,9 @@ class NodeJSTreeEvaluator(JavaScriptTreeEvaluator):
                 # we don't deal with binary components; otherwise, it's missing
                 return None
             self.log("looking to resolve require() via %s", path)
-            basename = os.path.basename(filename)
+            dirname = os.path.dirname(filename)
+
             for lib in self.libs:
-                hits = []
                 if lib == self.nodejslib:
                     # skip the core modules, they're looked at above
                     continue
@@ -116,27 +142,18 @@ class NodeJSTreeEvaluator(JavaScriptTreeEvaluator):
                     # can't deal with anything but these
                     self.log("skipping lib %r, don't know how to deal", lib)
                     continue
-                self.log("looking up lib %r (basename %r)", lib.dirs, basename)
 
-                blobs = lib.blobs_with_basename(basename, ctlr=self.ctlr)
-                for blob in blobs or []:
-                    if os.path.normpath(blob.get("src")) != filename:
-                        # wrong file
-                        continue
-                    self.log("require() found at %s", filename)
-                    exports = blob.names.get("exports")
-                    if exports is not None and exports.tag == "variable":
-                        hits += self._hits_from_variable_type_inference(exports, [blob, ["exports"]])
-                    else:
-                        # try module.exports
-                        module = blob.names.get("module")
-                        if module is not None:
-                            exports = module.names.get("exports")
-                            if exports is not None and exports.tag == "variable":
-                                hits += self._hits_from_variable_type_inference(exports, [blob, ["module", "exports"]])
-                if hits:
-                    return hits
-            return None
+                if dirname in map(os.path.normpath, lib.dirs):
+                    # Found a lib with the directory we want. Whether we found
+                    # a hit or not, we don't need to look in any other libs
+                    # (since they will just give the same results)
+                    self.log("looking up lib %r (filename %r)", lib.dirs, filename)
+                    return get_hits_from_lib(lib, filename)
+
+            # none of the libs we know about has it, but we do have a file...
+            # try to force scan it
+            lib = self.mgr.db.get_lang_lib(self.lang, "node_modules_lib", (dirname,))
+            return get_hits_from_lib(lib, filename)
 
         def load_as_directory(path):
             """Load "path" as a directory and return hits from there
@@ -232,6 +249,16 @@ class NodeJSLangIntel(JavaScriptLangIntel):
     _evaluatorClass = NodeJSTreeEvaluator
     interpreterPrefName = "nodejsDefaultInterpreter"
     extraPathsPrefName = "nodejsExtraPaths"
+
+    @property
+    def stdlibs(self):
+        libdir = os.path.join(os.path.dirname(__file__), "lib_srcs", "node.js")
+        db = self.mgr.db
+        node_sources_lib = db.get_lang_lib(lang="Node.js",
+                                           name="node.js stdlib",
+                                           dirs=(libdir,))
+        return [node_sources_lib,
+                db.get_stdlib(self.lang)]
 
 class NodeJSBuffer(JavaScriptBuffer):
     lang = lang

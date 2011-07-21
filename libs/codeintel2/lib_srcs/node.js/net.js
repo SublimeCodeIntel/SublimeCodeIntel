@@ -18,8 +18,9 @@ net.Socket.prototype = {}
  * Disables the Nagle algorithm. By default TCP connections use the Nagle
  * algorithm, they buffer data before sending it off. Setting noDelay will
  * immediately fire off data each time socket.write() is called.
+ * @param noDelay=true
  */
-net.Socket.prototype.setNoDelay = function() {}
+net.Socket.prototype.setNoDelay = function(noDelay) {}
 /**
  * Pauses the reading of data. That is, 'data' events will not be emitted.
  * Useful to throttle back an upload.
@@ -28,13 +29,17 @@ net.Socket.prototype.pause = function() {}
 /**
  * Half-closes the socket. I.E., it sends a FIN packet. It is possible the
  * server will still send some data.
+ * @param data
+ * @param encoding
  */
-net.Socket.prototype.end = function() {}
+net.Socket.prototype.end = function(data, encoding) {}
 /**
  * Sets the socket to timeout after timeout milliseconds of inactivity on
  * the socket. By default net.Socket do not have a timeout.
+ * @param timeout
+ * @param callback
  */
-net.Socket.prototype.setTimeout = function() {}
+net.Socket.prototype.setTimeout = function(timeout, callback) {}
 /**
  * Resumes reading after a call to pause().
  */
@@ -59,15 +64,21 @@ net.Socket.prototype.remoteAddress = 0;
  * For UNIX sockets, it is possible to send a file descriptor through the
  * socket. Simply add the fileDescriptor argument and listen for the 'fd'
  * event on the other end.
+ * @param data
+ * @param encoding
+ * @param fileDescriptor
+ * @param callback
  */
-net.Socket.prototype.write = function() {}
+net.Socket.prototype.write = function(data, encoding, fileDescriptor, callback) {}
 /**
  * Opens the connection for a given socket. If port and host are given,
  * then the socket will be opened as a TCP socket, if host is omitted,
  * localhost will be assumed. If a path is given, the socket will be opened
  * as a unix socket to that path.
+ * @param path
+ * @param callback
  */
-net.Socket.prototype.connect = function() {}
+net.Socket.prototype.connect = function(path, callback) {}
 /**
  * Ensures that no more I/O activity happens on this socket. Only necessary
  * in case of errors (parse error or so).
@@ -76,8 +87,9 @@ net.Socket.prototype.destroy = function() {}
 /**
  * Sets the encoding (either 'ascii', 'utf8', or 'base64') for data that is
  * received.
+ * @param encoding=null
  */
-net.Socket.prototype.setEncoding = function() {}
+net.Socket.prototype.setEncoding = function(encoding) {}
 /**
  * Enable/disable keep-alive functionality, and optionally set the initial
  * delay before the first keepalive probe is sent on an idle socket. Set
@@ -85,8 +97,10 @@ net.Socket.prototype.setEncoding = function() {}
  * packet received and the first keepalive probe. Setting 0 for
  * initialDelay will leave the value unchanged from the default (or
  * previous) setting.
+ * @param enable=false
+ * @param initialDelay
  */
-net.Socket.prototype.setKeepAlive = function() {}
+net.Socket.prototype.setKeepAlive = function(enable, initialDelay) {}
 /**
  * net.Socket has the property that socket.write() always works. This is to
  * help users get up an running quickly. The computer cannot necessarily
@@ -101,27 +115,32 @@ net.Socket.prototype.bufferSize = 0;
 /**
  * Tests if input is an IP address. Returns 0 for invalid strings, returns
  * 4 for IP version 4 addresses, and returns 6 for IP version 6 addresses.
+ * @param input
  */
-net.isIP = function() {}
+net.isIP = function(input) {}
 
 /**
  * Returns true if input is a version 6 IP address, otherwise returns
  * false.
+ * @param input
  */
-net.isIPv6 = function() {}
+net.isIPv6 = function(input) {}
 
 /**
  * Returns true if input is a version 4 IP address, otherwise returns
  * false.
+ * @param input
  */
-net.isIPv4 = function() {}
+net.isIPv4 = function(input) {}
 
 /**
  * Creates a new TCP server. The connectionListener argument is
  * automatically set as a listener for the 'connection' event.
+ * @param options
+ * @param connectionListener
  * @returns net.Server
  */
-net.createServer = function() {}
+net.createServer = function(options, connectionListener) {}
 
 /**
  * This class is used to create a TCP or UNIX server.
@@ -132,12 +151,14 @@ net.Server.prototype = {}
  * Stop accepting connections for the given number of milliseconds (default
  * is one second). This could be useful for throttling new connections
  * against DoS attacks or other oversubscription.
+ * @param msecs
  */
-net.Server.prototype.pause = function() {}
+net.Server.prototype.pause = function(msecs) {}
 /**
  * Start a server listening for connections on the given file descriptor.
+ * @param fd
  */
-net.Server.prototype.listenFD = function() {}
+net.Server.prototype.listenFD = function(fd) {}
 /**
  * The number of concurrent connections on the server.
  */
@@ -162,15 +183,69 @@ net.Server.prototype.close = function() {}
 net.Server.prototype.address = function() {}
 /**
  * Start a UNIX socket server listening for connections on the given path.
+ * @param path
+ * @param callback
  */
-net.Server.prototype.listen = function() {}
+net.Server.prototype.listen = function(path, callback) {}
 
 /**
  * Construct a new socket object and opens a socket to the given location.
  * When the socket is established the 'connect' event will be emitted.
+ * @param arguments
  */
-net.createConnection = function() {}
+net.createConnection = function(arguments) {}
 
+
+/** @__local__ */ var __events__ = {};
+/**
+ * Emitted when a new connection is made. socket is an instance of
+ * net.Socket.
+ * @param socket {net.Socket}
+ */
+__events__.connection = function(socket) {};
+/**
+ * Emitted when the server closes.
+ */
+__events__.close = function() {};
+/**
+ * Emitted when a socket connection successfully is established. See
+ * connect().
+ */
+__events__.connect = function() {};
+/**
+ * Emitted when data is received. The argument data will be a Buffer or
+ * String. Encoding of data is set by socket.setEncoding(). (See the
+ * Readable Stream section for more information.)
+ * @param data {buffer.Buffer}
+ */
+__events__.data = function(data) {};
+/**
+ * Emitted when the other end of the socket sends a FIN packet.
+ */
+__events__.end = function() {};
+/**
+ * Emitted if the socket times out from inactivity. This is only to notify
+ * that the socket has been idle. The user must manually close the
+ * connection.
+ */
+__events__.timeout = function() {};
+/**
+ * Emitted when the write buffer becomes empty. Can be used to throttle
+ * uploads.
+ */
+__events__.drain = function() {};
+/**
+ * Emitted when an error occurs. The 'close' event will be called directly
+ * following this event.
+ * @param exception {Error}
+ */
+__events__.error = function(exception) {};
+/**
+ * Emitted once the socket is fully closed. The argument had_error is a
+ * boolean which says if the socket was closed due to a transmission error.
+ * @param had_error {Boolean}
+ */
+__events__.close = function(had_error) {};
 
                 /* net.Server inherits from EventEmitter */
                 var events = require('events');
