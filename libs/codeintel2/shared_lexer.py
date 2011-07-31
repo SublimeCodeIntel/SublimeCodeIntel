@@ -45,6 +45,8 @@ import sys
 
 from SilverCity import ScintillaConstants
 
+import logging
+#log.setLevel(logging.DEBUG)
 #---- global data
 
 MAX_REASONABLE_LIMIT = 10000
@@ -69,13 +71,16 @@ class Token:
         return Token(tok.style, text, tok.start_column, tok.start_line, tok.end_column, tok.end_line)
     
     def dump(self):
+        print self.dump_ret()
+
+    def dump_ret(self):
         s = "[" + str(self.style) + ", " + repr(self.text)
         for attr in ['start_column', 'start_line', 'end_column', 'end_line']:
             if hasattr(self, attr):
                 val = getattr(self, attr)
                 s += ", " + attr + "=" + str(val)
         s += "]"
-        print s
+        return s
 
 EOF_STYLE = -1
 EOF_TOKEN = Token(EOF_STYLE)

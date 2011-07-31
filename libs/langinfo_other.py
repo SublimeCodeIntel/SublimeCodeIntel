@@ -49,8 +49,7 @@ class MakefileLangInfo(LangInfo):
     exts = [".mak"]
     filename_patterns = [re.compile(r'^[Mm]akefile.*$')]
 
-class CSSLangInfo(LangInfo):
-    name = "CSS"
+class _CSSLangInfoCommon(LangInfo):
     conforms_to_bases = ["Text"]
     exts = [".css"]
     default_encoding = "utf-8"
@@ -61,6 +60,19 @@ class CSSLangInfo(LangInfo):
     #   @charset "<IANA defined charset name>";
     # at the start of the CSS document.
     encoding_decl_pattern = re.compile(r'\A@charset "(?P<encoding>[\w-]+)";')
+
+class CSSLangInfo(_CSSLangInfoCommon):
+    name = "CSS"
+    exts = [".css"]
+
+class SCSSLangInfo(_CSSLangInfoCommon):
+    name = "SCSS"
+    exts = [".scss"]
+
+class LessLangInfo(_CSSLangInfoCommon):
+    name = "Less"
+    exts = [".less"]
+
 
 class CIXLangInfo(LangInfo):
     """Komodo Code Intelligence XML dialect.

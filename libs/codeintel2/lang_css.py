@@ -210,7 +210,8 @@ class _StraightCSSStyleClassifier(object):
 
     @property
     def value_styles(self):
-        return (ScintillaConstants.SCE_CSS_VALUE, )
+        return (ScintillaConstants.SCE_CSS_VALUE,
+                ScintillaConstants.SCE_CSS_NUMBER)
 
     @property
     def tag_styles(self):
@@ -229,6 +230,8 @@ class _StraightCSSStyleClassifier(object):
         return (ScintillaConstants.SCE_CSS_DEFAULT,
                 ScintillaConstants.SCE_CSS_COMMENT)
 
+DebugStatus = False
+
 class _UDLCSSStyleClassifier(_StraightCSSStyleClassifier):
     def is_css_style(self, style, accessorCacheBack=None):
         return is_udl_css_style(style)
@@ -237,7 +240,7 @@ class _UDLCSSStyleClassifier(_StraightCSSStyleClassifier):
         # Check to see if it's a html style attribute
         # Note: We are starting from the html string delimiter, i.e.:
         #   <body style=<|>"abc...
-        DEBUG = False
+        DEBUG = DebugStatus
         # We may have already found out this is a style attribute, check it
         if getattr(ac, "is_html_style_attribute", False):
             return True
@@ -267,7 +270,7 @@ class _UDLCSSStyleClassifier(_StraightCSSStyleClassifier):
         # Previous style must be operator and one of "{;"
         ac = accessorCacheBack
         if ac is not None:
-            DEBUG = False
+            DEBUG = DebugStatus
             #DEBUG = True
             pcs = ac.getCurrentPosCharStyle()
             if DEBUG:
@@ -298,7 +301,7 @@ class _UDLCSSStyleClassifier(_StraightCSSStyleClassifier):
             if self.is_operator(pcs[2]) and pcs[1] in ">.;}{":
                 return True
             try:
-                DEBUG = False
+                DEBUG = DebugStatus
                 # Check that the preceding character before the identifier is a "."
                 ppcs = ac.getPrecedingPosCharStyle(pcs[2],
                                                    ignore_styles=self.ignore_styles)
@@ -328,7 +331,7 @@ class _UDLCSSStyleClassifier(_StraightCSSStyleClassifier):
             # Tags follow operators or other tags
             # For use, we'll go back until we find an operator in "}>"
             if style in self.identifier_styles:
-                DEBUG = False
+                DEBUG = DebugStatus
                 p, ch, style = ac.getCurrentPosCharStyle()
                 start_p = p
                 min_p = max(0, p - 50)
@@ -440,7 +443,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
 
 
     def preceding_trg_from_pos(self, buf, pos, curr_pos):
-        DEBUG = False # not using 'logging' system, because want to be fast
+        DEBUG = DebugStatus # not using 'logging' system, because want to be fast
         #DEBUG = True # not using 'logging' system, because want to be fast
 
         if DEBUG:
@@ -475,7 +478,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
             p, ch, style = ac.getPrecedingPosCharStyle(style, ignore_styles=ignore_styles, max_look_back=100)
             if DEBUG:
                 print "  preceding_trg_from_pos: Trying preceding p: %r, ch: %r, style: %r" % (p, ch, style)
-            if ch and (_isident(ch) or ch in ":( \t"):
+            if ch and (isident(ch) or ch in ":( \t"):
                 trg = self._trg_from_pos(buf, p+1, implicit=False, DEBUG=DEBUG,
                                          ac=ac, styleClassifier=styleClassifier)
                 if trg is not None:
@@ -527,11 +530,29 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
             if styleClassifier.is_default(last_style):
                 if DEBUG:
                     print "  _trg_from_pos:: Default style: %d, ch: %r" % (last_style, last_char)
-                # This may not even be a property-value, but at this stage we
-                # don't care, as it will get worked out later in the
-                # asynchronous call async_eval_at_trg().
-                return Trigger("CSS", TRG_FORM_CPLN, "property-values",
+                # Move backwards resolving ambiguity, default on "property-values"
+                min_pos = max(0, pos - 200)
+                while last_pos > min_pos:
+                    last_pos, last_char, last_style = ac.getPrevPosCharStyle()
+                    if styleClassifier.is_operator(last_style, ac) or styleClassifier.is_value(last_style, ac):
+                        if DEBUG:
+                            print " _trg_from_pos: space => property-values"
+                        return Trigger("CSS", TRG_FORM_CPLN, "property-values",
+                                       pos, implicit, extra={"ac": ac})
+                    elif styleClassifier.is_tag(last_style, ac):
+                        if DEBUG:
+                            print " _trg_from_pos: space => tag-names"
+                        return Trigger("CSS", TRG_FORM_CPLN, "tag-names",
                                pos, implicit, extra={"ac": ac})
+                    elif styleClassifier.is_identifier(last_style, ac):
+                        if DEBUG:
+                            print " _trg_from_pos: space => property-names"
+                        return Trigger("CSS", TRG_FORM_CPLN, "property-names",
+                               pos, implicit, extra={"ac": ac})
+                if DEBUG:
+                    print " _trg_from_pos: couldn't resolve space, settling on property-names"
+                return Trigger("CSS", TRG_FORM_CPLN, "property-values",
+                                   pos, implicit, extra={"ac": ac})
 
             elif styleClassifier.is_operator(last_style, ac):
                 # anchors
@@ -600,7 +621,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                     while p >= 0:
                         if DEBUG:
                             print "  _trg_from_pos:: Looking at p: %d, ch: %r, style: %d" % (p, ch, style)
-                        if not _isident(ch):
+                        if not isident(ch):
                             p += 1
                             break
                         elif style != last_style:
@@ -622,7 +643,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                 pos = last_pos
                 while pos >= 0:
                     pos, ch, style = ac.getPrevPosCharStyle()
-                    if not _isident(ch):
+                    if not isident(ch):
                         break
                     elif style != last_style:
                         return None
@@ -663,27 +684,17 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                     return Trigger("CSS", TRG_FORM_CPLN, "property-values",
                                    p+1, implicit, extra={"ac": ac})
                 # For explicit, we can also be inside a property already
-                if not implicit and _isident(ch):
+                if not implicit and isident(ch):
                     # If there is already part of a value there, we need to move
                     # the trigger point "p" to the start of the value.
-                    while _isident(ch):
+                    while isident(ch):
                         p, ch, style = ac.getPrevPosCharStyle()
                     return Trigger("CSS", TRG_FORM_CPLN, "property-values",
                                    p+1, implicit, extra={"ac": ac})
                 return None
 
-            elif styleClassifier.is_default(last_style):
-                if DEBUG:
-                    print "  _trg_from_pos:: Default style: %d, ch: %r" % (last_style, last_char)
-                p, ch, style = ac.getPrecedingPosCharStyle(last_style)
-                while style in styleClassifier.identifier_styles:
-                    p, ch, style = ac.getPrecedingPosCharStyle(style)
-                if styleClassifier.is_operator(style) and ch in ":,)":
-                    return Trigger("CSS", TRG_FORM_CPLN, "property-values",
-                                   p+1, implicit, extra={"ac": ac})
-
             elif DEBUG:
-                print "  _trg_from_pos:: Unknown style: %d, ch: %r" % (last_style, last_char)
+                print "  _trg_from_pos:: Unexpected style: %d, ch: %r" % (last_style, last_char)
 
             # XXX "at-property-names" - Might be used later
             #elif last_style == SCE_CSS_DIRECTIVE:
@@ -707,7 +718,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
         return None
 
     def trg_from_pos(self, buf, pos, implicit=True, ac=None):
-        DEBUG = False # not using 'logging' system, because want to be fast
+        DEBUG = DebugStatus # not using 'logging' system, because want to be fast
         if isinstance(buf, UDLBuffer):
             # This is CSS content in a multi-lang buffer.
             return self._trg_from_pos(buf, pos, implicit, DEBUG, ac, UDLCSSStyleClassifier)
@@ -723,7 +734,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
         if _xpcom_:
             trg = UnwrapObject(trg)
             ctlr = UnwrapObject(ctlr)
-        DEBUG = False
+        DEBUG = DebugStatus
         #DEBUG = True
         if DEBUG:
             print "\n----- async_eval_at_trg(trg=%r) -----"\
@@ -859,7 +870,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
     
             else:
                 raise NotImplementedError("not yet implemented: completion for "
-                                          "most css triggers")
+                                          "most css triggers: trg.id: %s" % (trg.id,))
         except IndexError:
             # Tried to go out of range of buffer, nothing appropriate found
             if DEBUG:
@@ -893,11 +904,11 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
 
     def _is_ident_of_length(self, accessor, pos, length=3):
         # Fourth char to left should not be an identifier
-        if pos > length and _isident(accessor.char_at_pos((pos - length) - 1)):
+        if pos > length and isident(accessor.char_at_pos((pos - length) - 1)):
             return False
         # chars to left should all be identifiers
         for i in range(pos - 1, (pos - length) -1, -1):
-            if not _isident(accessor.char_at_pos(i)):
+            if not isident(accessor.char_at_pos(i)):
                 return False
         return True
 
@@ -917,7 +928,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
         If the <current_value> is '', then the trigger position is
         ready to start a new value.
         """
-        DEBUG = False
+        DEBUG = DebugStatus
         #DEBUG = True
         #PERF: Use accessor.gen_chars_and_styles() if possible.
         try:
@@ -963,6 +974,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                                 styleClassifier.is_value(style)):
                 if DEBUG:
                     print "Already inside a paren, no cpln's then."
+                    #XXX SCSS and Less support arithmetic expressions
                 return (None, None, None)
             elif ch == ")" and (styleClassifier.is_operator(style) or
                                 styleClassifier.is_value(style)):
@@ -976,13 +988,14 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                     if DEBUG:
                         print "%s: couldn't find ':' operator, found invalid " \
                               "operator: %d %r %d" % (trg.name, p, ch, style)
+                    #TODO: SCSS and Less support arithmetic expressions
                     return (None, None, None)
             elif styleClassifier.is_string(style):
                 # Used to skip over string items in property values
                 if DEBUG:
                     print "Found string style, ignoring it"
-            elif not styleClassifier.is_value(style):
-                # is_value is used for sraight CSS, where everything is a value
+            elif not (styleClassifier.is_value(style) or styleClassifier.is_default(style)):
+                # old CSS lexer: everything betwee ":" and ';' used to be a value.
                 if DEBUG:
                     print "%s: couldn't find ':' operator, found invalid " \
                           "style: pcs: %d %r %d" % (trg.name, p, ch, style)
@@ -1106,9 +1119,9 @@ del ch
 del _ident_chars
 
 def _isident_first_char(char):
-    return _isident(char) and char != "-" and (char < "0" or char > "9")
+    return isident(char) and char != "-" and (char < "0" or char > "9")
 
-def _isident(char):
+def isident(char):
     # In CSS2, identifiers  (including element names, classes, and IDs in
     # selectors) can contain only the characters [A-Za-z0-9] and ISO 10646
     # characters 161 and higher, plus the hyphen (-); they cannot start with a

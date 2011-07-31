@@ -1008,48 +1008,10 @@ def sortByLine(seq):
     seq.sort(_sortByLineCmp)
     return seq
 
-
-class JSArgs:
-    """An argument list for a function (or constructor)"""
-    def __init__(self, arglist):
-        self.args = arglist
-        # We don't initially know the argument types.
-        self.types = [None] * len(arglist)
-        self.argline = ", ".join(arglist)
-
-    def __repr__(self):
-        args = []
-        for arg in self.args:
-            args.append(repr(arg))
-        return ', '.join(args)
-
-    def addTypeForArgument(self, argname, typename):
-        try:
-            idx = self.args.index(argname)
-        except ValueError:
-            pass
-        else:
-            self.types[idx] = typename
-
-    def toElementTree(self, cixelement, jsdoc=None):
-        for arg, typename in zip(self.args, self.types):
-            doc = None
-            # Use the jsdoc for assistance, type and doc information
-            if jsdoc:
-                for jsdocParam in jsdoc.params:
-                    if jsdocParam.paramname == arg:
-                        # we have a match
-                        typename = jsdocParam.paramtype
-                        doc = jsdocParam.doc
-            if not typename and ENABLE_HEURISTICS:
-                if arg == 'event': # assume that variables named event are Events
-                    typename = "Event"
-            addCixArgument(cixelement, arg, standardizeJSType(typename), doc)
-
 # Everything is JS is an object.... MUMUHAHAHAHAHAHAAAA.......
 
 class JSObject:
-    def __init__(self, name, parent, lineno, depth, type=None, args=None,
+    def __init__(self, name, parent, lineno, depth, type=None,
                  doc=None, isLocal=False, isHidden=False, path=None):
         self.name = name
         self.parent = parent
@@ -1089,12 +1051,6 @@ class JSObject:
             # means not to show documentation for these elements.
             self.attributes.append("private")
 
-        if args:
-            self.args = JSArgs(args)
-            self.argline = self.args.argline
-        else:
-            self.args = None
-            self.argline = ""
         self.doc = doc
         self.jsdoc = None
         if self.doc:
@@ -1153,13 +1109,7 @@ class JSObject:
             log.info("VAR:%s, line:%d, type:%r, scope:%r, meta:%r",
                      name, value.line, value.type, self.name, metadata)
             v = value
-            # Check to make sure it's not a function argument already
-            if not isinstance(self, JSFunction) or not self.args or \
-               name not in self.args.args:
-                self.variables[name] = v
-            else:
-                log.debug("addVariable:: Did not add variable because a "
-                          "function argument exists with the same name")
+            self.variables[name] = v
         # Else if there is no citdl type yet, assign it the given type
         elif value.type and not v.type:
             log.debug("existing VAR:%s, setting type: %r", name, value.type)
@@ -1217,7 +1167,7 @@ class JSObject:
     def outline(self, depth=0):
         result = []
         if self.cixname == "function":
-            result.append("%s%s %s(%s)" % (" " * depth, self.cixname, self.name, self.argline))
+            result.append("%s%s %s(%s)" % (" " * depth, self.cixname, self.name, ", ".join(self.args)))
         elif self.cixname == "class" and self.classrefs:
             result.append("%s%s %s [%s]" % (" " * depth, self.cixname, self.name, self.classrefs))
         elif self.cixname == "variable" and (self.type or (self.jsdoc and self.jsdoc.type)):
@@ -1309,9 +1259,8 @@ class JSObject:
             signature = "%s(" % (self.name)
             # Add function arguments
             if self.args:
-                signature += ' '.join(self.args.argline.split())
+                signature += ", ".join(self.args)
                 # Add function arguments to tree
-                self.args.toElementTree(cixobject, jsdoc)
             # Add signature - calltip
             signature += ")"
             cixobject.attrib["signature"] = signature
@@ -1342,7 +1291,7 @@ class JSObject:
         # handler combine the completions from the citdl and also the child
         # elements, but this is not yet possible.
         if allValues and self.cixname == 'variable' and \
-           cixobject.get("citdl") != "Object":
+           cixobject.get("citdl") and cixobject.get("citdl") != "Object":
             log.info("Variable of type: %r contains %d child elements, "
                      "ignoring them.", cixobject.get("citdl"), len(allValues))
             return None
@@ -1382,6 +1331,34 @@ class JSAlias(JSVariable):
         self.target = target
         self.scope = scope
 
+class JSArgument(JSVariable):
+    """An argument for a function (or constructor)"""
+    def __init__(self, *args, **kwargs):
+        JSVariable.__init__(self, *args, **kwargs)
+        self.cixname = "variable"
+        if not self.type and ENABLE_HEURISTICS:
+            if self.name == 'event': # assume that variables named event are Events
+                log.debug("JSArgument: assuming argument named event is a Event")
+                self.type = "Event"
+
+    def outline(self, depth=0):
+        result = []
+        if self.type or (self.jsdoc and self.jsdoc.type):
+            result.append("%sargument %s [%s]" % (" " * depth, self.name, self.type or (self.jsdoc and self.jsdoc.type)))
+        else:
+            result.append("%sargument %s" % (" " * depth, self.name))
+        for attrname in ("classes", "members", "functions", "variables"):
+            d = getattr(self, attrname, {})
+            for v in d.values():
+                result += v.outline(depth + 2)
+        return result
+
+    def toElementTree(self, *args, **kwargs):
+        cixelement = JSVariable.toElementTree(self, *args, **kwargs)
+        if cixelement is not None:
+            cixelement.attrib["ilk"] = "argument"
+        return cixelement
+
 class JSFunction(JSObject):
     """A JavaScript function"""
     def __init__(self, funcname, parent, args, lineno, depth=0, doc=None,
@@ -1400,12 +1377,16 @@ class JSFunction(JSObject):
         """
         # funcname: string
         # args: list (or None)
-        JSObject.__init__(self, funcname, parent, lineno, depth, args=args,
+        JSObject.__init__(self, funcname, parent, lineno, depth,
                           doc=doc, isLocal=isLocal, isHidden=isHidden, path=path)
         if isinstance(parent, JSClass):
             self._class = parent
         self._parent_assigned_vars = []
         self._callers = set()
+        self.args = list(args or [])
+        for arg in self.args:
+            self.addVariable(arg, JSArgument(name=arg, parent=self, line=lineno,
+                                             depth=depth))
 
     ##
     # @rtype {string or JSObject} add this possible return type
@@ -1419,6 +1400,15 @@ class JSFunction(JSObject):
         self._callers.add((pos, caller, line))
 
     def toElementTree(self, cixelement):
+        if self.jsdoc:
+            # fix up argument info from jsdoc
+            for jsdocParam in self.jsdoc.params:
+                var = self.variables.get(jsdocParam.paramname)
+                if isinstance(var, JSArgument):
+                    var.type = standardizeJSType(jsdocParam.paramtype)
+                    # fake a JSDoc (since it's already all parsed)
+                    var.jsdoc = JSDoc()
+                    var.jsdoc.doc = jsdocParam.doc
         cixobject = JSObject.toElementTree(self, cixelement)
         if not cixobject:
             return cixobject
@@ -1531,6 +1521,13 @@ class JSFile:
                 name = sp[namePos]
                 #print "sp[%d]: %r" % (namePos, name)
                 foundScope = self._findScopeWithName(name, scopeStack, type="variables")
+                alternateScopeStack = scopeStack
+                while foundScope and isinstance(foundScope, JSArgument) and \
+                  not foundScope.type and foundScope.parent in alternateScopeStack:
+                    log.debug("found untyped argument %r on %r, trying next",
+                              foundScope.name, foundScope.parent.name)
+                    alternateScopeStack[alternateScopeStack.index(foundScope.parent):] = []
+                    foundScope = self._findScopeWithName(name, alternateScopeStack, type="variables")
                 if not foundScope:
                     #print "Trying member variables"
                     # Then look for a class members with this name
@@ -1868,6 +1865,52 @@ class JavaScriptCiler:
         # Not found
         return None
 
+    def _resolveAlias(self, namelist, scope=None):
+        """Resolve the given alias
+        @param namelist {seq of str} The path to the alias to resolve
+        @param scope {JSObject} The starting scope; defaults to the current scope
+        @returns {tuple of scope, {seq of str}} The scope and namelist for the
+            (recursively) resolved namelist; alternatively, tuple (None, None)
+            if the alias could not be resolved (e.g. not an alias)
+        """
+        if not namelist:
+            return (None, None)
+        namelist = namelist[:]
+        if scope is None:
+            scope = self.currentScope
+        lastScope, lastNamelist = scope, namelist[:]
+        log.debug("_resolveAlias: Resolving alias %r in scope %r", namelist, scope.name)
+        aliasDepth = 0 # prevent infinite loop
+        found = False
+        while namelist:
+            log.debug("_resolveAlias: Looking for %r in scope %r", namelist, scope.name)
+            namesDict = getattr(scope, "variables", None)
+            if not namesDict:
+                # this scope has no variables
+                log.debug("_resolveAlias: scope %r has no variables", scope.name)
+                break
+            name = namelist.pop(0)
+            foundVar = namesDict.get(name)
+            if foundVar is None:
+                # can't find the wanted name
+                log.debug("_resolveAlias: scope %r does not have variable %r", scope.name, name)
+                break
+            if isinstance(foundVar, JSAlias) and aliasDepth < 10:
+                lastScope = scope = foundVar.scope
+                namelist = foundVar.target + namelist
+                lastNamelist = namelist[:]
+                aliasDepth += 1
+                log.debug("_resolveAlias: found alias %r on %r; new names %r",
+                          foundVar.name, scope.name, namelist)
+            else:
+                # found a non-alias variable
+                scope = foundVar
+        log.debug("_resolveAlias: finished resolve: scope %r namelist %r depth %r",
+                  lastScope.name, lastNamelist, aliasDepth)
+        if aliasDepth == 0:
+            return (None, None)
+        return (lastScope, lastNamelist)
+
     def _locateScopeForName(self, namelist, attrlist=("variables", ), scope=None):
         """Find the scope referenced by namelist, or if it is not itself a scope,
         the containing scope
@@ -1918,13 +1961,13 @@ class JavaScriptCiler:
                             namePos = -1
                             aliasDepth += 1
                             log.debug("_locateScopeForName: encountered alias %r, restarting with %r on %r",
-                                      name, namelist, scope)
+                                      name, namelist, scope.name)
                             break # continue outer for loop
                         elif attrToLookIn == "variables" and noVariables:
                             # we didn't originally want to pick up variables
                             continue
                         if foundScope:
-                            log.debug("_locateScopeForName: Found scope %r for: %r", foundScope, name)
+                            log.debug("_locateScopeForName: Found scope %r for: %r", foundScope.name, name)
                             # Look in this sub-scope if we have more names to check
                             if type != "variables" or namePos < len(namelist) - 1:
                                 currentScope = foundScope
@@ -2349,7 +2392,7 @@ class JavaScriptCiler:
             # Copy over non-local variables from the function to the class,
             # all the local variables stay inside the function scope.
             for varName, v in jsfunc.variables.items():
-                isLocal = "__local__" in v.attributes
+                isLocal = "__local__" in v.attributes or isinstance(v, JSArgument)
                 if not isLocal:
                     # Add to class and remove from the function
                     jsclass.variables[varName] = JSVariable(varName, jsclass, v.line,
@@ -2365,7 +2408,7 @@ class JavaScriptCiler:
 
         # Copy across all non-local members, bug 88549.
         for name, jsobject in jsfunc.variables.items():
-            if '__local__' not in jsobject.attributes:
+            if '__local__' not in jsobject.attributes and not isinstance(jsobject, JSArgument):
                 jsclass.variables[name] = jsobject
                 jsfunc.variables.pop(name, None)
         for name, jsobject in jsfunc.functions.items():
@@ -2443,6 +2486,15 @@ class JavaScriptCiler:
         else:
             applyToScope = self.cile   # Global file level
 
+        resolvedScope, resolvedNamelist = self._resolveAlias(namelist, fromScope)
+        if resolvedScope is not None and resolvedNamelist:
+            # don't use the resolved namelist if it resolves to an undeclared
+            # global object; doing so can cause us to shadow things found in the
+            # standard library
+            if resolvedScope is not self.cile or \
+              self._findInScope(resolvedNamelist[0], attrlist, resolvedScope) is not None:
+                fromScope, namelist = resolvedScope, resolvedNamelist
+
         isTheFirstName = True
         for name in namelist:
             # When looking for the first name of the scope, traverse the parent
@@ -2457,45 +2509,20 @@ class JavaScriptCiler:
                 v = JSVariable(name, applyToScope, self.lineno, self.depth,
                                vartype="Object", path=self.path)
                 scope = applyToScope.addVariable(name, value=v)
-                log.info("Could not find %r in scope: %r, creating variable (type=Object) for it!!!",
-                         name, fromScope.name)
+                log.info("Could not find %r in scope: %r, creating variable (type=Object) for it on scope %r!!!",
+                         name, fromScope.name, applyToScope.name)
             fromScope = scope
             applyToScope = scope
         return fromScope
 
-    def _findFunctionScopeWithArgument(self, argname, scope=None):
-        # Check whether argname is a function argument for the given scope or
-        # one of its parent scopes.
-        if scope is None:
-            scope = self.currentScope
-
-        while isinstance(scope, JSObject):
-            if isinstance(scope, JSFunction):
-                if scope.args and argname in scope.args.args:
-                    return scope
-            scope = scope.parent
-        return None
-
     def addVariable(self, namelist, typeNames, toScope=None, doc=None,
                     assignAsCurrentScope=False, isLocal=False, value=None,
                     varCtor=JSVariable):
-        log.debug("addVariable: %r, typeNames:%r, isLocal: %r",
-                  namelist, typeNames, isLocal)
         varName = namelist[-1]
         if toScope is None:
             toScope = self.currentScope
-
-        func = self._findFunctionScopeWithArgument(namelist[0], scope=toScope)
-        if func is not None:
-            log.debug("Not adding var %r, line: %d. Function %r has an arg "
-                      "with the same name.", namelist, self.lineno, func.name)
-            # If there is a known type, assign it to the argument.
-            if typeNames and len(namelist) == 1:
-                if isinstance(typeNames, JSVariable):
-                    func.args.addTypeForArgument(namelist[0], typeNames.type)
-                else:
-                    func.args.addTypeForArgument(namelist[0], ".".join(typeNames))
-            return None
+        log.debug("addVariable: %r, typeNames:%r, isLocal: %r, scope: %r",
+                  namelist, typeNames, isLocal, toScope.name)
 
         if len(namelist) > 1:
             if namelist[-2] == "prototype":
@@ -3131,11 +3158,11 @@ class JavaScriptCiler:
                                                       varCtor=varCtor)
                     else:
                         if len(namelist) > 1:
-                            log.debug("_variableHandler:: Line %d, scoped assignment: %r, %s=%r",
-                                      lineno, namelist, typeString, typeNames)
+                            log.debug("_variableHandler:: Line %d, scoped assignment: %r, %s=%r scope %r",
+                                      lineno, namelist, typeString, typeNames, self.currentScope.name)
                         else:
-                            log.debug("_variableHandler:: Line %d, local variable assignment: %r, %s=%r",
-                                      lineno, namelist, typeString, typeNames)
+                            log.debug("_variableHandler:: Line %d, local variable assignment: %r, %s=%r scope %r",
+                                      lineno, namelist, typeString, typeNames, self.currentScope.name)
                         # XXX - Check this, do we need this hack?
                         if typeNames == ["Object"] and text[-1] == "{":
                             # Turn it into a class
