@@ -209,6 +209,9 @@ def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
 
 
 def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs={}):
+    if hasattr(view, 'command_history') and view.command_history(0)[0] != 'insert':
+        view.run_command('hide_auto_complete')
+        return
     def _autocomplete_callback(view, path):
         id = view.id()
         content = view.substr(sublime.Region(0, view.size()))
