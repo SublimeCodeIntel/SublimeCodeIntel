@@ -303,17 +303,31 @@ StateMap = {
     },
     'CSS': {
         'default': ('SCE_CSS_DEFAULT',),
-        'tags': ('SCE_CSS_TAG',),
-        'classes': ('SCE_CSS_CLASS', 'SCE_CSS_PSEUDOCLASS', 'SCE_CSS_UNKNOWN_PSEUDOCLASS',),
+        'tags': ('SCE_CSS_TAG',
+                 'SCE_CSS_PSEUDOELEMENT',
+                 'SCE_CSS_EXTENDED_PSEUDOELEMENT',
+                 ),
+        'classes': ('SCE_CSS_CLASS',
+                    'SCE_CSS_PSEUDOCLASS',
+                    'SCE_CSS_EXTENDED_PSEUDOCLASS',
+                    'SCE_CSS_UNKNOWN_PSEUDOCLASS',
+                    ),
         'operators': ('SCE_CSS_OPERATOR',),
-        'identifiers': ('SCE_CSS_IDENTIFIER', 'SCE_CSS_UNKNOWN_IDENTIFIER',
-                        'SCE_CSS_IDENTIFIER2',),
+        'identifiers': ('SCE_CSS_IDENTIFIER',
+                        'SCE_CSS_UNKNOWN_IDENTIFIER',
+                        'SCE_CSS_IDENTIFIER2',
+                        'SCE_CSS_IDENTIFIER3',
+                        'SCE_CSS_EXTENDED_IDENTIFIER',
+                        ),
         'values': ('SCE_CSS_VALUE',),
         'comments': ('SCE_CSS_COMMENT',),
         'ids': ('SCE_CSS_ID',),
         'important': ('SCE_CSS_IMPORTANT',),
         'directives': ('SCE_CSS_DIRECTIVE',),
         'strings': ('SCE_CSS_DOUBLESTRING', 'SCE_CSS_SINGLESTRING',),
+        'numbers': ('SCE_CSS_NUMBER',),
+        'stringeol': ('SCE_CSS_STRINGEOL',),
+        'attribute name': ('SCE_CSS_ATTRIBUTE',),
     },
     'Makefile': {
         'default': ('SCE_MAKE_DEFAULT',),
@@ -480,6 +494,8 @@ StateMap['IDL'] = StateMap['C++'].copy()
 StateMap['VBScript'] = StateMap['VisualBasic'].copy()
 StateMap['Fortran'] = StateMap['Fortran 77'].copy()
 StateMap['Python3'] = StateMap['Python'].copy()
+StateMap['SCSS'] = StateMap['CSS'].copy()
+StateMap['Less'] = StateMap['CSS'].copy()
 
 SharedStates = {
     'bracebad' : ('STYLE_BRACEBAD',),

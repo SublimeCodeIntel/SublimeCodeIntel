@@ -505,7 +505,6 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     except CodeIntelError:
         logger(view, 'warning', "skip `%s': couldn't determine language" % path)
         return
-    lang = {'SCSS': 'CSS'}.get(lang, lang)  # Languages equivalent map
     if lang.lower() in [l.lower() for l in view.settings().get('codeintel_disabled_languages', [])]:
         return
     is_scratch = view.is_scratch()
