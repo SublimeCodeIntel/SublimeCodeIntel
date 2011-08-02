@@ -209,9 +209,6 @@ def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
 
 
 def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs={}):
-    if hasattr(view, 'command_history') and view.command_history(0)[0] != 'insert':
-        view.run_command('hide_auto_complete')
-        return
     def _autocomplete_callback(view, path):
         id = view.id()
         content = view.substr(sublime.Region(0, view.size()))
@@ -277,7 +274,10 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         if not live and text and sentinel[path] is not None:
             live = True
         if live:
-            autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path])
+            if hasattr(view, 'command_history') and view.command_history(0)[0] == 'insert':
+                autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path])
+            else:
+                view.run_command('hide_auto_complete')
         else:
             def _scan_callback(view, path):
                 content = view.substr(sublime.Region(0, view.size()))
