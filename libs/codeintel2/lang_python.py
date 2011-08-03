@@ -966,7 +966,7 @@ class PythonBuffer(CitadelBuffer):
             line = self._last_logical_line(working_text).rstrip()
             if line:
                 last_bracket = line.rfind("(")
-                pos = (pos - (len(line) - last_bracket)) - 1
+                pos = (pos - (len(line) - last_bracket))
                 return Trigger(self.lang, TRG_FORM_CALLTIP,
                                "call-signature", pos, implicit)
             else:
