@@ -688,7 +688,7 @@ class PythonBuffer(CitadelBuffer):
             print "  last_char: %r" % last_char
 
         # Quick out if the preceding char isn't a trigger char.
-        if last_char not in " .(@_":
+        if last_char not in " .(@_,":
             if DEBUG:
                 print "trg_from_pos: no: %r is not in ' .(@'_" % last_char
             return None
@@ -961,6 +961,16 @@ class PythonBuffer(CitadelBuffer):
             else:
                 if DEBUG: print "trg_from_pos: no: no chars preceding '('"
             return None
+        elif last_char == ',':
+            working_text = accessor.text_range(max(0, last_pos - 200), last_pos)
+            line = self._last_logical_line(working_text).rstrip()
+            if line:
+                last_bracket = line.rfind("(")
+                pos = (pos - (len(line) - last_bracket))
+                return Trigger(self.lang, TRG_FORM_CALLTIP,
+                               "call-signature", pos, implicit)
+            else:
+                return None
 
     def _last_logical_line(self, text):
         lines = text.splitlines(0) or ['']
