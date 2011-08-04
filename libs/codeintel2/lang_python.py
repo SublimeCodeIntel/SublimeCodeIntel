@@ -962,15 +962,29 @@ class PythonBuffer(CitadelBuffer):
                 if DEBUG: print "trg_from_pos: no: no chars preceding '('"
             return None
         elif last_char == ',':
-            working_text = accessor.text_range(max(0, last_pos - 200), last_pos)
-            line = self._last_logical_line(working_text).rstrip()
-            if line:
-                last_bracket = line.rfind("(")
-                pos = (pos - (len(line) - last_bracket))
-                return Trigger(self.lang, TRG_FORM_CALLTIP,
+            working_text = accessor.text_range(
+                max(0, last_pos - 200), last_pos + 1)
+            if working_text:
+                pos = self._find_unclosed_bracket(working_text, pos)
+                if pos:
+                    return Trigger(self.lang, TRG_FORM_CALLTIP,
                                "call-signature", pos, implicit)
-            else:
-                return None
+            return None
+
+    def _find_unclosed_bracket(self, line, pos):
+        closed = 0
+        for idx, ch in enumerate(reversed(line[1:])):
+            if ch == '(':
+                if closed > 0:
+                    closed -= 1
+                else:
+                    next_char = line[-1 * (idx + 2)]
+                    if not re.match(r'\w',  next_char):
+                        return None
+                    return pos - idx
+            elif ch == ')':
+                closed += 1
+        return None
 
     def _last_logical_line(self, text):
         lines = text.splitlines(0) or ['']
