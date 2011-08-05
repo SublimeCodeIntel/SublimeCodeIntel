@@ -2609,6 +2609,10 @@ class PHPParser:
             p += 1
         return None
 
+    def _unescape_string(self, s):
+        """Unescape a PHP string."""
+        return s.replace("\\\\", "\\")
+
     def _getConstantNameAndType(self, styles, text, p):
         """Work out the constant name and type is, returns these as tuple"""
 
@@ -2634,7 +2638,9 @@ class PHPParser:
                                                          assignmentChar=None)
                 break
             p += 1
-        return constant_name, constant_type
+        # We must ensure the name (which came from a PHP string is unescaped),
+        # bug 90795.
+        return self._unescape_string(constant_name), constant_type
 
     def _addAllVariables(self, styles, text, p):
         while p < len(styles):

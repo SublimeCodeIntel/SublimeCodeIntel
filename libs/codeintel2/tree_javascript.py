@@ -392,6 +392,10 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
     def _hits_from_citdl(self, expr, scoperef, defn_only=False):
         self._check_infinite_recursion(expr)
 
+        if "[" in expr:
+            # TODO: We cannot resolve array type inferences yet.
+            raise CodeIntelError("no type-inference yet for arrays: %r" % citdl)
+
         tokens = list(self._tokenize_citdl_expr(expr))
 
         #self.log("expr tokens: %r", tokens)

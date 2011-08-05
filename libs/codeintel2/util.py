@@ -132,17 +132,23 @@ def gen_dirs_under_dirs(dirs, max_depth, interesting_file_patterns=None,
 
     dirs_to_skip = (skip_scc_control_dirs
         and ["CVS", ".svn", ".hg", ".git", ".bzr"] or [])
+    # We must keep track of the directories we have walked, as the list of dirs
+    # can overlap - bug 90289.
+    walked_these_dirs = {}
     for dir in dirs:
         norm_dir = normpath(abspath(expanduser(dir)))
         LEN_DIR = len(norm_dir)
         for dirpath, dirnames, filenames in walk2(norm_dir):
+            if dirpath in walked_these_dirs:
+                dirnames[:] = []  # Already walked - no need to do it again.
+                continue
             if dirpath[LEN_DIR:].count(os.sep) >= max_depth:
                 dirnames[:] = []  # hit max_depth
             else:
+                walked_these_dirs[dirpath] = True
                 for dir_to_skip in dirs_to_skip:
                     if dir_to_skip in dirnames:
                         dirnames.remove(dir_to_skip)
-        
             if interesting_file_patterns:
                 for pat, filename in (
                     (p,f) for p in interesting_file_patterns
