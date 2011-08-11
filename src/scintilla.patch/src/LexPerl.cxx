@@ -1067,11 +1067,12 @@ void ColourisePerlDoc(unsigned int startPos, int length, int , // initStyle
                 styler.ColourTo(i - 1, state);
                 state = SCE_PL_NUMBER;
                 if (ch == '0') {
-                    if (chNext == 'x') {
+                    if (chNext == 'x' || chNext == 'X') {
+                        // Perl 5.14: 0X and 0B are now supported.
                         numBase = 16;
                         // Move to the next char, 'x' isn't allowed inside a number
                         advanceOneChar(i, ch, chNext, chNext2);
-                    } else if (chNext == 'b') {
+                    } else if (chNext == 'b' || chNext == 'B') {
                         numBase = 2;
                         // 'b' isn't allowed either
                         advanceOneChar(i, ch, chNext, chNext2);

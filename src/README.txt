@@ -31,3 +31,4 @@ http://benjamin.smedbergs.us/blog/2006-12-11/killableprocesspy/
 
 Lexers (codeintel2/lexers) from UDL languages at:
 http://svn.openkomodo.com/repos/openkomodo/src/udl/
+Using: `find udl -name '*-mainlex.udl' -exec python luddite.py just_compile {} \;`

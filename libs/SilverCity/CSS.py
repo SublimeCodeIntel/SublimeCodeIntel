@@ -20,7 +20,7 @@ class _CSSLexerTemplate(Lexer.Lexer):
             WordList(Keywords.css_browser_specific_pseudo_classes),
             WordList(Keywords.css_browser_specific_pseudo_elements),
                                ]
-            
+
 class CSSLexer(_CSSLexerTemplate):
     def __init__(self, properties = PropertySet()):
         _CSSLexerTemplate.__init__(self, properties)

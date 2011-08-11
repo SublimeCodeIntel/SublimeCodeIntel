@@ -532,9 +532,10 @@ class PythonCITDLExtractorMixin(object):
     for Python-like syntax.
     """
 
-    # Dictionary of literal types to specific language citdl type
-    # Note: The default values are Python specific
-    citdl_from_literal_type = {"string": "str"}
+    # Dictionary of literal types to specific language citdl type.
+    # Example for Python: {"string": "str"}
+    # Example for JavaScript: {"string": "String"}
+    citdl_from_literal_type = {}
 
     def _citdl_expr_from_pos(self, buf, pos, implicit=False,
                              include_forwards=False, DEBUG=False, trg=None):

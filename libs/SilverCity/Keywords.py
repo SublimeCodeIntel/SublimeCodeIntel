@@ -33,32 +33,33 @@ javadoc_keywords = \
     "value version"
 
 perl_keywords = \
-    "NULL __FILE__ __LINE__ __PACKAGE__ __DATA__ __END__ AUTOLOAD "\
-    "BEGIN CORE DESTROY END EQ GE GT INIT LE LT NE CHECK abs accept "\
-    "alarm and atan2 bind binmode bless caller chdir chmod chomp chop "\
+    "__FILE__ __LINE__ __PACKAGE__ __DATA__ __END__ AUTOLOAD "\
+    "BEGIN CHECK CORE DESTROY END INIT CHECK UNITCHECK abs accept "\
+    "alarm and atan2 bind binmode bless break caller chdir chmod chomp chop "\
     "chown chr chroot close closedir cmp connect continue cos crypt "\
-    "dbmclose dbmopen defined delete die do dump each else elsif endgrent "\
+    "dbmclose dbmopen default defined delete die do dump each else elsif endgrent "\
     "endhostent endnetent endprotoent endpwent endservent eof eq eval "\
     "exec exists exit exp fcntl fileno flock for foreach fork format "\
     "formline ge getc getgrent getgrgid getgrnam gethostbyaddr gethostbyname "\
     "gethostent getlogin getnetbyaddr getnetbyname getnetent getpeername "\
     "getpgrp getppid getpriority getprotobyname getprotobynumber getprotoent "\
     "getpwent getpwnam getpwuid getservbyname getservbyport getservent "\
-    "getsockname getsockopt glob gmtime goto grep gt hex if index "\
+    "getsockname getsockopt given glob gmtime goto grep gt hex if import "\
+    "include index "\
     "int ioctl join keys kill last lc lcfirst le length link listen "\
     "local localtime lock log lstat lt m map mkdir msgctl msgget msgrcv "\
-    "msgsnd my ne next no not oct open opendir or ord our pack package "\
-    "pipe pop pos print printf prototype push q qq qr quotemeta qu "\
+    "msgsnd my ne new next no not oct open opendir or ord our pack package "\
+    "pipe pop pos print printf prototype push q qq qr quotemeta "\
     "qw qx rand read readdir readline readlink readpipe recv redo "\
     "ref rename require reset return reverse rewinddir rindex rmdir "\
-    "s scalar seek seekdir select semctl semget semop send setgrent "\
+    "s say scalar seek seekdir select semctl semget semop send setgrent "\
     "sethostent setnetent setpgrp setpriority setprotoent setpwent "\
     "setservent setsockopt shift shmctl shmget shmread shmwrite shutdown "\
     "sin sleep socket socketpair sort splice split sprintf sqrt srand "\
-    "stat study sub substr symlink syscall sysopen sysread sysseek "\
+    "stat state study sub substr symlink syscall sysopen sysread sysseek "\
     "system syswrite tell telldir tie tied time times tr truncate "\
     "uc ucfirst umask undef unless unlink unpack unshift untie until "\
-    "use utime values vec wait waitpid wantarray warn while write "\
+    "use utime values vec wait waitpid wantarray warn when while write "\
     "x xor y"
 
 python_keywords = \
@@ -166,7 +167,7 @@ vxml_attributes=\
 
 vxml_keywords = vxml_elements + " " + vxml_attributes + " " + "public !doctype"
 
-hypertext_elements=\
+html4_elements=\
     "a abbr acronym address applet area b base basefont " \
     "bdo big blockquote body br button caption center " \
     "cite code col colgroup dd del dfn dir div dl dt em " \
@@ -177,6 +178,15 @@ hypertext_elements=\
     "script select small span strike strong style sub sup " \
     "table tbody td textarea tfoot th thead title tr tt u ul " \
     "var xml xmlns"
+
+html5_elements=\
+    "article aside audio canvas command datalist details dialog " \
+    "embed figcaption figure footer header hgroup keygen mark menu " \
+    "meter nav output progress rp rt ruby section source summary " \
+    "time video"
+
+# Note: There hypertext_elements are not sorted!
+hypertext_elements = html4_elements + " " + html5_elements
 
 hypertext_attributes=\
     "abbr accept-charset accept accesskey action align alink " \
@@ -244,23 +254,162 @@ xslt_keywords = xslt_elements + " " + xslt_attributes + " " + ' '.join(
         ['xsl:' + word for word in (xslt_elements + " " + xslt_attributes).split(' ')]
     )  
 
-# XXX Fill these in!
-js_keywords = ""
-vb_keywords = ""  
+js_keywords = (
+    "abstract boolean break byte case catch "
+    "char class const continue debugger default "
+    "delete do double else enum export "
+    "extends false final finally float for function "
+    "goto if implements import in instanceof "
+    "int interface long native new null package "
+    "private protected public return short "
+    "static super switch synchronized this throw "
+    "throws transient true try typeof var void "
+    "while with")
+
+# http://msdn.microsoft.com/library/default.asp?url=/library/en-us/vblr7/html/vaorivblangkeywordsall.asp
+vb_keywords = (
+    "addhandler addressof alias and andalso  ansi as assembly "
+    "auto boolean byref byte byval call case catch "
+    "cbool cbyte cchar cdate cdec cdbl char cint "
+    "class clng cobj const cshort csng cstr ctype "
+    "date decimal declare default delegate dim directcast do "
+    "double each else elseif end enum erase error "
+    "event exit false finally for friend function get "
+    "gettype gosub goto handles if implements imports in "
+    "inherits integer interface is let lib like long "
+    "loop me mod module mustinherit mustoverride mybase myclass "
+    "namespace new next not nothing notinheritable notoverridable object "
+    "on option optional or orelse overloads overridable overrides "
+    "paramarray preserve private property protected public raiseevent "
+    "readonly redim rem removehandler resume "
+    "return select set shadows step stop string structure "
+    "sub synclock then throw to true try typeof " 
+    "unicode until variant when while with withevents writeonly xor")
 
 css_keywords = \
-    "font-family font-style font-variant font-weight font-size font " \
-    "color background-color background-image background-repeat background-attachment background-position background " \
-    "word-spacing letter-spacing text-decoration vertical-align text-transform text-align text-indent line-height " \
-    "margin-top margin-right margin-bottom margin-left margin " \
-    "padding-top padding-right padding-bottom padding-left padding " \
-    "border-top-width border-right-width border-bottom-width border-left-width border-width " \
-    "border-top border-right border-bottom border-left border " \
-    "border-color border-style width height float clear " \
-    "display white-space list-style-type list-style-image list-style-position list-style"
-
+    """
+    background background-attachment background-color background-image
+    background-position background-repeat border border-bottom
+    border-bottom-width border-color border-left border-left-width
+    border-right border-right-width border-style border-top
+    border-top-width border-width clear color display float font
+    font-family font-size font-style font-variant font-weight height
+    letter-spacing line-height list-style list-style-image
+    list-style-position list-style-type margin margin-bottom margin-left
+    margin-right margin-top padding padding-bottom padding-left
+    padding-right padding-top text-align text-decoration text-indent
+    text-transform vertical-align white-space width word-spacing
+    """
 css_pseudo_classes = \
-    "first-letter first-line link active visited "\
-    "first-child focus hover lang before after left right first"
+    """
+    active after before first first-child first-letter first-line
+    focus hover lang left link right visited
+    """
 
-css_keywords_2 = "first-letter first-line active link visited"
+css_keywords_2 = \
+    """
+    ascent azimuth baseline bbox border-bottom-color
+    border-bottom-style border-collapse border-color border-left-color
+    border-left-style border-right-color border-right-style
+    border-spacing border-style border-top-color border-top-style
+    bottom cap-height caption-side centerline clip content
+    counter-increment counter-reset cue cue-after cue-before cursor
+    definition-src descent direction elevation empty-cells
+    font-size-adjust font-stretch left marker-offset marks mathline
+    max-height max-width min-height min-width orphans outline
+    outline-color outline-style outline-width overflow page
+    page-break-after page-break-before page-break-inside panose-1
+    pause pause-after pause-before pitch pitch-range play-during
+    position quotes richness right size slope speak speak-header
+    speak-numeral speak-punctuation speech-rate src stemh stemv stress
+    table-layout text-shadow top topline unicode-bidi unicode-range
+    units-per-em visibility voice-family volume widows widths x-height
+    z-index
+    """
+
+css_properties_3 = \
+    ""
+
+css_pseudo_elements = \
+    ""
+css_browser_specific_properties = \
+    ""
+css_browser_specific_pseudo_classes = \
+    ""
+css_browser_specific_pseudo_elements = \
+    ""
+
+postscript_level1_keywords = \
+    "$error = == FontDirectory StandardEncoding UserObjects abs add aload " \
+    "anchorsearch and arc arcn arcto array ashow astore atan awidthshow begin bind " \
+    "bitshift bytesavailable cachestatus ceiling charpath clear cleardictstack " \
+    "cleartomark clip clippath closefile closepath concat concatmatrix copy copypage " \
+    "cos count countdictstack countexecstack counttomark currentcmykcolor " \
+    "currentcolorspace currentdash currentdict currentfile currentflat currentfont " \
+    "currentgray currenthsbcolor currentlinecap currentlinejoin currentlinewidth " \
+    "currentmatrix currentmiterlimit currentpagedevice currentpoint currentrgbcolor " \
+    "currentscreen currenttransfer cvi cvlit cvn cvr cvrs cvs cvx def defaultmatrix " \
+    "definefont dict dictstack div dtransform dup echo end eoclip eofill eq " \
+    "erasepage errordict exch exec execstack executeonly executive exit exp false " \
+    "file fill findfont flattenpath floor flush flushfile for forall ge get " \
+    "getinterval grestore grestoreall gsave gt idetmatrix idiv idtransform if ifelse " \
+    "image imagemask index initclip initgraphics initmatrix inustroke invertmatrix " \
+    "itransform known kshow le length lineto ln load log loop lt makefont mark " \
+    "matrix maxlength mod moveto mul ne neg newpath noaccess nor not null nulldevice " \
+    "or pathbbox pathforall pop print prompt pstack put putinterval quit rand rcheck " \
+    "rcurveto read readhexstring readline readonly readstring rectstroke repeat " \
+    "resetfile restore reversepath rlineto rmoveto roll rotate round rrand run save " \
+    "scale scalefont search setblackgeneration setcachedevice setcachelimit " \
+    "setcharwidth setcolorscreen setcolortransfer setdash setflat setfont setgray " \
+    "sethsbcolor setlinecap setlinejoin setlinewidth setmatrix setmiterlimit " \
+    "setpagedevice setrgbcolor setscreen settransfer setvmthreshold show showpage " \
+    "sin sqrt srand stack start status statusdict stop stopped store string " \
+    "stringwidth stroke strokepath sub systemdict token token transform translate " \
+    "true truncate type ueofill undefineresource userdict usertime version vmstatus " \
+    "wcheck where widthshow write writehexstring writestring xcheck xor " \
+
+postscript_level2_keywords = \
+    "GlobalFontDirectory ISOLatin1Encoding SharedFontDirectory UserObject arct " \
+    "colorimage cshow currentblackgeneration currentcacheparams currentcmykcolor " \
+    "currentcolor currentcolorrendering currentcolorscreen currentcolorspace " \
+    "currentcolortransfer currentdevparams currentglobal currentgstate " \
+    "currenthalftone currentobjectformat currentoverprint currentpacking " \
+    "currentpagedevice currentshared currentstrokeadjust currentsystemparams " \
+    "currentundercolorremoval currentuserparams defineresource defineuserobject " \
+    "deletefile execform execuserobject filenameforall fileposition filter " \
+    "findencoding findresource gcheck globaldict glyphshow gstate ineofill infill " \
+    "instroke inueofill inufill inustroke languagelevel makepattern packedarray " \
+    "printobject product realtime rectclip rectfill rectstroke renamefile " \
+    "resourceforall resourcestatus revision rootfont scheck selectfont serialnumber " \
+    "setbbox setblackgeneration setcachedevice2 setcacheparams setcmykcolor setcolor " \
+    "setcolorrendering setcolorscreen setcolorspace setcolortranfer setdevparams " \
+    "setfileposition setglobal setgstate sethalftone setobjectformat setoverprint " \
+    "setpacking setpagedevice setpattern setshared setstrokeadjust setsystemparams " \
+    "setucacheparams setundercolorremoval setuserparams setvmthreshold shareddict " \
+    "startjob uappend ucache ucachestatus ueofill ufill undef undefinefont " \
+    "undefineresource undefineuserobject upath ustroke ustrokepath vmreclaim " \
+    "writeobject xshow xyshow yshow"
+    
+postscript_level3_keywords = \
+    "cliprestore clipsave composefont currentsmoothness findcolorrendering " \
+    "setsmoothness shfill"
+
+postscript_ripspecific_keywords = \
+    ".begintransparencygroup .begintransparencymask .bytestring .charboxpath " \
+    ".currentaccuratecurves .currentblendmode .currentcurvejoin .currentdashadapt " \
+    ".currentdotlength .currentfilladjust2 .currentlimitclamp .currentopacityalpha " \
+    ".currentoverprintmode .currentrasterop .currentshapealpha " \
+    ".currentsourcetransparent .currenttextknockout .currenttexturetransparent " \
+    ".dashpath .dicttomark .discardtransparencygroup .discardtransparencymask " \
+    ".endtransparencygroup .endtransparencymask .execn .filename .filename " \
+    ".fileposition .forceput .forceundef .forgetsave .getbitsrect .getdevice " \
+    ".inittransparencymask .knownget .locksafe .makeoperator .namestring .oserrno " \
+    ".oserrorstring .peekstring .rectappend .runandhide .setaccuratecurves " \
+    ".setblendmode .setcurvejoin .setdashadapt .setdebug .setdefaultmatrix " \
+    ".setdotlength .setfilladjust2 .setlimitclamp .setmaxlength .setopacityalpha " \
+    ".setoverprintmode .setrasterop .setsafe .setshapealpha .setsourcetransparent " \
+    ".settextknockout .settexturetransparent .stringbreak .stringmatch .tempfile " \
+    ".type1decrypt .type1encrypt .type1execchar .unread arccos arcsin copydevice " \
+    "copyscanlines currentdevice finddevice findlibfile findprotodevice flushpage " \
+    "getdeviceprops getenv makeimagedevice makewordimagedevice max min " \
+    "putdeviceprops setdevice"

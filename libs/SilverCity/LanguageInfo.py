@@ -70,6 +70,16 @@ def guess_language_for_file(filename):
         import NULL
         return NULL.null_language_info
 
+def guess_language_for_buffer(buffer):
+    shebang = buffer.split('\n')[0]
+    guesses = guess_languages_for_shebang(shebang)
+        
+    if len(guesses) == 1:
+        return guesses[0]
+
+    import NULL
+    return NULL.null_language_info
+    
 def find_generator_by_name(name):
     for language in registered_languages:
         for generator in language.html_generators:            
@@ -115,14 +125,14 @@ def do_registration():
     import CPP
     import CSS
     import HyperText
+    import JavaScript
     import Java
     import NULL
     import Perl
-    import Python
+    import Python    import PostScript
     import Ruby
     import SQL
     import Verilog
     import YAML
     import XML
     import XSLT
-                    

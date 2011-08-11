@@ -394,7 +394,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
 
         if "[" in expr:
             # TODO: We cannot resolve array type inferences yet.
-            raise CodeIntelError("no type-inference yet for arrays: %r" % citdl)
+            raise CodeIntelError("no type-inference yet for arrays: %r" % expr)
 
         tokens = list(self._tokenize_citdl_expr(expr))
 
