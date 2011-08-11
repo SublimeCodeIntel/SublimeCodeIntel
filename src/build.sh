@@ -14,6 +14,7 @@ cat ../sgmlop*.patch | patch -sup1 && \
 python setup.py build && \
 cd .. && \
 tar xzf scintilla210.tgz && \
+find . -name "LexTCL*" | xargs rm
 cd scintilla && \
 cat ../scintilla.patch/*.patch | patch -sup0 && \
 cp -f ../scintilla.patch/src/* src/ && \
