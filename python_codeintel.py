@@ -142,7 +142,7 @@ status_lineno = {}
 status_lock = threading.Lock()
 
 HISTORY_SIZE = 64
-jump_history = collections.deque([], HISTORY_SIZE)
+jump_history_by_window = {} # map of window id -> collections.deque([], HISTORY_SIZE)
 
 def pos2bytes(content, pos):
     return len(content[:pos].encode('utf-8'))
@@ -339,22 +339,32 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                         log.debug(msg)
                         codeintel_log.debug(msg)
                         
+                        window = sublime.active_window()
+                        if window.id() not in jump_history_by_window:
+                            jump_history_by_window[window.id()] = collections.deque([], HISTORY_SIZE)
+                        jump_history = jump_history_by_window[window.id()]
+
                         # Save current position so we can return to it
                         row, col = view.rowcol(view.sel()[0].begin())
                         current_location = "%s:%d" % (file_name, row + 1)
                         jump_history.append(current_location)
                         
-                        window = sublime.active_window()
                         window.open_file(path, sublime.ENCODED_POSITION)
                         window.open_file(path, sublime.ENCODED_POSITION)
+
         codeintel(view, path, content, lang, pos, ('defns',), _trigger)
 
 class BackToPythonDefinition(sublime_plugin.TextCommand):
     def run(self, edit, block=False):
-        if len(jump_history) > 0:
-            previous_location = jump_history.pop()
-            window = sublime.active_window()
-            window.open_file(previous_location, sublime.ENCODED_POSITION)
+
+        window = sublime.active_window()
+        if window.id() in jump_history_by_window:
+            jump_history = jump_history_by_window[window.id()]
+        
+            if len(jump_history) > 0:
+                previous_location = jump_history.pop()
+                window = sublime.active_window()
+                window.open_file(previous_location, sublime.ENCODED_POSITION)
 
 _ci_envs_ = {}
 _ci_mgr_ = None
