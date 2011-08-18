@@ -798,14 +798,14 @@ def tryGetMTime(filename):
 
 def _get_git_revision(path):
     path = os.path.join(path, '.git')
-    revision_file = os.path.join(path, 'refs', 'heads', 'master')
-    if not os.path.exists(revision_file):
-        return None
-    fh = open(revision_file, 'r')
-    try:
-        return fh.read().strip()
-    finally:
-        fh.close()
+    if os.path.exists(path):
+        revision_file = os.path.join(path, 'refs', 'heads', 'master')
+        if os.path.isfile(revision_file):
+            fh = open(revision_file, 'r')
+            try:
+                return fh.read().strip()
+            finally:
+                fh.close()
 
 
 def get_git_revision(path=None):
