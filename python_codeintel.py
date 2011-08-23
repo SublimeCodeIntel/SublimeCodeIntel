@@ -818,5 +818,9 @@ def get_git_revision(path=None):
         rev = _get_git_revision(path)
         if rev:
             return u'GIT-%s' % rev
-        path = os.path.abspath(os.path.join(path, '..'))
+        uppath = os.path.abspath(os.path.join(path, '..'))
+        if uppath != path:
+            path = uppath
+        else:
+            break
     return u'GIT-unknown'
