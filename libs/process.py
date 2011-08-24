@@ -323,16 +323,15 @@ class ProcessOpen(Popen):
                    and sys.stderr.fileno() not in (0,1,2):
                     stderr = PIPE
         else:
-            # subprocess raises an exception otherwise.
+            # Set flags to 0, subprocess raises an exception otherwise.
             flags = 0
-            if shell and sys.platform != "win32":
-                # Set a preexec function, that will make the sub-process part
-                # of the same process group as the spawned shell. This will
-                # allow us to later kill both the spawned shell and the
-                # sub-process in one go (see the kill method) - bug 85693.
-                def preexec_fn():
-                    os.setpgid(0, 0)
-                self.__use_killpg = True
+            # Set a preexec function, this will make the sub-process create it's
+            # own session and process group - bug 80651, bug 85693.
+            preexec_fn = os.setsid
+            # Mark as requiring progressgroup killing. This will allow us to
+            # later kill both the spawned shell and the sub-process in one go
+            # (see the kill method) - bug 85693.
+            self.__use_killpg = True
 
         # Internal attributes.
         self.__cmd = cmd

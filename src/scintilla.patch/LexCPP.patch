@@ -44,30 +44,7 @@
  static void ColouriseCppDoc(unsigned int startPos, int length, int initStyle, WordList *keywordlists[],
                              Accessor &styler, bool caseSensitive) {
  
-@@ -102,24 +132,34 @@
- 	}
- 
- 	// look back to set chPrevNonWhite properly for better regex colouring
-+	int endPos = startPos + length;
- 	if (startPos > 0) {
--		int back = startPos;
--		while (--back && IsSpaceEquiv(styler.StyleAt(back)))
-+		unsigned int back = startPos;
-+		styler.Flush();
-+		while (back > 0 && IsSpaceEquiv(styler.StyleAt(--back)))
- 			;
- 		if (styler.StyleAt(back) == SCE_C_OPERATOR) {
- 			chPrevNonWhite = styler.SafeGetCharAt(back);
- 		}
-+		if (startPos != back) {
-+			initStyle = styler.StyleAt(back);
-+		}
-+		startPos = back;
- 	}
- 
--	StyleContext sc(startPos, length, initStyle, styler);
-+	StyleContext sc(startPos, endPos - startPos, initStyle, styler);
- 
+@@ -116,10 +146,14 @@
  	for (; sc.More(); sc.Forward()) {
  
  		if (sc.atLineStart) {
