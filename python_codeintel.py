@@ -244,7 +244,18 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
 
 class PythonCodeIntel(sublime_plugin.EventListener):
 
+    langs = ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
+             'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
+             'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul')
+
+    def check_scope(self, view):
+        loc = view.sel()[0]
+        scope_name = view.scope_name(loc.a)
+        return any(lang in scope_name for lang in PythonCodeIntel.langs)
+
     def on_close(self, view):
+        if not self.check_scope(view):
+            return
         path = view.file_name()
         status_lock.acquire()
         try:
@@ -259,6 +270,8 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         codeintel_cleanup(path)
 
     def on_modified(self, view):
+        if not self.check_scope(view):
+            return
         path = view.file_name()
         lang, _ = os.path.splitext(os.path.basename(view.settings().get('syntax')))
         try:
@@ -286,6 +299,8 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             queue(view, _scan_callback, 3000, args=[path])
 
     def on_selection_modified(self, view):
+        if not self.check_scope(view):
+            return
         global despair, despaired, old_pos
         delay_queue(600)  # on movement, delay queue (to make movement responsive)
 
@@ -303,6 +318,8 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                 calltip(view, "", id=id)
 
     def on_query_completions(self, view, prefix, locations):
+        if not self.check_scope(view):
+            return []
         id = view.id()
         if id in completions:
             _completions = completions[id]
