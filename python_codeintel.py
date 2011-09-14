@@ -532,7 +532,9 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         logger(view, 'warning', "skip `%s': couldn't determine language" % path)
         return
     if lang.lower() in [l.lower() for l in view.settings().get('codeintel_disabled_languages', [])]:
+        logger(view, 'info', "skip `%s': disabled language" % lang)
         return
+    logger(view, 'info', "processing `%s': please wait..." % lang)
     is_scratch = view.is_scratch()
     is_dirty = view.is_dirty()
     folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
