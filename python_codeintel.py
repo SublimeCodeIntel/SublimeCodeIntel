@@ -279,7 +279,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             else:
                 # TODO(teejae): re-enable hide_auto_complete after it is correctly made idempotent in Sublime binary.
                 codeintel_log.debug('would use hide_auto_complete')
-                view.run_command('hide_auto_complete')
+                # view.run_command('hide_auto_complete')
         else:
             def _scan_callback(view, path):
                 content = view.substr(sublime.Region(0, view.size()))
