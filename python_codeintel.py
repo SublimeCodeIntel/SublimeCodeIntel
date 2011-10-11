@@ -277,6 +277,8 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             if not hasattr(view, 'command_history') or view.command_history(0)[0] == 'insert':
                 autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path])
             else:
+                # TODO(teejae): re-enable hide_auto_complete after it is correctly made idempotent in Sublime binary.
+                codeintel_log.debug('would use hide_auto_complete')
                 view.run_command('hide_auto_complete')
         else:
             def _scan_callback(view, path):
