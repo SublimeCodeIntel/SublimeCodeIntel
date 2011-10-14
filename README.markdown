@@ -65,7 +65,7 @@ Configuration files (`~/.codeintel/config` or `project_root/.codeintel/config`).
             "perl": "/usr/bin/perl",
             "perlExtraPaths": []
         },
-        "Perl": {
+        "Ruby": {
             "ruby": "/usr/bin/ruby",
             "rubyExtraPaths": []
         },
