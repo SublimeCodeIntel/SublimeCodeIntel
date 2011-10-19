@@ -481,7 +481,6 @@ class PythonTreeEvaluator(TreeEvaluator):
         """
         #PERF: just have a .import_handler property on the evalr?
         import_handler = self.citadel.import_handler_from_lang(self.trg.lang)
-        libs = self.libs
 
         #PERF: Add .imports method to ciElementTree for quick iteration
         #      over them. Or perhaps some cache to speed this method.
@@ -494,7 +493,9 @@ class PythonTreeEvaluator(TreeEvaluator):
         first_token = tokens[0]
 
         self._check_infinite_recursion(first_token)
+        orig_libs = self.libs
         for imp_elem in (i for i in elem if i.tag == "import"):
+            libs = orig_libs # reset libs back to the original
             self.debug("'%s ...' from %r?", tokens[0], imp_elem)
             alias = imp_elem.get("alias")
             symbol_name = imp_elem.get("symbol")
