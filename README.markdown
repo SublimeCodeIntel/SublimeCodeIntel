@@ -86,6 +86,27 @@ Additional settings can be configured in the User File Settings:
 * A list of disabled languages can be set using "codeintel_disabled_languages". Ex. ``"codeintel_disabled_languages": ['css']`
 
 
+Troubleshooting
+---------------
+
+libpcre
++++++++
+
+There's a frequent issue with SublimeCodeIntel, often reported. You need to
+install the ``libpcre++-dev`` library to make sure it's going to work.
+This library is likely to be packaged on your system, such as, for Ubuntu/Debian-like
+distros::
+
+    $ sudo apt-get install libpcre++-dev
+
+Once you have installed it, you may need to use the ``build.sh`` script. Open
+a terminal and go to your ``Packages/SublimeCodeIntel/src`` folder.
+Then simply run:
+
+    $ . build.sh
+
+
+
 License
 -------
 The plugin is based in code from the Open Komodo Editor and has a MPL license.
