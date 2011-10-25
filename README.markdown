@@ -89,8 +89,8 @@ Additional settings can be configured in the User File Settings:
 Troubleshooting
 ---------------
 
-libpcre
-#######
+### libpcre
+
 
 There's a frequent issue with SublimeCodeIntel, often reported. You need to
 install the ``libpcre++-dev`` library to make sure it's going to work.
