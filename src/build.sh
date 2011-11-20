@@ -4,9 +4,9 @@ if [ $OSTYPE = "linux-gnu" ]; then
 	export CFLAGS=-DPy_UNICODE_SIZE=4
 fi
 
-rm -rf cElementTree-1.0.5-20051216 &&\
-rm -rf SilverCity-0.9.7 &&\
-rm -rf scintilla &&\
+rm -rf cElementTree-1.0.5-20051216 && \
+rm -rf SilverCity-0.9.7 && \
+rm -rf scintilla && \
 rm -rf sgmlop-1.1.1-20040207 && \
 unzip sgmlop-1.1.1-20040207.zip && \
 cd sgmlop-1.1.1-20040207 && \
@@ -14,7 +14,7 @@ cat ../sgmlop*.patch | patch -sup1 && \
 python setup.py build && \
 cd .. && \
 tar xzf scintilla210.tgz && \
-find . -name "LexTCL*" | xargs rm
+find . -name "LexTCL*" -delete && \
 cd scintilla && \
 cat ../scintilla.patch/*.patch | patch -sup0 && \
 cp -f ../scintilla.patch/src/* src/ && \
