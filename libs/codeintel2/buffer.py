@@ -265,6 +265,7 @@ class Buffer(object):
         ctlr.wait(timeout)
         if not ctlr.is_done():
             ctlr.done("timed out")
+            ctlr.abort()
             raise EvalTimeout("eval for %s timed-out" % trg)
         return ctlr.cplns
 
@@ -289,6 +290,7 @@ class Buffer(object):
         ctlr.wait(timeout)
         if not ctlr.is_done():
             ctlr.done("timed out")
+            ctlr.abort()
             raise EvalTimeout("eval for %s timed-out" % trg)
         return ctlr.calltips
 

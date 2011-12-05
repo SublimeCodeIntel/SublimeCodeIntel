@@ -712,11 +712,13 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             ctlr = LogEvalController(codeintel_log)
             try:
                 if 'cplns' in forms and trg and trg.form == TRG_FORM_CPLN:
-                    cplns = buf.cplns_from_trg(trg, ctlr=ctlr)
+                    cplns = buf.cplns_from_trg(trg, ctlr=ctlr, timeout=10)
                 if 'calltips' in forms and trg and trg.form == TRG_FORM_CALLTIP:
-                    calltips = buf.calltips_from_trg(trg, ctlr=ctlr)
+                    calltips = buf.calltips_from_trg(trg, ctlr=ctlr, timeout=10)
                 if 'defns' in forms and defn_trg and defn_trg.form == TRG_FORM_DEFN:
-                    defns = buf.defns_from_trg(defn_trg, ctlr=ctlr)
+                    defns = buf.defns_from_trg(defn_trg, ctlr=ctlr, timeout=10)
+            except EvalTimeout:
+                logger(view, 'info', "Timeout while resolving completions!")
             finally:
                 codeintel_log.handlers = _hdlrs
             logger(view, 'warning', "")

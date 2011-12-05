@@ -154,6 +154,7 @@ class CitadelBuffer(Buffer):
         ctlr.wait(timeout)
         if not ctlr.is_done():
             ctlr.done("timed out")
+            ctlr.abort()
             raise EvalTimeout("eval for %s timed-out" % trg)
         return ctlr.defns # -> list of Definition's
 
