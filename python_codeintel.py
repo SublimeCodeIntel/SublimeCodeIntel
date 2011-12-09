@@ -265,14 +265,19 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             lang = lang or guess_lang_from_path(path)
         except CodeIntelError:
             pass
-        live = view.settings().get('codeintel_live', True)
         pos = view.sel()[0].end()
         text = view.substr(sublime.Region(pos - 1, pos))
-        _sentinel = sentinel.get(path)
         is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
-        sentinel[path] = _sentinel if _sentinel is not None else pos if is_fill_char else None
-        if not live and text and sentinel[path] is not None:
-            live = True
+
+        live = True
+        live = live and view.settings().get('codeintel_live', True)
+        live = live and not lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_disabled_languages', ['CSS', 'SCSS', 'LESS'])]
+        # if live:
+        #     _sentinel = sentinel.get(path)
+        #     sentinel[path] = pos if is_fill_char else (_sentinel if _sentinel is not None else None)
+        #     print sentinel[path]
+        #     live = live and sentinel[path] is not None
+
         if live:
             if not hasattr(view, 'command_history') or view.command_history(0)[0] == 'insert':
                 autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path])
@@ -291,6 +296,8 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
         rowcol = view.rowcol(view.sel()[0].end())
         if old_pos != rowcol:
+            path = view.file_name()
+            sentinel[path] = None
             old_pos = rowcol
             despair = 1000
             despaired = True
