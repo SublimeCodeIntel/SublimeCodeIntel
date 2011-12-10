@@ -228,11 +228,13 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                     codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
                 if cplns:
                     # Show autocompletions:
-                    completions[id] = sorted(
+                    _completions = sorted(
                         [('%s  (%s)' % (name, type), name) for type, name in cplns],
                         cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
                     )
-                    view.run_command('auto_complete', {'disable_auto_insert': True})
+                    if _completions:
+                        completions[id] = _completions
+                        view.run_command('auto_complete', {'disable_auto_insert': True})
                 elif calltips is not None:
                     # Trigger a tooltip
                     calltip(view, 'tip', calltips[0])
@@ -719,11 +721,11 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             ctlr = LogEvalController(codeintel_log)
             try:
                 if 'cplns' in forms and trg and trg.form == TRG_FORM_CPLN:
-                    cplns = buf.cplns_from_trg(trg, ctlr=ctlr, timeout=10)
+                    cplns = buf.cplns_from_trg(trg, ctlr=ctlr, timeout=5)
                 if 'calltips' in forms and trg and trg.form == TRG_FORM_CALLTIP:
-                    calltips = buf.calltips_from_trg(trg, ctlr=ctlr, timeout=10)
+                    calltips = buf.calltips_from_trg(trg, ctlr=ctlr, timeout=5)
                 if 'defns' in forms and defn_trg and defn_trg.form == TRG_FORM_DEFN:
-                    defns = buf.defns_from_trg(defn_trg, ctlr=ctlr, timeout=10)
+                    defns = buf.defns_from_trg(defn_trg, ctlr=ctlr, timeout=5)
             except EvalTimeout:
                 logger(view, 'info', "Timeout while resolving completions!")
             finally:
