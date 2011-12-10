@@ -281,7 +281,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         #     live = live and sentinel[path] is not None
 
         if live:
-            if not hasattr(view, 'command_history') or view.command_history(0)[0] == 'insert':
+            if not hasattr(view, 'command_history') or view.substr(view.word(view.sel()[0])):
                 autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path])
             else:
                 view.run_command('hide_auto_complete')
