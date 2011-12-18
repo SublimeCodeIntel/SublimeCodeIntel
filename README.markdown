@@ -81,9 +81,13 @@ Configuration files (`~/.codeintel/config` or `project_root/.codeintel/config`).
 
 Additional settings can be configured in the User File Settings:
 
+* A list of disabled languages can be set using "codeintel_disabled_languages". Ex. ``"codeintel_disabled_languages": ['css']`
+
 * Live autocomplete can be disabled by setting "codeintel_live" to false.
 
-* A list of disabled languages can be set using "codeintel_disabled_languages". Ex. ``"codeintel_disabled_languages": ['css']`
+* Live autocompletion can be disabled in a per-language basis, using "codeintel_live_disabled_languages". Ex. ``"codeintel_live_disabled_languages": ['css']`
+
+* Information for more settings is available in the `Base File.sublime-settings` file.
 
 
 Troubleshooting
@@ -105,6 +109,17 @@ Then simply run:
 
     $ . build.sh
 
+
+What's New
+----------
+v1.2 (18-12-2011)
+    * JavaScript support improved (it's now much nicer with the CPU).
+    * CSS files support much improved (thanks to Jon's new features in autocomplete).
+    * Added palette commands to disable/enable the plugin in many ways.
+    * Added `codeintel_live_disabled_languages` and fixed `codeintel_live` to disable SublimeCodeIntel live autocomplete mode.
+    * Smarter language detection and fallbacks.
+    * Improved autocomplete triggering, should now respond better.
+    * Support for new completion settings in Sublime Text 2 Build 2148.
 
 
 License
