@@ -626,7 +626,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
         if extra_dirs:
             log.debug("%s extra lib dirs: %r", self.lang, extra_dirs)
             max_depth = env.get_pref("codeintel_max_recursive_dir_depth", 10)
-            js_assocs = env.assoc_patterns_from_lang(self.lang)
+            js_assocs = env.assoc_patterns_from_lang("JavaScript")
             extra_dirs = tuple(
                 util.gen_dirs_under_dirs(extra_dirs,
                     max_depth=max_depth,
