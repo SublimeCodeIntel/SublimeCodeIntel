@@ -223,9 +223,9 @@ def guess_lang(view=None, path=None):
         syntax = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
     lang = syntax and _codeintel_syntax_map.get(syntax.lower(), syntax)
 
-    if not mgr.is_citadel_lang(lang):
+    if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
         lang = None
-        if mgr.is_citadel_lang(syntax):
+        if mgr.is_citadel_lang(syntax) or mgr.is_cpln_lang(syntax):
             lang = syntax
         else:
             if view and not path:
@@ -243,7 +243,7 @@ def guess_lang(view=None, path=None):
 
     if not lang:
         if mgr:
-            logger(view, 'info', "Invalid language: %s. Available: %s" % (lang, ', '.join(mgr.get_citadel_langs())))
+            logger(view, 'info', "Invalid language: %s. Available: %s" % (lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs()))))
         else:
             logger(view, 'info', "Invalid language: %s" % lang)
 
@@ -529,8 +529,8 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                     config_file = None
 
             valid = True
-            if not mgr.is_citadel_lang(lang):
-                msg = "Invalid language: %s. Available: %s" % (lang, ', '.join(mgr.get_citadel_langs()))
+            if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
+                msg = "Invalid language: %s. Available: %s" % (lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs())))
                 log.debug(msg)
                 codeintel_log.debug(msg)
                 valid = False
@@ -599,8 +599,6 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                     else:
                         mtime = os.stat(path)[stat.ST_MTIME]
                     buf.scan(mtime=mtime, skip_scan_time_check=is_dirty)
-            else:
-                buf = None
         else:
             buf = None
         if callback:
