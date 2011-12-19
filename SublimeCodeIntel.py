@@ -533,7 +533,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
                 msg = "Invalid language: %s. Available: %s" % (lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs())))
                 log.debug(msg)
-                codeintel_log.debug(msg)
+                codeintel_log.warning(msg)
                 valid = False
 
             # Load configuration files:
