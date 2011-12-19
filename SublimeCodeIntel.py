@@ -99,11 +99,12 @@ codeintel_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(messag
 stderr_hdlr = logging.StreamHandler(sys.stderr)
 stderr_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
 codeintel_log = logging.getLogger("codeintel")
-condeintel_log_file = ''
+condeintel_log_filename = ''
+condeintel_log_file = None
 log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [codeintel_hdlr]
 log.handlers = [stderr_hdlr]
-codeintel_log.setLevel(logging.WARNING)  # INFO/ERROR
+codeintel_log.setLevel(logging.ERROR)  # INFO/ERROR
 logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # INFO
 for lang in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
              'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
@@ -444,7 +445,7 @@ def codeintel_cleanup(path):
 
 
 def codeintel_manager():
-    global _ci_mgr_
+    global _ci_mgr_, condeintel_log_filename, condeintel_log_file
     if _ci_mgr_:
         mgr = _ci_mgr_
     else:
@@ -461,11 +462,11 @@ def codeintel_manager():
         mgr.initialize()
 
         # Connect the logging file to the handler
-        condeintel_log_file = os.path.join(mgr.db.base_dir, 'codeintel.log')
-        condeintel_log_file = open(condeintel_log_file, 'w', 1)
+        condeintel_log_filename = os.path.join(mgr.db.base_dir, 'codeintel.log')
+        condeintel_log_file = open(condeintel_log_filename, 'w', 1)
         codeintel_log.handlers = [logging.StreamHandler(condeintel_log_file)]
         msg = "Starting logging SublimeCodeIntel rev %s (%s) on %s" % (get_revision()[:12], os.stat(__file__)[stat.ST_MTIME], datetime.datetime.now().ctime())
-        print >>condeintel_log_file, "%s\n%s" % (msg, "=" * len(msg))
+        print >>condeintel_log_file, "+", "%s\n%s" % (msg, "=" * len(msg))
 
         _ci_mgr_ = mgr
     return mgr
@@ -591,7 +592,9 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             if isinstance(buf, CitadelBuffer):
                 despair = 0
                 despaired = False
-                logger(view, 'info', "Updating indexes... The first time this can take a while.", timeout=20000, delay=1000)
+                msg = "Updating indexes for '%s'... The first time this can take a while." % lang
+                print >>condeintel_log_file, "+", msg
+                logger(view, 'info', msg, timeout=20000, delay=1000)
                 if not path or is_scratch:
                     buf.scan()  # FIXME: Always scanning unsaved files (since many tabs can have unsaved files, or find other path as ID)
                 else:
@@ -603,6 +606,9 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         else:
             buf = None
         if callback:
+            msg = "Doing CodeIntel for '%s' (hold on)..." % lang
+            print >>condeintel_log_file, "+", msg
+            logger(view, 'info', msg, timeout=20000, delay=1000)
             callback(buf, msgs)
         else:
             logger(view, 'info', "")
@@ -681,15 +687,23 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
         l = locals()
         for f in forms:
             ret.append(l.get(f))
-        total = (time.time() - start)
-        if not despaired or total * 1000 < timeout:
+        total = (time.time() - start) * 1000
+        if total > 1000:
+            timestr = "~%ss" % int(round(total / 1000))
+        else:
+            timestr = "%sms" % int(round(total))
+        if not despaired or total < timeout:
+            msg = "Done '%s' CodeIntel! Full CodeIntel took %s" % (lang, timestr)
+            print >>condeintel_log_file, "+", msg
             def _callback():
                 if view.line(view.sel()[0]) == view.line(pos):
                     callback(*ret)
             logger(view, 'info', "")
             sublime.set_timeout(_callback, 0)
         else:
-            logger(view, 'info', "Just finished indexing! Please try again. Scan took %s" % total, timeout=3000)
+            msg = "Just finished indexing '%s'! Please try again. Full CodeIntel took %s" % (lang, timestr)
+            print >>condeintel_log_file, "+", msg
+            logger(view, 'info', msg, timeout=3000)
     codeintel_scan(view, path, content, lang, _codeintel, pos, forms)
 
 
