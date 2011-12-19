@@ -109,6 +109,10 @@ Then simply run:
 
     $ . build.sh
 
+If ``build.sh`` fails - please check that ``python-dev`` is installed
+
+    $ sudo apt-get install python-dev
+
 
 What's New
 ----------
