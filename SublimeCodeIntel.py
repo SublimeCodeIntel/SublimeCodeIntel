@@ -103,13 +103,13 @@ condeintel_log_file = ''
 log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [codeintel_hdlr]
 log.handlers = [stderr_hdlr]
-codeintel_log.setLevel(logging.INFO)  # INFO/ERROR
-logging.getLogger("codeintel.db").setLevel(logging.INFO)  # INFO
+codeintel_log.setLevel(logging.WARNING)  # INFO/ERROR
+logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # INFO
 for lang in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
              'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
              'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
-    logging.getLogger("codeintel." + lang).setLevel(logging.DEBUG)  # DEBUG
-log.setLevel(logging.ERROR)  # ERROR
+    logging.getLogger("codeintel." + lang).setLevel(logging.WARNING)  # DEBUG
+log.setLevel(logging.WARNING)  # ERROR
 
 cpln_fillup_chars = {
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ ",
@@ -462,9 +462,10 @@ def codeintel_manager():
 
         # Connect the logging file to the handler
         condeintel_log_file = os.path.join(mgr.db.base_dir, 'codeintel.log')
-        codeintel_log.handlers = [logging.StreamHandler(open(condeintel_log_file, 'w', 1))]
+        condeintel_log_file = open(condeintel_log_file, 'w', 1)
+        codeintel_log.handlers = [logging.StreamHandler(condeintel_log_file)]
         msg = "Starting logging SublimeCodeIntel rev %s (%s) on %s" % (get_revision()[:12], os.stat(__file__)[stat.ST_MTIME], datetime.datetime.now().ctime())
-        codeintel_log.info("%s\n%s" % (msg, "=" * len(msg)))
+        print >>condeintel_log_file, "%s\n%s" % (msg, "=" * len(msg))
 
         _ci_mgr_ = mgr
     return mgr
@@ -637,15 +638,15 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             _hdlrs = codeintel_log.handlers
             hdlr = logging.StreamHandler(eval_log_stream)
             hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
-            codeintel_log.handlers = [hdlr]
+            codeintel_log.handlers = list(_hdlrs) + [hdlr]
             ctlr = LogEvalController(codeintel_log)
             try:
                 if 'cplns' in forms and trg and trg.form == TRG_FORM_CPLN:
-                    cplns = buf.cplns_from_trg(trg, ctlr=ctlr, timeout=5)
+                    cplns = buf.cplns_from_trg(trg, ctlr=ctlr, timeout=20)
                 if 'calltips' in forms and trg and trg.form == TRG_FORM_CALLTIP:
-                    calltips = buf.calltips_from_trg(trg, ctlr=ctlr, timeout=5)
+                    calltips = buf.calltips_from_trg(trg, ctlr=ctlr, timeout=20)
                 if 'defns' in forms and defn_trg and defn_trg.form == TRG_FORM_DEFN:
-                    defns = buf.defns_from_trg(defn_trg, ctlr=ctlr, timeout=5)
+                    defns = buf.defns_from_trg(defn_trg, ctlr=ctlr, timeout=20)
             except EvalTimeout:
                 logger(view, 'info', "Timeout while resolving completions!")
             finally:
