@@ -246,6 +246,25 @@ index 4987a57..0997b33 100644
          elem, scoperef = self._hit_from_first_token(tokens[0], scoperef)
          if elem is not None:
              self.log("_hit_from_first_part: found elem: %s %r at %r",
+@@ -758,9 +758,15 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
+                         pass
+ 
+                 for lib in self.libs:
+-                    self.log("lookup '%s' in %s", '.'.join(lpath), lib)
+-                    hits_here = lib.hits_from_lpath(lpath, self.ctlr,
+-                                                    curr_buf=self.buf)
++                    _k2_ = ('hits_from_lpath', lib, lpath)
++                    try:
++                        hits_here = self._hits_seen[_k2_]
++                        self.log("lookup '%s' in %s (!)", '.'.join(lpath), lib)
++                    except KeyError:
++                        self.log("lookup '%s' in %s", '.'.join(lpath), lib)
++                        hits_here = lib.hits_from_lpath(lpath, self.ctlr,
++                                                        curr_buf=self.buf)
++                        self._hits_seen[_k2_] = hits_here
+                     if hits_here:
+                         self.log("found %d hits in lib", len(hits_here))
+                         hits += hits_here
 @@ -783,6 +849,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
              hits = [(elem, scoperef)]
              nconsumed = 1

@@ -819,9 +819,15 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                         pass
 
                 for lib in self.libs:
-                    self.log("lookup '%s' in %s", '.'.join(lpath), lib)
-                    hits_here = lib.hits_from_lpath(lpath, self.ctlr,
-                                                    curr_buf=self.buf)
+                    _k2_ = ('hits_from_lpath', lib, lpath)
+                    try:
+                        hits_here = self._hits_seen[_k2_]
+                        self.log("lookup '%s' in %s (!)", '.'.join(lpath), lib)
+                    except KeyError:
+                        self.log("lookup '%s' in %s", '.'.join(lpath), lib)
+                        hits_here = lib.hits_from_lpath(lpath, self.ctlr,
+                                                        curr_buf=self.buf)
+                        self._hits_seen[_k2_] = hits_here
                     if hits_here:
                         self.log("found %d hits in lib", len(hits_here))
                         hits += hits_here
