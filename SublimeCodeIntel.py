@@ -104,13 +104,13 @@ condeintel_log_file = None
 log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [codeintel_hdlr]
 log.handlers = [stderr_hdlr]
-codeintel_log.setLevel(logging.ERROR)  # INFO/ERROR
-logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # INFO
+codeintel_log.setLevel(logging.ERROR)  # ERROR
+logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # WARNING/INFO
 for lang in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
              'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
              'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
-    logging.getLogger("codeintel." + lang).setLevel(logging.WARNING)  # DEBUG
-log.setLevel(logging.WARNING)  # ERROR
+    logging.getLogger("codeintel." + lang).setLevel(logging.WARNING)  # WARNING/DEBUG
+log.setLevel(logging.ERROR)  # ERROR
 
 cpln_fillup_chars = {
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ ",
@@ -134,7 +134,9 @@ despair = 0
 despaired = False
 
 completions = {}
+languages = {}
 sentinel = {}
+
 status_msg = {}
 status_lineno = {}
 status_lock = threading.Lock()
@@ -149,30 +151,21 @@ def pos2bytes(content, pos):
 
 def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=None):
     if timeout is None:
-        timeout = {None: 3000, 'error': 3000, 'warning': 5000, 'info': 10000, 'event': 10000, 'tip': 15000}.get(type)
+        timeout = {'error': 3000, 'warning': 5000, 'info': 10000, 'event': 10000, 'tip': 15000}.get(type, 3000)
+
     if msg is None:
         msg, type = type, 'debug'
     msg = msg.strip()
-    status_msg.setdefault(id, [None, None, 0])
-    if msg == status_msg[id][1]:
-        return
+
     status_lock.acquire()
     try:
+        status_msg.setdefault(id, [None, None, 0])
+        if msg == status_msg[id][1]:
+            return
         status_msg[id][2] += 1
         order = status_msg[id][2]
     finally:
         status_lock.release()
-
-    def _calltip_erase():
-        status_lock.acquire()
-        try:
-            if msg == status_msg.get(id, [None, None, 0])[1]:
-                view.erase_status(id)
-                status_msg[id][1] = None
-                if id in status_lineno:
-                    del status_lineno[id]
-        finally:
-            status_lock.release()
 
     def _calltip_set():
         lineno = view.line(view.sel()[0])
@@ -193,13 +186,20 @@ def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=
                     del status_lineno[id]
         finally:
             status_lock.release()
-    try:
-        if delay and delay is not None:
-            sublime.set_timeout(_calltip_set, delay)
-        else:
-            _calltip_set()
-    except:
-        sublime.set_timeout(_calltip_set, delay)
+
+    def _calltip_erase():
+        status_lock.acquire()
+        try:
+            if msg == status_msg.get(id, [None, None, 0])[1]:
+                view.erase_status(id)
+                status_msg[id][1] = None
+                if id in status_lineno:
+                    del status_lineno[id]
+        finally:
+            status_lock.release()
+
+    sublime.set_timeout(_calltip_set, delay or 0)
+
     if msg:
         sublime.set_timeout(_calltip_erase, timeout)
 
@@ -214,41 +214,52 @@ def guess_lang(view=None, path=None):
     if not view.settings().get('codeintel', True):
         return None
 
-    mgr = codeintel_manager()
-
-    _codeintel_syntax_map = dict((k.lower(), v) for k, v in view.settings().get('codeintel_syntax_map', {}).items())
-    _codeintel_disabled_languages = [l.lower() for l in view.settings().get('codeintel_disabled_languages', [])]
-
-    lang = None
     syntax = None
     if view:
         syntax = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
-    lang = syntax and _codeintel_syntax_map.get(syntax.lower(), syntax)
+
+    id = view.id()
+    _k_ = '%s::%s' % (syntax, path)
+    try:
+        return languages[id][_k_]
+    except KeyError:
+        pass
+    languages.setdefault(id, {})
+
+    lang = None
+    _codeintel_syntax_map = dict((k.lower(), v) for k, v in view.settings().get('codeintel_syntax_map', {}).items())
+    _lang = lang = syntax and _codeintel_syntax_map.get(syntax.lower(), syntax)
+
+    mgr = codeintel_manager()
 
     if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
         lang = None
         if mgr.is_citadel_lang(syntax) or mgr.is_cpln_lang(syntax):
-            lang = syntax
+            _lang = lang = syntax
         else:
             if view and not path:
                 path = view.file_name()
             if path:
                 try:
-                    lang = guess_lang_from_path(path)
+                    _lang = lang = guess_lang_from_path(path)
                 except CodeIntelError:
                     logger(view, 'warning', "skip `%s': couldn't determine language" % path)
+                    languages[id][_k_] = None
                     return
 
+    _codeintel_disabled_languages = [l.lower() for l in view.settings().get('codeintel_disabled_languages', [])]
     if lang and lang.lower() in _codeintel_disabled_languages:
         logger(view, 'info', "skip `%s': disabled language" % lang)
+        languages[id][_k_] = None
         return
 
-    if not lang:
+    if not lang and _lang:
         if mgr:
-            logger(view, 'info', "Invalid language: %s. Available: %s" % (lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs()))))
+            logger(view, 'info', "Invalid language: %s. Available: %s" % (_lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs()))))
         else:
-            logger(view, 'info', "Invalid language: %s" % lang)
+            logger(view, 'info', "Invalid language: %s" % _lang)
 
+    languages[id][_k_] = lang
     return lang
 
 
@@ -264,7 +275,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
             next = ''
         if pos and content and content[view.line(sel).begin():pos].strip() and not next.isalnum() and next != '_':
             #TODO: For the sentinel to work, we need to send a prefix to the completions... but no show_completions() currently available
-            #pos = sentinel[path] if sentinel[path] is not None else view.sel()[0].end()
+            #pos = sentinel[id] if sentinel[id] is not None else view.sel()[0].end()
 
             def _trigger(cplns, calltips):
                 if cplns is not None or calltips is not None:
@@ -285,7 +296,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                 elif calltips is not None:
                     # Trigger a tooltip
                     calltip(view, 'tip', calltips[0])
-            sentinel[path] = None
+            sentinel[id] = None
             codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
     # If it's a fill char, queue using lower values and preemptive behavior
     queue(view, _autocomplete_callback, timeout, busy_timeout, preemptive, args=args, kwargs=kwargs)
@@ -440,9 +451,9 @@ def codeintel_callbacks(force=False):
 queue_dispatcher = codeintel_callbacks
 
 
-def codeintel_cleanup(path):
-    if path in _ci_envs_:
-        del _ci_envs_[path]
+def codeintel_cleanup(id):
+    if id in _ci_envs_:
+        del _ci_envs_[id]
 
 
 def codeintel_manager():
@@ -483,6 +494,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     logger(view, 'info', "processing `%s': please wait..." % lang)
     is_scratch = view.is_scratch()
     is_dirty = view.is_dirty()
+    id = view.id()
     folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
 
     def _codeintel_scan():
@@ -496,7 +508,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         mgr.db.event_reporter = lambda m: logger(view, 'event', m)
 
         try:
-            env = _ci_envs_[path]
+            env = _ci_envs_[id]
             if env._folders != folders:
                 raise KeyError
             if now > env._time:
@@ -575,7 +587,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             env._project_base_dir = project_base_dir
             env._config_file = config_file
             env.__class__.get_proj_base_dir = lambda self: project_base_dir
-            _ci_envs_[path] = env
+            _ci_envs_[id] = env
         env._time = now + 5  # don't check again in less than five seconds
 
         msgs = []
@@ -777,23 +789,20 @@ def get_revision(path=None):
 class PythonCodeIntel(sublime_plugin.EventListener):
 
     def on_close(self, view):
-        path = view.file_name()
-        status_lock.acquire()
-        try:
-            if path in sentinel:
-                del sentinel[path]
-            if path in status_msg:
-                del status_msg[path]
-            if path in status_lineno:
-                del status_lineno[path]
-        finally:
-            status_lock.release()
-        codeintel_cleanup(path)
+        id = view.id()
+        if id in completions:
+            del completions[id]
+        if id in sentinel:
+            del sentinel[id]
+        if id in languages:
+            del languages[id]
+        codeintel_cleanup(view.file_name())
 
     def on_modified(self, view):
         path = view.file_name()
         lang = guess_lang(view, path)
         if lang:
+
             pos = view.sel()[0].end()
             text = view.substr(sublime.Region(pos - 1, pos))
             is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
@@ -802,10 +811,11 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             live = live and view.settings().get('codeintel_live', True)
             live = live and not lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_disabled_languages', [])]
             # if live:
-            #     _sentinel = sentinel.get(path)
-            #     sentinel[path] = pos if is_fill_char else (_sentinel if _sentinel is not None else None)
-            #     print sentinel[path]
-            #     live = live and sentinel[path] is not None
+            #     id = view.id()
+            #     _sentinel = sentinel.get(id)
+            #     sentinel[id] = pos if is_fill_char else (_sentinel if _sentinel is not None else None)
+            #     print sentinel[id]
+            #     live = live and sentinel[id] is not None
 
             if live:
                 if not hasattr(view, 'command_history') or view.command_history(0)[0] == 'insert':
@@ -824,8 +834,8 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
         rowcol = view.rowcol(view.sel()[0].end())
         if old_pos != rowcol:
-            path = view.file_name()
-            sentinel[path] = None
+            id = view.id()
+            sentinel[id] = None
             old_pos = rowcol
             despair = 1000
             despaired = True
