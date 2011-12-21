@@ -105,8 +105,6 @@ distros. Open a terminal and do:
 
     $ sudo apt-get install python-dev
 
-    $ sudo apt-get install libpcre++-dev
-
 Once you have installed those, you may need to use the ``build.sh`` script.
 In your terminal, go to your ``Packages/SublimeCodeIntel/src`` folder, then
 simply run:
@@ -120,7 +118,7 @@ v1.3 (20-12-2011):
 
     * This build should fix many of the problems seen in Linux systems.
 
-    * Libraries for Linux rebuilt with libpcre statically.
+    * Libraries for Linux rebuilt with libpcre statically (libpcre bundled for Linux builds).
 
     * calltip() is now thread safe (which caused some strange behavior in Linux
         where Sublime Text 2 ended up being unresponsive).
