@@ -93,36 +93,53 @@ Additional settings can be configured in the User File Settings:
 Troubleshooting
 ---------------
 
-### libpcre
+### build.sh
 
 
-There's a frequent issue with SublimeCodeIntel, often reported. You need to
-install the ``libpcre++-dev`` library to make sure it's going to work.
-This library is likely to be packaged on your system, such as, for Ubuntu/Debian-like
-distros::
+If everything else fails, try rebuilding the libraries using ``build.sh``.
+You need to install some things to make sure it's going to work.
+These are likely to be packaged on your system, such as, for Ubuntu/Debian-like
+distros. Open a terminal and do:
+
+    $ sudo apt-get install g++
+
+    $ sudo apt-get install python-dev
 
     $ sudo apt-get install libpcre++-dev
 
-Once you have installed it, you may need to use the ``build.sh`` script. Open
-a terminal and go to your ``Packages/SublimeCodeIntel/src`` folder.
-Then simply run:
+Once you have installed those, you may need to use the ``build.sh`` script.
+In your terminal, go to your ``Packages/SublimeCodeIntel/src`` folder, then
+simply run:
 
-    $ . build.sh
-
-If ``build.sh`` fails - please check that ``python-dev`` is installed
-
-    $ sudo apt-get install python-dev
+    $ ./build.sh
 
 
 What's New
 ----------
-v1.2 (18-12-2011)
+v1.3 (20-12-2011):
+
+    * This build should fix many of the problems seen in Linux systems.
+
+    * Libraries for Linux rebuilt with libpcre statically.
+
+    * calltip() is now thread safe (which caused some strange behavior in Linux
+        where Sublime Text 2 ended up being unresponsive).
+
+
+v1.2 (18-12-2011):
+
     * JavaScript support improved (it's now much nicer with the CPU).
+
     * CSS files support much improved (thanks to Jon's new features in autocomplete).
+
     * Added palette commands to disable/enable the plugin in many ways.
+
     * Added `codeintel_live_disabled_languages` and fixed `codeintel_live` to disable SublimeCodeIntel live autocomplete mode.
+
     * Smarter language detection and fallbacks.
+
     * Improved autocomplete triggering, should now respond better.
+
     * Support for new completion settings in Sublime Text 2 Build 2148.
 
 
