@@ -303,6 +303,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
 
 
 _ci_envs_ = {}
+_ci_next_scan_ = {}
 _ci_mgr_ = None
 _ci_db_base_dir_ = None
 _ci_db_catalog_dirs_ = []
@@ -454,6 +455,8 @@ queue_dispatcher = codeintel_callbacks
 def codeintel_cleanup(id):
     if id in _ci_envs_:
         del _ci_envs_[id]
+    if id in _ci_next_scan_:
+        del _ci_next_scan_[id]
 
 
 def codeintel_manager():
@@ -602,20 +605,24 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 msgs.append(('info', "New env with atalogs for '%s': %s" % (lang, ', '.join(catalogs) or None)))
 
             buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
-            if isinstance(buf, CitadelBuffer):
-                despair = 0
-                despaired = False
-                msg = "Updating indexes for '%s'... The first time this can take a while." % lang
-                print >>condeintel_log_file, msg
-                logger(view, 'info', msg, timeout=20000, delay=1000)
-                if not path or is_scratch:
-                    buf.scan()  # FIXME: Always scanning unsaved files (since many tabs can have unsaved files, or find other path as ID)
-                else:
-                    if is_dirty:
-                        mtime = 1
+
+            now = datetime.datetime.now()
+            if not _ci_next_scan_.get(id) or now > _ci_next_scan_[id]:
+                _ci_next_scan_[id] = now + datetime.timedelta(seconds=10)
+                if isinstance(buf, CitadelBuffer):
+                    despair = 0
+                    despaired = False
+                    msg = "Updating indexes for '%s'... The first time this can take a while." % lang
+                    print >>condeintel_log_file, msg
+                    logger(view, 'info', msg, timeout=20000, delay=1000)
+                    if not path or is_scratch:
+                        buf.scan()  # FIXME: Always scanning unsaved files (since many tabs can have unsaved files, or find other path as ID)
                     else:
-                        mtime = os.stat(path)[stat.ST_MTIME]
-                    buf.scan(mtime=mtime, skip_scan_time_check=is_dirty)
+                        if is_dirty:
+                            mtime = 1
+                        else:
+                            mtime = os.stat(path)[stat.ST_MTIME]
+                        buf.scan(mtime=mtime, skip_scan_time_check=is_dirty)
         else:
             buf = None
         if callback:
@@ -645,12 +652,12 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             defn_trg = getattr(buf, 'defn_trg_from_pos', lambda p: None)(pos2bytes(content, pos))
         except (CodeIntelError):
             codeintel_log.exception("Exception! %s:%s (%s)" % (path or '<Unsaved>', pos, lang))
-            logger(view, 'info', "Error indexing! Please send the log file: '%s" % condeintel_log_file)
+            logger(view, 'info', "Error indexing! Please send the log file: '%s" % condeintel_log_filename)
             trg = None
             defn_trg = None
         except:
             codeintel_log.exception("Exception! %s:%s (%s)" % (path or '<Unsaved>', pos, lang))
-            logger(view, 'info', "Error indexing! Please send the log file: '%s" % condeintel_log_file)
+            logger(view, 'info', "Error indexing! Please send the log file: '%s" % condeintel_log_filename)
             raise
         else:
             eval_log_stream = StringIO()
