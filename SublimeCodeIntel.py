@@ -67,7 +67,7 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
         }
     }
 """
-import os, sys, stat, time, datetime, collections
+import os, sys, stat, time, datetime, collections, re
 import sublime_plugin, sublime
 import threading
 import logging
@@ -283,7 +283,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                 if cplns:
                     # Show autocompletions:
                     _completions = sorted(
-                        [('%s  (%s)' % (name, type), name) for type, name in cplns],
+                        [('%s  (%s)' % (name, type), name + '(${1})' if type=='function' else '') for type, name in cplns],
                         cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
                     )
                     if _completions:
@@ -296,6 +296,29 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                 elif calltips is not None:
                     # Trigger a tooltip
                     calltip(view, 'tip', calltips[0])
+
+                    rex = re.compile("\((.*)\)", re.DOTALL)
+                    m = rex.search(calltips[0])
+
+                    rex = re.compile("(\$[a-zA-Z0-9-_]+)")
+                    m1 = rex.findall(m.group(1))
+
+                    rex = re.compile("(?:string|array)\s+([a-zA-Z0-9-_]+)")
+                    m2 = rex.findall(m.group(1))
+
+                    l = m1 + m2
+                    
+                    snippet = []
+                    i = 1
+                    for p in l:
+                        var = p.replace('$', '')
+                        snippet.append('${' + str(i) + ':' + var + '}')
+                        i += 1
+     
+                    view.run_command('insert_snippet', {
+                        'contents': ', '.join(snippet)
+                    })
+
             sentinel[id] = None
             codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
     # If it's a fill char, queue using lower values and preemptive behavior
