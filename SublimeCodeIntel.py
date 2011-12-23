@@ -283,7 +283,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                 if cplns:
                     # Show autocompletions:
                     _completions = sorted(
-                        [('%s  (%s)' % (name, type), name + '(${1})' if type=='function' else '') for type, name in cplns],
+                        [('%s  (%s)' % (name, type), name + ('(${1})' if type=='function' else '')) for type, name in cplns],
                         cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
                     )
                     if _completions:
