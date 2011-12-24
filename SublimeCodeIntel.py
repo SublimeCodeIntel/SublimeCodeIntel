@@ -307,14 +307,14 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                     m2 = rex.findall(m.group(1))
 
                     l = m1 + m2
-                    
+
                     snippet = []
                     i = 1
                     for p in l:
                         var = p.replace('$', '')
                         snippet.append('${' + str(i) + ':' + var + '}')
                         i += 1
-     
+
                     view.run_command('insert_snippet', {
                         'contents': ', '.join(snippet)
                     })
@@ -848,7 +848,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             #     live = live and sentinel[id] is not None
 
             if live:
-                if not hasattr(view, 'command_history') or view.command_history(0)[0] == 'insert':
+                if not hasattr(view, 'command_history') or view.command_history(0)[0] == 'insert' or text == '(':
                     autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path, lang])
                 else:
                     view.run_command('hide_auto_complete')
