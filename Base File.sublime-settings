@@ -18,7 +18,7 @@
     /*
         Sets the mode in which SublimeCodeIntel's live autocomplete runs:
 
-        true - Autocomplete popsup as you type (the default).
+        true - Autocomplete popups as you type (the default).
         false - Autocomplete popups only when you request it.
     */
     "codeintel_live": true,
