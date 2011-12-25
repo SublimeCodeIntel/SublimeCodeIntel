@@ -300,20 +300,22 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                     rex = re.compile("\((.*)\)", re.DOTALL)
                     m = rex.search(calltips[0])
 
-                    rex = re.compile("(\$[a-zA-Z0-9-_]+)")
-                    m1 = rex.findall(m.group(1))
-
-                    rex = re.compile("(?:string|array)\s+([a-zA-Z0-9-_]+)")
-                    m2 = rex.findall(m.group(1))
-
-                    l = m1 + m2
+                    params = m.group(1).split(',')
 
                     snippet = []
                     i = 1
-                    for p in l:
-                        var = p.replace('$', '')
+                    for p in params:
+                        if p.find('=') != -1:
+                            continue
+                        if p.find(' ') != -1:
+                            p = p.split(' ')[1]
+
+                        var = p.replace('$', '').strip()
                         snippet.append('${' + str(i) + ':' + var + '}')
                         i += 1
+
+                    if i == 1:
+                        return
 
                     view.run_command('insert_snippet', {
                         'contents': ', '.join(snippet)
@@ -848,7 +850,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             #     live = live and sentinel[id] is not None
 
             if live:
-                if not hasattr(view, 'command_history') or view.command_history(0)[0] == 'insert' or text == '(':
+                if not hasattr(view, 'command_history') or (view.command_history(0)[0] == 'insert' and view.command_history(0)[1]['characters'] != ',') or (text == '(' and view.command_history(0)[0] == ''):
                     autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path, lang])
                 else:
                     view.run_command('hide_auto_complete')
