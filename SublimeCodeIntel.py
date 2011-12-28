@@ -297,28 +297,29 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                     # Trigger a tooltip
                     calltip(view, 'tip', calltips[0])
 
-                    rex = re.compile("\((.*)\)", re.DOTALL)
-                    m = rex.search(calltips[0])
+                    if content[sel.a - 1] == '(' and content[sel.a] == ')':
+                        rex = re.compile("\((.*)\)", re.DOTALL)
+                        m = rex.search(calltips[0])
 
-                    params = m.group(1).split(',')
+                        params = m.group(1).split(',')
 
-                    snippet = []
-                    i = 1
-                    for p in params:
-                        if p.find('=') != -1:
-                            continue
-                        if p.find(' ') != -1:
-                            p = p.split(' ')[1]
+                        snippet = []
+                        i = 1
+                        for p in params:
+                            if p.find('=') != -1:
+                                continue
+                            if p.find(' ') != -1:
+                                p = p.split(' ')[1]
 
-                        var = p.replace('$', '').strip()
-                        snippet.append('${' + str(i) + ':' + var + '}')
-                        i += 1
+                            var = p.replace('$', '').strip()
+                            snippet.append('${' + str(i) + ':' + var + '}')
+                            i += 1
 
-                    if i == 1:
-                        return
+                        if i == 1:
+                            return
 
-                    view.run_command('insert_snippet', {
-                        'contents': ', '.join(snippet)
+                        view.run_command('insert_snippet', {
+                            'contents': ', '.join(snippet)
                     })
 
             sentinel[id] = None
@@ -673,7 +674,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             return [None] * len(forms)
 
         try:
-            trg = getattr(buf, 'trg_from_pos', lambda p: None)(pos2bytes(content, pos))
+            trg = getattr(buf, 'preceding_trg_from_pos', lambda p: None)(pos2bytes(content, pos), pos2bytes(content, pos))
             defn_trg = getattr(buf, 'defn_trg_from_pos', lambda p: None)(pos2bytes(content, pos))
         except (CodeIntelError):
             codeintel_log.exception("Exception! %s:%s (%s)" % (path or '<Unsaved>', pos, lang))
@@ -850,7 +851,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             #     live = live and sentinel[id] is not None
 
             if live:
-                if not hasattr(view, 'command_history') or (view.command_history(0)[0] == 'insert' and view.command_history(0)[1]['characters'] != ',') or (text == '(' and view.command_history(0)[0] == ''):
+                if not hasattr(view, 'command_history') or (view.command_history(0)[0] == 'insert' and view.command_history(0)[1]['characters'] != ',') or (view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)') or (text == '(' and view.command_history(0)[0] == 'commit_completion'):
                     autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path, lang])
                 else:
                     view.run_command('hide_auto_complete')
