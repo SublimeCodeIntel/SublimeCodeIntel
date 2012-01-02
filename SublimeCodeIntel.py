@@ -243,7 +243,6 @@ def guess_lang(view=None, path=None):
                 try:
                     _lang = lang = guess_lang_from_path(path)
                 except CodeIntelError:
-                    logger(view, 'warning', "skip `%s': couldn't determine language" % path)
                     languages[id][_k_] = None
                     return
 
