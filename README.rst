@@ -1,9 +1,10 @@
 SublimeCodeIntel
 ================
 
-Code intelligence plugin ported from Open Komodo Editor to the [Sublime Text 2](http://sublimetext.com "Sublime Text 2") editor.
+Code intelligence plugin ported from Open Komodo Editor to the `Sublime Text 2 <http://sublimetext.com/dev>`_
 
-Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2):
+Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2)::
+
     PHP, Python, RHTML, JavaScript, Smarty, Mason, Node.js, XBL, Tcl, HTML, HTML5, TemplateToolkit, XUL, Django, Perl, Ruby, Python3.
 
 Provides the following features:
@@ -23,27 +24,32 @@ Installing
 ----------
 *Without Git:* Download the latest source from http://github.com/Kronuz/SublimeCodeIntel and copy the whole directory into the Packages directory.
 
-*With Git:* Clone the repository in your Sublime Text 2 Packages directory, located somewhere in user's "Home" directory:
+*With Git:* Clone the repository in your Sublime Text 2 Packages directory, located somewhere in user's "Home" directory::
 
-> git clone git://github.com/Kronuz/SublimeCodeIntel.git
+    git clone git://github.com/Kronuz/SublimeCodeIntel.git
 
 
 The "Packages" packages directory is located at:
 
-* Windows:
+* Windows::
+
     %APPDATA%/Sublime Text 2/Packages/
-* OS X:
+
+* OS X::
+
     ~/Library/Application Support/Sublime Text 2/Packages/
-* Linux:
+
+* Linux::
+
     ~/.Sublime Text 2/Packages/
 
 
 Using
 -----
 
-* Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click. To "Jump to Symbol Declaration" use `super+f3` or `alt+click` over the symbol.
+* Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click. To "Jump to Symbol Declaration" use ``super+f3`` or ``alt+click`` over the symbol.
 
-* Start typing code as usual, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use `super+j`.
+* Start typing code as usual, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use ``super+j``.
 
 Don't despair! The first time you use it it needs to build some indexes and it can take more than a few seconds (around six in my configuration).
 
@@ -54,7 +60,7 @@ Configuring
 -----------
 For adding additional library paths (django and extra libs paths for Python or extra paths to look for .js files for JavaScript for example), either add those paths as folders to your project, or create an optional codeintel configuration file in your home or in your project's root.
 
-Configuration files (`~/.codeintel/config` or `project_root/.codeintel/config`). All configurations are optional. Example::
+Configuration files (``~/.codeintel/config`` or ``project_root/.codeintel/config``). All configurations are optional. Example::
 
     {
         "PHP": {
@@ -85,25 +91,25 @@ Configuration files (`~/.codeintel/config` or `project_root/.codeintel/config`).
 
 Additional settings can be configured in the User File Settings:
 
-* A list of disabled languages can be set using "codeintel_disabled_languages". Ex. ``"codeintel_disabled_languages": ['css']`
+* A list of disabled languages can be set using "codeintel_disabled_languages". Ex. ``"codeintel_disabled_languages": ['css']``
 
 * Live autocomplete can be disabled by setting "codeintel_live" to false.
 
-* Live autocompletion can be disabled in a per-language basis, using "codeintel_live_disabled_languages". Ex. ``"codeintel_live_disabled_languages": ['css']`
+* Live autocompletion can be disabled in a per-language basis, using "codeintel_live_disabled_languages". Ex. ``"codeintel_live_disabled_languages": ['css']``
 
-* Information for more settings is available in the `Base File.sublime-settings` file.
+* Information for more settings is available in the ``Base File.sublime-settings`` file.
 
 
 Troubleshooting
 ---------------
 
-### build.sh
+Using ``build.sh``
 
 
 If everything else fails, try rebuilding the libraries using ``build.sh``.
 You need to install some things to make sure it's going to work.
 These are likely to be packaged on your system, such as, for Ubuntu/Debian-like
-distros. Open a terminal and do:
+distros. Open a terminal and do::
 
     $ sudo apt-get install g++
 
@@ -111,7 +117,7 @@ distros. Open a terminal and do:
 
 Once you have installed those, you may need to use the ``build.sh`` script.
 In your terminal, go to your ``Packages/SublimeCodeIntel/src`` folder, then
-simply run:
+simply run::
 
     $ ./build.sh
 
@@ -120,29 +126,29 @@ What's New
 ----------
 v1.3 (20-12-2011):
 
-    * This build should fix many of the problems seen in Linux systems.
+* This build should fix many of the problems seen in Linux systems.
 
-    * Libraries for Linux rebuilt with libpcre statically (libpcre bundled for Linux builds).
+* Libraries for Linux rebuilt with libpcre statically (libpcre bundled for Linux builds).
 
-    * calltip() is now thread safe (which caused some strange behavior in Linux
-        where Sublime Text 2 ended up being unresponsive).
+* calltip() is now thread safe (which caused some strange behavior in Linux
+    where Sublime Text 2 ended up being unresponsive).
 
 
 v1.2 (18-12-2011):
 
-    * JavaScript support improved (it's now much nicer with the CPU).
+* JavaScript support improved (it's now much nicer with the CPU).
 
-    * CSS files support much improved (thanks to Jon's new features in autocomplete).
+* CSS files support much improved (thanks to Jon's new features in autocomplete).
 
-    * Added palette commands to disable/enable the plugin in many ways.
+* Added palette commands to disable/enable the plugin in many ways.
 
-    * Added `codeintel_live_disabled_languages` and fixed `codeintel_live` to disable SublimeCodeIntel live autocomplete mode.
+* Added ``codeintel_live_disabled_languages`` and fixed ``codeintel_live`` to disable SublimeCodeIntel live autocomplete mode.
 
-    * Smarter language detection and fallbacks.
+* Smarter language detection and fallbacks.
 
-    * Improved autocomplete triggering, should now respond better.
+* Improved autocomplete triggering, should now respond better.
 
-    * Support for new completion settings in Sublime Text 2 Build 2148.
+* Support for new completion settings in Sublime Text 2 Build 2148.
 
 
 License
