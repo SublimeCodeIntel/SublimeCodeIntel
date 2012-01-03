@@ -134,8 +134,7 @@ v1.3 (20-12-2011):
 
 * Libraries for Linux rebuilt with libpcre statically (libpcre bundled for Linux builds).
 
-* calltip() is now thread safe (which caused some strange behavior in Linux
-    where Sublime Text 2 ended up being unresponsive).
+* ``calltip()`` is now thread safe (which caused some strange behavior in Linux where Sublime Text 2 ended up being unresponsive).
 
 
 v1.2 (18-12-2011):
