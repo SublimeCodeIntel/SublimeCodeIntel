@@ -1,5 +1,5 @@
-Sublime CodeIntel
-=================
+SublimeCodeIntel
+================
 
 Code intelligence plugin ported from Open Komodo Editor to the [Sublime Text 2](http://sublimetext.com "Sublime Text 2") editor.
 
@@ -13,6 +13,10 @@ Provides the following features:
 * Function Call tooltips - Displays information in the status bar about the working function.
 
 Plugin should work in all three platforms (MacOS X, Windows and Linux).
+
+.. image:: http://pledgie.com/campaigns/16511.png?skin_name=chrome
+   :alt: Click here to lend your support to SublimeCodeIntel and make a donation at pledgie.com!
+   :target: http://pledgie.com/campaigns/16511
 
 
 Installing
