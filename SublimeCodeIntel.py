@@ -104,7 +104,7 @@ condeintel_log_file = None
 log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [codeintel_hdlr]
 log.handlers = [stderr_hdlr]
-codeintel_log.setLevel(logging.ERROR)  # ERROR
+codeintel_log.setLevel(logging.INFO)  # INFO
 logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # WARNING/INFO
 for lang in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
              'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
@@ -243,7 +243,6 @@ def guess_lang(view=None, path=None):
                 try:
                     _lang = lang = guess_lang_from_path(path)
                 except CodeIntelError:
-                    logger(view, 'warning', "skip `%s': couldn't determine language" % path)
                     languages[id][_k_] = None
                     return
 
@@ -253,7 +252,7 @@ def guess_lang(view=None, path=None):
         languages[id][_k_] = None
         return
 
-    if not lang and _lang:
+    if not lang and _lang and _lang not in ('Console',):
         if mgr:
             logger(view, 'info', "Invalid language: %s. Available: %s" % (_lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs()))))
         else:
@@ -711,7 +710,6 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             logger(view, 'event', "")
             result = False
             merge = ''
-            _msgs = []
             for msg in reversed(eval_log_stream.getvalue().strip().split('\n')):
                 msg = msg.strip()
                 if msg:
@@ -723,20 +721,20 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
                     except:
                         merge = (msg + ' ' + merge) if merge else msg
                         continue
-                    _msgs.append((levelname, name + ':' + ((msg + ' ' + merge) if merge else msg)))
                     merge = ''
                     if not result and msg.startswith('evaluating '):
                         calltip(view, 'warning', msg)
                         result = True
-            if any((cplns, calltips, defns, result)):
-                _msgs.reverse()
-                for msg in msgs + _msgs:
-                    getattr(codeintel_log, msg[0], codeintel_log.info)(msg[1])
 
         ret = []
-        l = locals()
         for f in forms:
-            ret.append(l.get(f))
+            if f == 'cplns':
+                ret.append(cplns)
+            elif f == 'calltips':
+                ret.append(calltips)
+            elif f == 'defns':
+                ret.append(defns)
+
         total = (time.time() - start) * 1000
         if total > 1000:
             timestr = "~%ss" % int(round(total / 1000))
@@ -745,6 +743,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
         if not despaired or total < timeout:
             msg = "Done '%s' CodeIntel! Full CodeIntel took %s" % (lang, timestr)
             print >>condeintel_log_file, msg
+
             def _callback():
                 if view.line(view.sel()[0]) == view.line(pos):
                     callback(*ret)
@@ -915,6 +914,10 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
             def _trigger(defns):
                 if defns is not None:
                     defn = defns[0]
+                    if defn.name and defn.doc:
+                        msg = "%s: %s" % (defn.name, defn.doc)
+                        logger(view, 'info', msg, timeout=3000)
+
                     if defn.path and defn.line:
                         if defn.line != 1 or defn.path != file_name:
                             path = defn.path + ':' + str(defn.line)
@@ -934,6 +937,10 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
 
                             window.open_file(path, sublime.ENCODED_POSITION)
                             window.open_file(path, sublime.ENCODED_POSITION)
+                    elif defn.name:
+                        msg = 'Cannot find jumping point to: %s' % defn.name
+                        log.debug(msg)
+                        codeintel_log.debug(msg)
 
             codeintel(view, path, content, lang, pos, ('defns',), _trigger)
 

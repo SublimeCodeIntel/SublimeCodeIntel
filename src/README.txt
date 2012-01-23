@@ -4,15 +4,15 @@ Patches applied to 3rd-party modules to be used by SublimeCodeIntel.
 * elementtree patched to have "iElementTree" features in the pure python version
 	of ElementTree (not really needed if using ciElementTree)
 * SilverCity patched to compile with scintilla 210
-* scintilla patched to add User Language Definitions and XML, using 210 instead 
+* scintilla patched to add User Language Definitions and XML, using 210 instead
 	of the older bundled version with SilverCity.
 * sgmlop patched to have '%' symbol as PI and send positions to Parsers.
 
-For platforms with a *nix shell, use ./build.sh to build and "deploy" the needed 
-binary files (_SilverCity.so and ciElementTree.so) for SublimeCodeIntel to work. 
+For platforms with a *nix shell, use ./build.sh to build and "deploy" the needed
+binary files (_SilverCity.so and ciElementTree.so) for SublimeCodeIntel to work.
 The built .so files will be copied to `SublimeCodeIntel/libs/_local_arch/`
 
-The other provided patches are here for reference later upgrading of codeintel2 
+The other provided patches are here for reference later upgrading of codeintel2
 and other Open Komodo modules.
 
 Open Komodo's codeintel2 source from:
