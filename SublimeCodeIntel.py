@@ -298,14 +298,18 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                     calltip(view, 'tip', calltips[0])
 
                     if content[sel.a - 1] == '(' and content[sel.a] == ')':
-                        rex = re.compile("\((.*)\)", re.DOTALL)
+                        rex = re.compile("\(([^\[\(\)]*)")
                         m = rex.search(calltips[0])
+
+                        if m is None:
+                            return
 
                         params = m.group(1).split(',')
 
                         snippet = []
                         i = 1
                         for p in params:
+                            p = p.strip()
                             if p.find('=') != -1:
                                 continue
                             if p.find(' ') != -1:
@@ -320,7 +324,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
 
                         view.run_command('insert_snippet', {
                             'contents': ', '.join(snippet)
-                    })
+                        })
 
             sentinel[id] = None
             codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
