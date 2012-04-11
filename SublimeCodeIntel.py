@@ -67,7 +67,7 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
         }
     }
 """
-import os, sys, stat, time, datetime, collections
+import os, sys, stat, time, datetime, collections, re
 import sublime_plugin, sublime
 import threading
 import logging
@@ -282,7 +282,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                 if cplns:
                     # Show autocompletions:
                     _completions = sorted(
-                        [('%s  (%s)' % (name, type), name) for type, name in cplns],
+                        [('%s  (%s)' % (name, type), name + ('(${1})' if type=='function' else '')) for type, name in cplns],
                         cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
                     )
                     if _completions:
@@ -295,6 +295,36 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                 elif calltips is not None:
                     # Trigger a tooltip
                     calltip(view, 'tip', calltips[0])
+
+                    if content[sel.a - 1] == '(' and content[sel.a] == ')':
+                        rex = re.compile("\(([^\[\(\)]*)")
+                        m = rex.search(calltips[0])
+
+                        if m is None:
+                            return
+
+                        params = m.group(1).split(',')
+
+                        snippet = []
+                        i = 1
+                        for p in params:
+                            p = p.strip()
+                            if p.find('=') != -1:
+                                continue
+                            if p.find(' ') != -1:
+                                p = p.split(' ')[1]
+
+                            var = p.replace('$', '').strip()
+                            snippet.append('${' + str(i) + ':' + var + '}')
+                            i += 1
+
+                        if i == 1:
+                            return
+
+                        view.run_command('insert_snippet', {
+                            'contents': ', '.join(snippet)
+                        })
+
             sentinel[id] = None
             codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
     # If it's a fill char, queue using lower values and preemptive behavior
@@ -647,7 +677,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             return [None] * len(forms)
 
         try:
-            trg = getattr(buf, 'trg_from_pos', lambda p: None)(pos2bytes(content, pos))
+            trg = getattr(buf, 'preceding_trg_from_pos', lambda p: None)(pos2bytes(content, pos), pos2bytes(content, pos))
             defn_trg = getattr(buf, 'defn_trg_from_pos', lambda p: None)(pos2bytes(content, pos))
         except (CodeIntelError):
             codeintel_log.exception("Exception! %s:%s (%s)" % (path or '<Unsaved>', pos, lang))
@@ -824,7 +854,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             #     live = live and sentinel[id] is not None
 
             if live:
-                if not hasattr(view, 'command_history') or view.command_history(0)[0] == 'insert':
+                if not hasattr(view, 'command_history') or (view.command_history(0)[0] == 'insert' and view.command_history(0)[1]['characters'] != ',') or (view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)') or (text == '(' and view.command_history(0)[0] == 'commit_completion'):
                     autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path, lang])
                 else:
                     view.run_command('hide_auto_complete')
