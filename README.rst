@@ -1,9 +1,9 @@
 SublimeCodeIntel
 ================
 
-Code intelligence plugin ported from Open Komodo Editor to the `Sublime Text 2 <http://sublimetext.com/dev>`_
+Code intelligence plugin ported from `Open Komodo Editor <http://www.openkomodo.com/>`_ to `Sublime Text 2 <http://www.sublimetext.com/2>`_.
 
-Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2)::
+Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2):
 
     PHP, Python, RHTML, JavaScript, Smarty, Mason, Node.js, XBL, Tcl, HTML, HTML5, TemplateToolkit, XUL, Django, Perl, Ruby, Python3.
 
