@@ -37,5 +37,14 @@
     "codeintel_syntax_map":
     {
         "Python Django": "Python"
+    },
+
+    /*
+        Define filters per language to exclude paths from scanning.
+        ex: "JavaScript":["/build/"]
+    */
+    "codeintel_scan_exclude_dir":
+    {
+        "JavaScript":["/build/"]
     }
 }

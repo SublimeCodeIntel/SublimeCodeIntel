@@ -632,6 +632,14 @@ class JavaScriptLangIntel(CitadelLangIntel,
                     max_depth=max_depth,
                     interesting_file_patterns=js_assocs)
             )
+
+            # TODO Why doesn't it pick-up the value in the setting file???
+
+            exclude_patterns = env.get_pref("codeintel_scan_exclude_dir", { "JavaScript":["/build/"] }).get(self.lang)
+            if not exclude_patterns is None:
+                for p in exclude_patterns:
+                    extra_dirs = [d for d in extra_dirs if not re.search(p, d)]
+
         else:
             extra_dirs = () # ensure retval is a tuple
         return extra_dirs
@@ -657,6 +665,8 @@ class JavaScriptLangIntel(CitadelLangIntel,
             env.add_pref_observer("codeintel_max_recursive_dir_depth",
                                   self._invalidate_cache)
             env.add_pref_observer("codeintel_scan_files_in_project",
+                                  self._invalidate_cache)
+            env.add_pref_observer("codeintel_scan_exclude_dir",
                                   self._invalidate_cache)
             # (Bug 68850) Both of these 'live_*' prefs on the *project*
             # prefset can result in a change of project base dir. It is
