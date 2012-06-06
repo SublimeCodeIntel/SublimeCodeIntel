@@ -226,9 +226,8 @@ def guess_lang(view=None, path=None):
         pass
     languages.setdefault(id, {})
 
-    lang = None
     _codeintel_syntax_map = dict((k.lower(), v) for k, v in view.settings().get('codeintel_syntax_map', {}).items())
-    _lang = lang = syntax and _codeintel_syntax_map.get(syntax.lower(), syntax)
+    _lang = lang = _codeintel_syntax_map.get(syntax.lower(), syntax)
 
     mgr = codeintel_manager()
 
