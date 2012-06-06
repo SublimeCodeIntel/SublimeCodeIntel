@@ -226,11 +226,16 @@ def guess_lang(view=None, path=None):
         pass
     languages.setdefault(id, {})
 
-    lang = None
     _codeintel_syntax_map = dict((k.lower(), v) for k, v in view.settings().get('codeintel_syntax_map', {}).items())
-    _lang = lang = syntax and _codeintel_syntax_map.get(syntax.lower(), syntax)
+    _lang = lang = _codeintel_syntax_map.get(syntax.lower(), syntax)
 
     mgr = codeintel_manager()
+
+    _codeintel_disabled_languages = [unicode(l.lower()) for l in view.settings().get('codeintel_disabled_languages', [])]
+    if lang and unicode(lang.lower()) in _codeintel_disabled_languages:
+        logger(view, 'info', "skip `%s': disabled language" % lang)
+        languages[id][_k_] = None
+        return
 
     if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
         lang = None
@@ -245,12 +250,6 @@ def guess_lang(view=None, path=None):
                 except CodeIntelError:
                     languages[id][_k_] = None
                     return
-
-    _codeintel_disabled_languages = [l.lower() for l in view.settings().get('codeintel_disabled_languages', [])]
-    if lang and lang.lower() in _codeintel_disabled_languages:
-        logger(view, 'info', "skip `%s': disabled language" % lang)
-        languages[id][_k_] = None
-        return
 
     if not lang and _lang and _lang not in ('Console',):
         if mgr:
