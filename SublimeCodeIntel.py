@@ -231,8 +231,8 @@ def guess_lang(view=None, path=None):
 
     mgr = codeintel_manager()
 
-    _codeintel_disabled_languages = [l.lower() for l in view.settings().get('codeintel_disabled_languages', [])]
-    if lang and lang.lower() in _codeintel_disabled_languages:
+    _codeintel_disabled_languages = [unicode(l.lower()) for l in view.settings().get('codeintel_disabled_languages', [])]
+    if lang and unicode(lang.lower()) in _codeintel_disabled_languages:
         logger(view, 'info', "skip `%s': disabled language" % lang)
         languages[id][_k_] = None
         return
