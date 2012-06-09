@@ -561,9 +561,12 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 project_base_dir = None
                 if path:
                     # Try to find a suitable project directory (or best guess):
-                    for folder in ['.codeintel', '.git', '.hg', 'trunk']:
+                    for folder in ['.codeintel', '.git', '.hg', '.svn', 'trunk']:
                         project_dir = find_folder(path, folder)
-                        if project_dir and (folder != '.codeintel' or not os.path.exists(os.path.join(project_dir, 'db'))):
+                        if project_dir:
+                            if folder == '.codeintel':
+                                if project_dir == CODEINTEL_HOME_DIR or os.path.exists(os.path.join(project_dir, 'db')):
+                                    continue
                             if folder.startswith('.'):
                                 project_base_dir = os.path.abspath(os.path.join(project_dir, '..'))
                             else:
@@ -631,7 +634,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 msgs.append(('info', "\n%s\n%s" % (msg, "-" * len(msg))))
 
             if catalogs:
-                msgs.append(('info', "New env with atalogs for '%s': %s" % (lang, ', '.join(catalogs) or None)))
+                msgs.append(('info', "New env with catalogs for '%s': %s" % (lang, ', '.join(catalogs) or None)))
 
             buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
 
