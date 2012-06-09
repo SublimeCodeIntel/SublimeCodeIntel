@@ -1,9 +1,9 @@
 SublimeCodeIntel
 ================
 
-Code intelligence plugin ported from Open Komodo Editor to the `Sublime Text 2 <http://sublimetext.com/dev>`_
+Code intelligence plugin ported from `Open Komodo Editor <http://www.openkomodo.com/>`_ to `Sublime Text 2 <http://www.sublimetext.com/2>`_.
 
-Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2)::
+Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2):
 
     PHP, Python, RHTML, JavaScript, Smarty, Mason, Node.js, XBL, Tcl, HTML, HTML5, TemplateToolkit, XUL, Django, Perl, Ruby, Python3.
 
@@ -53,7 +53,7 @@ Using
 
 * Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click. To "Jump to Symbol Declaration" use ``super+f3`` or ``alt+click`` over the symbol.
 
-* Start typing code as usual, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use ``super+j``.
+* Start typing code as usual, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use ``shift+ctrl+space``.
 
 Don't despair! The first time you use it it needs to build some indexes and it can take more than a few seconds (around six in my configuration).
 
