@@ -291,6 +291,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                             'disable_auto_insert': True,
                             'api_completions_only': True,
                             'next_completion_if_showing': False,
+                            'auto_complete_commit_on_tab': True,
                         })
                 elif calltips is not None:
                     # Trigger a tooltip
