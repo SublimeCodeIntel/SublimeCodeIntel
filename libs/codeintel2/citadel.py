@@ -63,7 +63,6 @@ from codeintel2.buffer import Buffer
 from codeintel2.common import *
 from codeintel2.indexer import ScanRequest
 from codeintel2.langintel import LangIntel
-#from codeintel2.scheduler import BatchUpdater
 
 
 
@@ -512,40 +511,6 @@ class ImportHandler:
         path += self.corePath
         return path
 
-    #DEPRECATED: Though still used in one place by `lang_ruby.py`.
-    def findSubImportsOnDisk(self, module, cwd):
-        """Return a list of importable submodules to the given module.
-        
-        The returned list is a list of strings that would be appropriate for
-        direct use in the language's specific import statement. I.e.: for
-        Perl:
-            ["ConnCache", "Protocol", "UserAgent", ...]
-        not:
-            ["ConnCache.pm", "Protocol.pm", "UserAgent.pm", ...]
-        For PHP, however, including the .php extension might be appropriate.
-        """
-        raise NotImplementedError("findSubImportsOnDisk: pure virtual method call")
-
-    #DEPRECATED: `indexer.py` is still using this
-    def genScannableFiles(self, path=None, skipRareImports=False,
-                          importableOnly=False):
-        """Generate scannable files on the import path.
-        
-            "path" (optional) is an import path to load. If not specified
-                the default import path is used.
-            "skipRareImports" (optional, default false) is a boolean
-                indicating if files unlikely to be imported/searched-for/used
-                should be skipped. This can be specified to speed up, for
-                example, scanning *all* files during a batch update of a
-                language installation.
-            "importableOnly" (optional, default false) is a boolean
-                indicating if only those files that are importable from
-                the given path should be included. For example a Python
-                file in a subdirectory cannot be imported if that dir
-                does not have a package-defining "__init__.py" file.
-        """
-        raise NotImplementedError("genScannableFiles: pure virtual method call")
-
     #---- new citree-based eval stuff
 
     # The string that separates dir levels in import names. For example,
@@ -721,7 +686,7 @@ class CitadelEvaluator(Evaluator):
     def info(self, msg, *args):
         self.ctlr.info(msg, *args)
     def warn(self, msg, *args):
-        self.ctlr.warn(msg, *args) #XXX why was this "info"?
+        self.ctlr.warn(msg, *args)
     def error(self, msg, *args):
         self.ctlr.error(msg, *args)
 
@@ -738,30 +703,13 @@ class Citadel(object):
 
         citadel = Citadel(mgr, ...)
         
-        #XXX Obsolete
-        # Upgrade the CIDB, if necessary via appropriate usage of:
-        #   .cidb_upgrade_info()
-        #   .upgrade_cidb()
-        #   .reset_cidb()
-
         citadel.initialize()
 
         # Use the citadel. The most common methods are:
         #   .{add|stage}_scan_request()
-        # and making batch updates (described below).
 
         # Must be finalized to ensure no thread hangs.
         citadel.finalize()
-
-    Making Batch Updates
-    --------------------
-    
-        citadel.batch_update_request(...) # make one or more request
-        citadel.batch_update_start(...)   # start the update
-
-    By default .batch_update_start() will block until the update is complete.
-    This (and other control of the update process) can be customized by
-    passing in your own controller.
     """
     MIN_CIDB_VERSION = (1, 0)  # minimum supported database version
 
@@ -771,12 +719,6 @@ class Citadel(object):
         self._import_handler_from_lang = {}
         self._cile_driver_from_lang = {}
         self._is_citadel_cpln_from_lang = {}
-
-        self._scheduler = None # the scheduler thread, started as required
-        self.batch_updater = None
-        # Boolean indicating if a late-created main scheduler should NOT be
-        # started immediately (because a BatchScheduler is already running).
-        self._wait_to_start_scheduler = False
 
     def set_lang_info(self, lang, cile_driver_class, is_cpln_lang=False):
         self._cile_driver_from_lang[lang] = cile_driver_class(self.mgr)
@@ -800,153 +742,6 @@ class Citadel(object):
 
     def finalize(self):
         pass
-
-    def batch_update(self, join=True, updater=None):
-        """Do a batch update.
-        
-            "join" (optional, default True) indicates if this should
-                block until complete. If False this will return immediately
-                and you must manually .join() on the updater.
-            "updater" (optional) is an BatchUpdater instance (generally
-                a customized subclass of) used to do the update process.
-        """
-        if self.batch_updater is not None:
-            raise CodeIntelError("cannot start batch update: another batch "
-                                 "update is in progress")
-
-        assert join or updater is not None, \
-               ("cannot specify join=False and updater=None because "
-                "you must manually wait on the updater if join is False.")
-        if updater is None:
-            updater = BatchUpdater()
-        assert isinstance(updater, BatchUpdater), \
-                ("given controller is not an instance of "
-                 "BatchUpdater: %r" % updater)
-
-        if self._scheduler is not None:
-            self._scheduler.pause()
-        else:
-            self._wait_to_start_scheduler = True
-
-        self.batch_updater = updater
-        updater.start(self, on_complete=self._batch_update_completed)
-        if join:
-            updater.join()
-
-    def _batch_update_completed(self):
-        self._wait_to_start_scheduler = False
-        if self._scheduler is not None:
-            if self._scheduler.isAlive():
-                self._scheduler.resume()
-            else:
-                self._scheduler.start()
-        self.batch_updater = None
-
-    #_SHOW_PROGRESS_ON_ONE_LINE = True
-    #def batchUpdateProgress(self, stage, obj):
-    #    """Called when progress is made on a set of batch update requests.
-    #    
-    #        "stage" is a string defining the current processing stage.
-    #        "obj" is some object relevant to a particular stage to describe
-    #            is state of progress.
-    #    
-    #    Subclasses can override this for custom handling.
-    #    """
-    #    if self._batchProgressQuiet:
-    #        return
-    #
-    #    cache = self._batchProgressCache or {}
-    #    if stage == "Preparing database": # a.k.a. removing db indices
-    #        name, current, total = obj
-    #        line = "%s: %s" % (stage, name)
-    #    elif stage == "Restoring indices":
-    #        name, current, total = obj
-    #        line = "%s: %s" % (stage, name)
-    #    elif stage == "Gathering files":
-    #        line = "Gathering files: %s files" % obj
-    #    elif stage == "Scanning": # 'obj' is a request object
-    #        # Scanning: [#####        ] (1/12) ...tel\xsltcile.py ETA: 5 min
-    #        remaining = self._batch_scheduler.getNumFilesToProcess()+1
-    #        total = cache.setdefault("total_files", remaining)
-    #        # Progress meter section
-    #        percent = float(total-remaining)/float(total)
-    #        METER_WIDTH = 20
-    #        meterTemplate = "%%-%ds" % METER_WIDTH
-    #        meter = meterTemplate % ("#"*int(METER_WIDTH*percent))
-    #        # Count and file section
-    #        # 79: display width; 25: other stuff, e.g. "Scanning", "ETA: ..."
-    #        file = obj.path
-    #        COUNT_AND_FILE_WIDTH = 79 - 25 - METER_WIDTH
-    #        count = "(%d/%d)" % (total-remaining+1, total)
-    #        FILE_WIDTH = COUNT_AND_FILE_WIDTH - len(count) - 1
-    #        if len(file) > FILE_WIDTH:
-    #            file = "..."+file[-FILE_WIDTH+3:]
-    #        countAndFile = "%s %s" % (count, file)
-    #        # ETA section
-    #        now = time.time()
-    #        if "starttime" in cache:
-    #            elapsedsecs = now - cache["starttime"]
-    #            totalsecs = elapsedsecs / percent
-    #            remainsecs = totalsecs - elapsedsecs
-    #            if remainsecs < 60.0:
-    #                eta = "ETA: %d sec" % int(remainsecs)
-    #            elif (remainsecs/60.0 < 60.0):
-    #                eta = "ETA: %d min" % int(remainsecs/60.0)
-    #            else:
-    #                eta = "ETA: %d hr" % int(remainsecs/3600.0)
-    #        else:
-    #            cache["starttime"] = now
-    #            eta = ""
-    #        # Put sections together
-    #        line_template = "Scanning: [%%s] %%-%ds %%s" % COUNT_AND_FILE_WIDTH
-    #        line = line_template % (meter, countAndFile, eta)
-    #    else:
-    #        line = "%s: %s" % (stage, obj)
-    #    if self._SHOW_PROGRESS_ON_ONE_LINE and "last_line" in cache:
-    #        length = len(cache["last_line"])
-    #        sys.stdout.write( "\b \b"*length )
-    #    sys.stdout.write(line)
-    #    if not self._SHOW_PROGRESS_ON_ONE_LINE:
-    #        sys.stdout.write('\n')
-    #    cache["last_line"] = line
-    #    self._batchProgressCache = cache
-    #
-    #def batchUpdateCompleted(self, reason):
-    #    """Called when a set of batch update requests are completed.
-    #    
-    #    Subclasses can override this for custom handling.
-    #    """
-    #    if self._batchProgressQuiet:
-    #        return
-    #
-    #    cache = self._batchProgressCache or {}
-    #    if "starttime" in cache:
-    #        totalsecs = time.time() - cache["starttime"]
-    #        if totalsecs < 60.0:
-    #            elapsed = "%d seconds" % int(totalsecs)
-    #        elif (totalsecs/60.0 < 60.0):
-    #            elapsed = "%d minute(s)" % int(totalsecs/60.0)
-    #        else:
-    #            elapsed = "%d hour(s)" % int(totalsecs/3600.0)
-    #    else:
-    #        elapsed = None
-    #    errors = self._lastBatchUpdateErrors
-    #    if self._SHOW_PROGRESS_ON_ONE_LINE and "last_line" in cache:
-    #        length = len(cache["last_line"])
-    #        sys.stdout.write( "\b \b"*length )
-    #    if reason == "completed":
-    #        sys.stdout.write("Batch update completed.")
-    #    elif reason == "stopped":
-    #        sys.stdout.write("Batch update was cancelled.")
-    #    elif reason == "error":
-    #        sys.stdout.write("Batch update errored out.")
-    #    else:
-    #        sys.stdout.write("Batch update completed (%s)." % reason)
-    #    if elapsed: sys.stdout.write(" Running time: %s." % elapsed)
-    #    if errors: sys.stdout.write(" There were %d errors:" % len(errors))
-    #    sys.stdout.write("\n")
-    #    if errors:
-    #        print "\t"+"\n\t".join(errors)
 
     def import_handler_from_lang(self, lang):
         """Return an "import"-handler for the given language.

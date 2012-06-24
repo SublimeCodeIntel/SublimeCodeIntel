@@ -632,6 +632,13 @@ class TreeEvaluator(CitadelEvaluator):
         signature = elem.get("signature", None)
         attributes = elem.get("attributes", None)
         returns = elem.get("returns", None)
+        try:
+            scope = self._elem_from_scoperef((blob, lpath))
+            scopestart = scope.get("line", 1)
+            scopeend = scope.get("lineend", 0)
+        except AttributeError:
+            scopestart = 1
+            scopeend = 0
 
         # Only fixup paths that do not look like URIs.
         if path and not re.match(r"^\w+:\/\/", path):
@@ -640,7 +647,7 @@ class TreeEvaluator(CitadelEvaluator):
             path = normpath(path)  # remove possible '.' and '..' elements
         defn = Definition(blob.get("lang"), path, blob.get("name"), lpath,
                           name, line, ilk, citdl, doc,
-                          signature, attributes, returns)
+                          signature, attributes, returns, scopestart, scopeend)
         return defn
 
     # The SENTINEL_MAX_EXPR_COUNT could probably be *reduced*.

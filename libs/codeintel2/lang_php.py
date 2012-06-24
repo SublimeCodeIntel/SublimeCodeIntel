@@ -74,7 +74,7 @@ from codeintel2.gencix_utils import *
 from codeintel2.tree_php import PHPTreeEvaluator
 from codeintel2.langintel import (ParenStyleCalltipIntelMixin,
                                   ProgLangTriggerIntelMixin)
-from codeintel2.accessor import AccessorCache
+from codeintel2.accessor import AccessorCache, KoDocumentAccessor
 
 if _xpcom_:
     from xpcom.server import UnwrapObject
@@ -224,8 +224,8 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                         return Trigger(lang, TRG_FORM_CPLN, "classes", pos, implicit)
                     elif text in ("implements", ):
                         return Trigger(lang, TRG_FORM_CPLN, "interfaces", pos, implicit)
-                    elif text in ("use"):
-                        return Trigger(lang, TRG_FORM_CPLN, "namespaces", pos, implicit)
+                    elif text in ("use", ):
+                        return Trigger(lang, TRG_FORM_CPLN, "use", pos, implicit)
                     elif prev_style == self.operator_style and \
                          prev_char == "," and implicit:
                         return self._functionCalltipTrigger(ac, prev_pos, DEBUG)
@@ -297,10 +297,16 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                     prev_text = ac.getTextBackWithStyle(style, max_text_len=15)
                     if DEBUG:
                         print "prev_text: %r" % (prev_text, )
-                    if prev_text[1] != "namespace":
+                    if prev_text[1] == "use":
+                        if DEBUG:
+                            print "Triggering use-namespace completion"
+                        return Trigger(lang, TRG_FORM_CPLN, "use-namespace",
+                                       pos, implicit)
+                    elif prev_text[1] != "namespace":
                         if DEBUG:
                             print "Triggering namespace completion"
-                        return Trigger(lang, TRG_FORM_CPLN, "namespace-members", pos, implicit)
+                        return Trigger(lang, TRG_FORM_CPLN, "namespace-members",
+                                       pos, implicit)
 
             elif last_style == self.variable_style or \
                  (not implicit and last_char == "$"):
@@ -359,14 +365,17 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                             prev_text = ac.getTextBackWithStyle(style, max_text_len=15)
                             if DEBUG:
                                 print "prev_text: %r" % (prev_text, )
-                            if (prev_text[1] not in ("new", "function",
+                            if (prev_text[1] not in ("new", "function", "use",
                                                     "class", "interface", "implements",
                                                     "public", "private", "protected",
                                                     "final", "abstract", "instanceof",)
                                         # For the operator styles, we must use
                                         # endswith, as it could follow a "()",
                                         # bug 90846.
-                                        and prev_text[1][-2:] not in ("->", "::",)):
+                                        and prev_text[1][-2:] not in ("->", "::",)
+                                        # Don't trigger when accessing a
+                                        # namespace - bug 88736.
+                                        and not prev_text[1].endswith("\\")):
                                 return Trigger(lang, TRG_FORM_CPLN, "functions",
                                                trig_pos, implicit)
                         # If we want implicit triggering on more than 3 chars
@@ -685,7 +694,7 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                     print "i now: %d, ch: %r" % (i, ch)
 
                 if ch in WHITESPACE:
-                    if trg.type in ("namespaces", "namespace-members"):
+                    if trg.type in ("use-namespace", "namespace-members"):
                         # Namespaces cannot be split over whitespace.
                         break
                     while ch in WHITESPACE:
@@ -840,9 +849,10 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                 i = trg.pos + 1   # triggered on the $, skip over it
             elif trg.type == "array-members":
                 i = trg.extra.get("bracket_pos")   # triggered on foo['
-            elif trg.type == "namespaces":
+            elif trg.type == "use":
                 i = trg.pos + 1
-            elif trg.type == "namespace-members":
+            elif trg.type == "namespace-members" or \
+                 trg.type == "use-namespace":
                 i = trg.pos - 1
             else:
                 i = trg.pos - 2 # skip past the trigger char
@@ -1070,11 +1080,13 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
 
             # Warn the user if there is a huge number of import dirs that
             # might slow down completion.
-            num_import_dirs = len(extra_dirs) + len(include_dirs)
+            all_dirs = list(extra_dirs) + list(include_dirs)
+            num_import_dirs = len(all_dirs)
             if num_import_dirs > 100:
-                db.report_event("This buffer is configured with %d PHP "
-                                "import dirs: this may result in poor "
-                                "completion performance" % num_import_dirs)
+                msg = "This buffer is configured with %d %s import dirs: " \
+                      "this may result in poor completion performance" % \
+                      (num_import_dirs, self.lang)
+                self.mgr.report_message(msg, "\n".join(all_dirs))
 
             # - cataloglib, stdlib
             catalog_selections = env.get_pref("codeintel_selected_catalogs")
@@ -1166,12 +1178,13 @@ class PHPBuffer(UDLBuffer, XMLParsingBufferMixin):
 
     def __init__(self, *args, **kwargs):
         super(PHPBuffer, self).__init__(*args, **kwargs)
-        
-        # Encourage the database to pre-scan dirs relevant to completion
-        # for this buffer -- because of recursive-dir-include-everything
-        # semantics for PHP this first-time scan can take a while.
-        request = PreloadBufLibsRequest(self)
-        self.mgr.idxr.stage_request(request, 1.0)
+
+        if isinstance(self.accessor, KoDocumentAccessor):
+            # Encourage the database to pre-scan dirs relevant to completion
+            # for this buffer -- because of recursive-dir-include-everything
+            # semantics for PHP this first-time scan can take a while.
+            request = PreloadBufLibsRequest(self)
+            self.mgr.idxr.stage_request(request, 1.0)
 
     @property
     def libs(self):
@@ -1222,22 +1235,6 @@ class PHPImportHandler(ImportHandler):
                 #    scripts, which might likely not have the
                 #    extension: need to grow filetype-from-content smarts.
                 files.append(path)
-
-    def genScannableFiles(self, path=None, skipRareImports=False,
-                          importableOnly=False):
-        if path is None:
-            path = self._getPath()
-        searchedDirs = {}
-        for dirname in path:
-            if dirname == os.curdir:
-                # Do NOT traverse '.' if it is in the include_path. Not sure
-                # if this is at all common for PHP.
-                continue
-            files = []
-            os.path.walk(dirname, self._findScannableFiles,
-                         (files, searchedDirs))
-            for file in files:
-                yield file
 
     def find_importables_in_dir(self, dir):
         """See citadel.py::ImportHandler.find_importables_in_dir() for
@@ -1351,6 +1348,7 @@ S_IGNORE_SCOPE = 3
 S_OBJECT_ARGUMENT = 4
 S_GET_HEREDOC_MARKER = 5
 S_IN_HEREDOC = 6
+S_TRAIT_RESOLUTION = 7
 # Special tags for multilang handling (i.e. through UDL)
 S_OPEN_TAG  = 10
 S_CHECK_CLOSE_TAG = 11
@@ -1414,7 +1412,7 @@ class PHPArg:
 class PHPVariable:
 
     # PHPDoc variable type sniffer.
-    _re_var = re.compile(r'^\s*@var\s+(\$(?P<variable>\w+)\s+)?(?P<type>\w+)(?:\s+(?P<doc>.*?))?', re.M|re.U)
+    _re_var = re.compile(r'^\s*@var\s+(\$(?P<variable>\w+)\s+)?(?P<type>[\w\\]+)(?:\s+(?P<doc>.*?))?', re.M|re.U)
     _ignored_php_types = ("object", "mixed")
 
     def __init__(self, name, line, vartype='', attributes='', doc=None,
@@ -1679,9 +1677,10 @@ class PHPInterface:
 
 class PHPClass:
 
+    cixtype = "CLASS"
     # PHPDoc magic property sniffer.
-    _re_magic_property = re.compile(r'^\s*@property(-(?P<type>read|write))?\s+((?P<citdl>\w+)\s+)?(?P<name>\$\w+)(?:\s+(?P<doc>.*?))?', re.M|re.U)
-    _re_magic_method = re.compile(r'^\s*@method\s+((?P<citdl>\w+)\s+)?(?P<name>\w+)(\(\))?(?P<doc>.*?)$', re.M|re.U)
+    _re_magic_property = re.compile(r'^\s*@property(-(?P<type>read|write))?\s+((?P<citdl>[\w\\]+)\s+)?(?P<name>\$\w+)(?:\s+(?P<doc>.*?))?', re.M|re.U)
+    _re_magic_method = re.compile(r'^\s*@method\s+((?P<citdl>[\w\\]+)\s+)?(?P<name>\w+)(\(\))?(?P<doc>.*?)$', re.M|re.U)
 
     def __init__(self, name, extends, lineno, depth, attributes=None,
                  interfaces=None, doc=None):
@@ -1694,6 +1693,8 @@ class PHPClass:
         self.members = {} # declared class variables
         self.variables = {} # all variables used in class
         self.functions = {}
+        self.traits = {}
+        self.traitOverrides = {}
         if interfaces:
             self.interfaces = interfaces.split(',')
         else:
@@ -1726,7 +1727,7 @@ class PHPClass:
 
     def __repr__(self):
         # dump our contents to human readable form
-        r = "CLASS %s" % self.name
+        r = "%s %s" % (self.cixtype, self.name)
         if self.extends:
             r += " EXTENDS %s" % self.extends
         r += '\n'
@@ -1751,10 +1752,24 @@ class PHPClass:
             for v in self.variables.values():
                 r += "    %r" % v
             
+        if self.traits:
+            r += "traits:\n"
+            for k, v in self.traits.items():
+                r += "    %r" % k
+            if self.traitOverrides:
+                r += "trait overrides:\n"
+                for k, v in self.traitOverrides.items():
+                    r += "    %r, %r" % (k, v)
+
         return r + '\n'
 
-    def toElementTree(self, cixblob):
-        cixelement = createCixClass(cixblob, self.name)
+    def addTraitReference(self, name):
+        self.traits[name] = []
+
+    def addTraitOverride(self, namelist, alias, visibility=None, insteadOf=False):
+        self.traitOverrides[".".join(namelist)] = (alias, visibility, insteadOf)
+
+    def _toElementTree(self, cixblob, cixelement):
         cixelement.attrib["line"] = str(self.linestart)
         if self.lineend is not None:
             cixelement.attrib["lineend"] = str(self.lineend)
@@ -1767,6 +1782,20 @@ class PHPClass:
         if self.extends:
             addClassRef(cixelement, self.extends)
 
+        if self.traits:
+            cixelement.attrib["traitrefs"] = " ".join(self.traits)
+            for citdl, data in self.traitOverrides.items():
+                alias, vis, insteadOf = data
+                if alias and not insteadOf:
+                    name = alias
+                else:
+                    name = citdl.split(".")[-1]
+                override_elem = SubElement(cixelement, "alias", name=name, citdl=citdl)
+                if insteadOf:
+                    override_elem.attrib["insteadof"] = alias
+                if vis:
+                    override_elem.attrib["attributes"] = vis
+
         for i in self.interfaces:
             addInterfaceRef(cixelement, i.strip())
 
@@ -1774,6 +1803,16 @@ class PHPClass:
                     self.members.values() + self.variables.values()
         for v in sortByLine(allValues):
             v.toElementTree(cixelement)
+
+    def toElementTree(self, cixblob):
+        cixelement = createCixClass(cixblob, self.name)
+        self._toElementTree(cixblob, cixelement)
+
+class PHPTrait(PHPClass):
+    cixtype = "TRAIT"
+    def toElementTree(self, cixblob):
+        cixelement = SubElement(cixblob, "scope", ilk="trait", name=self.name)
+        self._toElementTree(cixblob, cixelement)
 
 class PHPImport:
     def __init__(self, name, lineno, alias=None, symbol=None):
@@ -2084,13 +2123,14 @@ class PHPParser:
         else:
             log.debug("addReturnType: No current function for return value!?")
 
-    def addClass(self, name, extends=None, attributes=None, interfaces=None, doc=None):
+    def addClass(self, name, extends=None, attributes=None, interfaces=None, doc=None, isTrait=False):
         toScope = self.currentNamespace or self.fileinfo
         if name not in toScope.classes:
             # push the current class onto the class stack
             self.classStack.append(self.currentClass)
             # make this class the current class
-            self.currentClass = PHPClass(name,
+            cixClass = isTrait and PHPTrait or PHPClass
+            self.currentClass = cixClass(name,
                                          extends,
                                          self.lineno,
                                          self.depth,
@@ -2098,7 +2138,8 @@ class PHPParser:
                                          interfaces,
                                          doc=doc)
             toScope.classes[self.currentClass.name] = self.currentClass
-            log.debug("CLASS: %s extends %s interfaces %s attributes %s on line %d in %s at depth %d\nDOCS: %s",
+            log.debug("%s: %s extends %s interfaces %s attributes %s on line %d in %s at depth %d\nDOCS: %s",
+                     self.currentClass.cixtype,
                      self.currentClass.name, self.currentClass.extends, 
                      self.currentClass.interfaces, self.currentClass.attributes,
                      self.currentClass.linestart, self.filename, self.depth,
@@ -2511,6 +2552,10 @@ class PHPParser:
                     typeNames = ["boolean"];
                 elif keyword == "array":
                     typeNames = ["array()"];
+                elif keyword == "clone":
+                    # clone is a special method - bug 85534.
+                    typeNames, p = self._getIdentifiersFromPos(styles, text, p,
+                                            identifierStyle=self.PHP_VARIABLE)
             elif styles[p] in self.PHP_STRINGS:
                 p += 1
                 typeNames = ["string"]
@@ -2522,10 +2567,6 @@ class PHPParser:
                 if text[p].lower() in ("true", "false"):
                     p += 1
                     typeNames = ["boolean"]
-                elif text[p] == "clone":
-                    # clone is a special method - bug 85534.
-                    typeNames, p = self._getIdentifiersFromPos(styles, text, p+1,
-                                            identifierStyle=self.PHP_VARIABLE)
                 else:
                     typeNames, p = self._getIdentifiersFromPos(styles, text, p)
                     # Don't record null, as it doesn't help us with anything
@@ -2632,7 +2673,7 @@ class PHPParser:
         while p < len(styles):
             if styles[p] in self.PHP_STRINGS:
                 constant_name += self._unquoteString(text[p])
-            elif styles[p] == self.PHP_IDENTIFIER and \
+            elif styles[p] == self.PHP_WORD and \
                  text[p] == "__NAMESPACE__" and self.currentNamespace:
                 # __NAMESPACE__ is a special constant - we can expand this as we
                 # know what the current namespace is.
@@ -2734,6 +2775,11 @@ class PHPParser:
             if style == "const":
                 namelist, p = self._getIdentifiersFromPos(styles, text, p,
                                                           self.PHP_IDENTIFIER)
+            elif text[p:p+3] == ["self", ":", ":"]:
+                # Handle things like: "self::$instance = FOO", bug 92813.
+                classVar = True
+                namelist, p = self._getIdentifiersFromPos(styles, text, p+3,
+                                                          self.PHP_VARIABLE)
             else:
                 namelist, p = self._getIdentifiersFromPos(styles, text, p,
                                                           self.PHP_VARIABLE)
@@ -2813,8 +2859,8 @@ class PHPParser:
                     self.addVariable(name, ".".join(typeNames),
                                      attributes=attributes, doc=self.comment)
 
-    def _useNamespaceHandler(self, styles, text, p):
-        log.debug("_useNamespaceHandler:: text: %r", text[p:])
+    def _useKeywordHandler(self, styles, text, p):
+        log.debug("_useKeywordHandler:: text: %r", text[p:])
         looped = False
         while p < len(styles):
             if looped:
@@ -2836,7 +2882,64 @@ class PHPParser:
                         alias, p = self._getIdentifiersFromPos(styles, text, p+1)
                         if alias:
                             alias = alias[0]
-                self.addNamespaceImport(namelist[0], alias)
+                if self.currentClass:
+                    # Must be a trait.
+                    self.currentClass.addTraitReference(namelist[0])
+                else:
+                    # Must be a namespace reference.
+                    self.addNamespaceImport(namelist[0], alias)
+
+    def _handleTraitResolution(self, styles, text, p, doc=None):
+        log.debug("_handleTraitResolution:: text: %r", text[p:])
+        # Examples:
+        #       B::smallTalk insteadof A;
+        #       B::bigTalk as talk;
+        #       sayHello as protected;
+        #       sayHello as private myPrivateHello;
+
+        # Can only be defined on a trait or a class.
+        if not self.currentClass:
+            log.warn("_handleTraitResolution:: not in a class|trait definition")
+            return
+
+        # Look for the identifier first.
+        # 
+        namelist, p = self._getIdentifiersFromPos(styles, text, p,
+                                                  self.PHP_IDENTIFIER)
+        log.debug("namelist:%r, p:%d", namelist, p)
+        if not namelist or p+2 >= len(text):
+            log.warn("Not enough arguments in trait use statement: %r", text)
+            return
+
+        # Get the keyword "as", "insteadof"
+        keyword = text[p]
+        log.debug("keyword:%r", keyword)
+        p += 1
+
+        # Get the settings.
+        alias = None
+        visibility = None
+        # Get special attribute keywords.
+        if keyword == "as" and \
+           text[p] in ("public", "protected", "private"):
+            visibility = text[p]
+            p += 1
+            log.debug("_handleTraitResolution: visibility %r", visibility)
+        if p < len(text):
+            # Get the alias name.
+            names, p = self._getIdentifiersFromPos(styles, text, p)
+            if names:
+                alias = names[0]
+                if len(names) > 1:
+                    log.warn("Ignoring multiple alias identifiers in text: %r",
+                             text)
+        if alias or visibility:
+            # Set override.
+            self.currentClass.addTraitOverride(namelist, alias,
+                                               visibility=visibility,
+                                               insteadOf=(keyword=="insteadof"))
+        else:
+            self.warn("Unknown trait resolution: %r", text)
 
     def _addCodePiece(self, newstate=S_DEFAULT, varnames=None):
         styles = self.styles
@@ -2922,7 +3025,7 @@ class PHPParser:
                         self.addFunction(namelist[0], phpArgs, attributes,
                                          doc=self.comment,
                                          returnByRef=returnByRef)
-                elif keyword == "class":
+                elif keyword == "class" or keyword == "trait":
                     # Examples:
                     #   class SimpleClass {
                     #   class SimpleClass2 extends SimpleClass {
@@ -2941,7 +3044,8 @@ class PHPParser:
                         #print "implements: %r" % (implements)
                         self.addClass(namelist[0], extends=extends,
                                       attributes=attributes,
-                                      interfaces=implements, doc=self.comment)
+                                      interfaces=implements, doc=self.comment,
+                                      isTrait=(keyword == "trait"))
                 elif keyword == "interface":
                     # Examples:
                     #   interface Foo {
@@ -2979,13 +3083,25 @@ class PHPParser:
                         self.setNamespace(namelist, usesBraces,
                                           doc=self.comment)
                 elif keyword == "use":
-                    self._useNamespaceHandler(styles, text, pos)
+                    self._useKeywordHandler(styles, text, pos)
+                    if text and text[-1] == "{":
+                        self.return_to_state = newstate
+                        newstate = S_TRAIT_RESOLUTION
                 else:
                     log.debug("Ignoring keyword: %s", keyword)
                     self._addAllVariables(styles, text, pos)
     
             elif firstStyle == self.PHP_IDENTIFIER:
-                log.debug("Ignoring when starting with identifier")
+                if text[0] == "self":
+                    self._variableHandler(styles, text, pos, attributes,
+                                          doc=self.comment)
+                elif self.state == S_TRAIT_RESOLUTION:
+                    self._handleTraitResolution(styles, text, pos, doc=self.comment)
+                    log.debug("Trait resolution: text: %r, pos: %d", text, pos)
+                    # Stay in this state.
+                    newstate = S_TRAIT_RESOLUTION
+                else:
+                    log.debug("Ignoring when starting with identifier")
             elif firstStyle == self.PHP_VARIABLE:
                 # Defining scope for action
                 self._variableHandler(styles, text, pos, attributes,
@@ -3098,7 +3214,7 @@ class PHPParser:
                         self.incBlock()
                     elif op == "}":
                         # Decreasing depth/scope
-                        if len(text) == 1 and text[0] == "}":
+                        if len(self.text) == 1:
                             self._resetState()
                         else:
                             self._addCodePiece()
@@ -3189,4 +3305,5 @@ def register(mgr):
                       langintel_class=PHPLangIntel,
                       import_handler_class=PHPImportHandler,
                       cile_driver_class=PHPCILEDriver,
-                      is_cpln_lang=True)
+                      is_cpln_lang=True,
+                      import_everything=True)

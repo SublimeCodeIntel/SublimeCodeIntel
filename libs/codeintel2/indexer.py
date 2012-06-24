@@ -393,6 +393,10 @@ class PreloadLibRequest(_Request):
         return "pre-load %s %s (%d dirs)" \
                % (self.lib.lang, self.lib.name, len(self.lib.dirs))
 
+class CullMemRequest(_Request):
+    id = "cull memory request"
+    priority = PRIORITY_BACKGROUND
+
 
 class IndexerStopRequest(_Request):
     id = "indexer stop request"
@@ -595,6 +599,10 @@ class Indexer(threading.Thread):
             elif isinstance(request, XMLParseRequest):
                 request.buf.xml_parse()
 
+            elif isinstance(request, CullMemRequest):
+                log.debug("cull memory requested")
+                self.mgr.db.cull_mem()
+
             # Currently these two are somewhat of a DB zone-specific hack.
             #TODO: The standard DB "lib" iface should grow a
             #      .preload() (and perhaps .can_preload()) with a
@@ -603,13 +611,17 @@ class Indexer(threading.Thread):
             elif isinstance(request, PreloadBufLibsRequest):
                 for lib in request.buf.libs:
                     if isinstance(lib, (LangDirsLib, MultiLangDirsLib)):
-                        for dir in lib.dirs:
-                            lib.ensure_dir_scanned(dir)
+                        lib.ensure_all_dirs_scanned()
             elif isinstance(request, PreloadLibRequest):
                 lib = request.lib
                 assert isinstance(lib, (LangDirsLib, MultiLangDirsLib))
-                for dir in lib.dirs:
-                    lib.ensure_dir_scanned(dir)
+                lib.ensure_all_dirs_scanned()
+
+            if not isinstance(request, CullMemRequest) and self.mode == self.MODE_DAEMON:
+                # we did something; ask for a memory cull after 5 minutes
+                log.debug("staging new cull mem request")
+                self.stage_request(CullMemRequest(), 300)
+            self.mgr.db.report_event(None)
 
         finally:
             if isinstance(request, ScanRequest):
@@ -620,363 +632,6 @@ class Indexer(threading.Thread):
                     except:
                         log.exception("ignoring exception in Indexer "
                                       "on_scan_complete callback")
-
-
-#TODO: I believe this is unused. Drop it.
-class BatchUpdater(threading.Thread):
-    """A scheduler thread for batch updates to the CIDB.
-
-    Usage:
-    
-        # May want to have a subclass of BatchUpdater for fine control.
-        updater = BatchUpdater()
-        updater.add_request(...)  # Make one or more requests.
-        
-        mgr.batch_update(updater=updater)  # This will start the updater.
-        
-        # Optionally use/override methods on the updater to control/monitor
-        # the update.
-        # Control methods:
-        #   abort()                 Abort the update.
-        #   join(timeout=None)      Wait for the update to complete.
-        #
-        # Query methods:
-        #   num_files_to_process()
-        #   is_aborted()
-        #
-        # Monitoring methods (need to override these in subclass to catch):
-        #   debug(msg, *args)
-        #   info(msg, *args)
-        #   warn(msg, *args)
-        #   error(msg, *args)
-        #   progress(stage, obj)
-        #   done(reason)            Called when complete.
-
-    Dev Notes:
-    - Yes, there are two ways to get code run on completion:
-        .start(..., on_complete=None)   intended for the controlling Citadel
-        .done()                         intended for the sub-classing user
-    """
-    citadel = None
-    on_complete = None
-    _aborted = None
-
-    def __init__(self):
-        XXX
-        threading.Thread.__init__(self, name="CodeIntel Batch Scheduler")
-        self.setDaemon(True)
-
-        self._requests = Queue.Queue()
-        self.mode = None # "upgrade", "non-upgrade" or None
-        self._scheduler = None # lazily created (if necessary) Scheduler
-
-        #XXX Need these two anymore?
-        self._completion_reason = None
-        self._had_errors = False
-
-    def start(self, citadel, on_complete=None):
-        self.citadel = citadel
-        self.on_complete = on_complete
-        threading.Thread.start(self)
-
-    def abort(self):
-        """Abort the batch update.
-        
-        XXX The scheduler.stop() call will *block* until the scheduler is
-            done. Don't want that, but need to rationalize with other
-            calls to Scheduler.stop().
-        """
-        self._aborted = True
-        if self._scheduler:
-            self._scheduler.stop()
-    def is_aborted(self):
-        return self._aborted
-
-    def done(self, reason):
-        """Called when the update is complete.
-        
-            "reason" is a short string indicating how the batch update
-                completed. Currently expected values are (though this
-                may not be rigorous):
-                    aborted
-                    error
-                    success
-                    failed      (from Scheduler)
-                    completed   (from Scheduler)
-                    stopped     (from Scheduler)
-                XXX Might be helpful to rationalize these.
-        """
-        self.info("done: %s", reason)
-
-    def add_request(self, type, path, language=None, extra=None):
-        """Add a batch request
-        
-            "type" is one of:
-                language    scan a language installation
-                cix         import a CIX file
-                directory   scan a source directory
-                upgrade     upgrade a CIDB file to the current version
-            "path", depending on "type" is the full path to:
-                language    a language installation
-                cix         a CIX file
-                directory   a source directory
-                upgrade     a CIDB file
-            "language", depending on "type" is:
-                language    the language of the language installation
-                cix         (not relevant, should be None)
-                directory   the language of the source directory
-                upgrade     (not relevant, should be None)
-            "extra" is an optional (null if not used) extra value depending
-                on the type, path and/or language of the request that may be
-                request for processing it. For example, a PHP language batch
-                update request uses the "extra" field to specify the
-                "php.ini"-config-file path.
-        """
-        if self.isAlive():
-            raise CodeIntelError("cannot add a batch update request while "
-                                 "the batch scheduler is alive")
-        if type in ("language", "cix", "directory", "upgrade"):
-            if type in ("language", "cix", "directory"):
-                if self.mode == "upgrade":
-                    raise CodeIntelError("cannot mix 'upgrade' batch requests "
-                                         "with other types: (%s, %s, %s, %s)"
-                                         % (type, path, language, extra))
-                self.mode = "non-upgrade"
-            elif type == "upgrade":
-                if self.mode == "non-upgrade":
-                    raise CodeIntelError("cannot mix 'upgrade' batch requests "
-                                         "with other types: (%s, %s, %s, %s)"
-                                         % (type, path, language, extra))
-                self.mode = "upgrade"
-            self._requests.put( (type, path, language, extra) )
-        else:
-            raise CodeIntelError("unknown batch update request type: '%s'"
-                                 % type)
-
-    def num_files_to_process(self):
-        """Return the number of files remaining to process."""
-        #XXX Might want to do something for "upgrade" mode here.
-        if self._scheduler:
-            return self._scheduler.getNumRequests()
-        else:
-            return 0
-
-    def progress(self, msg, data):
-        """Report progress.
-        
-            "msg" is some string, generally used to indicate a stage of
-                processing
-            "data" is some object dependent on the value of "msg".
-        """
-        self.info("progress: %s %r", msg, data)
-    def debug(self, msg, *args):
-        log.debug(msg, *args)
-    def info(self, msg, *args):
-        log.info(msg, *args)
-    def warn(self, msg, *args):
-        log.warn(msg, *args)
-    def error(self, msg, *args):
-        log.error(msg, *args)
-
-    def _subscheduler_request_started(self, request):
-        """Callback from sub-Scheduler thread."""
-        self.progress("scanning", request)
-
-    def _subscheduler_completed(self, reason):
-        """Callback from sub-Scheduler thread."""
-        self._completion_reason = reason
-
-    def _get_scheduler(self):
-        if not self._scheduler:
-            self._scheduler = Scheduler(Scheduler.MODE_ONE_SHOT,
-                                        self.citadel,
-                                        None,
-                                        self._subscheduler_request_started,
-                                        self._subscheduler_completed)
-        return self._scheduler
-
-    def run(self):
-        log.debug("batch scheduler thread: start")
-        self.errors = []
-        try:
-            while 1:
-                if self._aborted:
-                    self._completion_reason = "aborted"
-                    break
-
-                try:
-                    type_, path, lang, extra = self._requests.get_nowait()
-                    self.debug("handle %r batch update request: "
-                               "path=%r, language=%r, extra=%r",
-                               type_, path, lang, extra)
-                    if type_ == "upgrade":
-                        self._handle_upgrade_request(path)
-                    elif type_ == "language":
-                        self._handle_lang_request(path, lang, extra)
-                    elif type_ == "cix":
-                        self._handle_cix_request(path)
-                    elif type_ == "directory":
-                        self._handle_directory_request(path, lang)
-                    else:
-                        raise CitadelError(
-                            "unexpected batch request type: '%s'" % type_)
-                except Queue.Empty:
-                    break
-                except Exception, ex:
-                    self._had_errors = True
-                    self.error("unexpected error handling batch update:\n%s",
-                               _indent(traceback.format_exc()))
-                    break
-
-            if self._had_errors:
-                log.debug("batch scheduler thread: error out")
-                self._completion_reason = "error"
-            elif self.mode == "upgrade":
-                self._completion_reason = "success"
-            elif self._scheduler: # No Scheduler for "upgrade" batch mode.
-                # Phase 2: start the scheduler and wait for it to complete.
-                self._scheduler.start()
-                self._scheduler.join()
-                if self._had_errors:
-                    self._completion_reason = "error"
-                else:
-                    self._completion_reason = "success"
-        finally:
-            log.debug("batch scheduler thread: stop scheduler")
-            if self._scheduler:
-                self._scheduler.stop()
-            log.debug("batch scheduler thread: scheduler stopped, call on_complete")
-            if self.on_complete:
-                try:
-                    self.on_complete()
-                except:
-                    log.exception("error in batch scheduler on_complete "
-                                  "(ignoring)")
-            log.debug("batch scheduler thread: on_complete called, call done")
-            self.done(self._completion_reason)
-            log.debug("batch scheduler thread: done called")
-        log.debug("batch scheduler thread: end")
-
-    def _cidb_upgrade_progress_callback(self, stage, percent):
-        self.progress("upgrade", (stage, percent))
-
-    def _handle_upgrade_request(self, dbPath):
-        db = Database(self.citadel)
-        starttime = time.time()
-        try:
-            currVer = db.upgrade(dbPath, self._cidb_upgrade_progress_callback)
-        except CodeIntelError, ex:
-            self._had_errors = True
-            self.error("Error upgrading CIDB: %s\n%s",
-                       ex, _indent(traceback.format_exc()))
-            return
-
-        #XXX Re-evaluate this. Might make more sense in the Komodo-specific
-        #    batch update controller now.
-        # Komodo-specific HACK: Allow for a more pleasing user experience
-        # by making sure the "Upgrading Database" dialog is up for at
-        # least 2 seconds, rather than flashing for a quick upgrade.
-        endtime = time.time()
-        elapsed = endtime - starttime
-        if elapsed < 2.0:
-            time.sleep(2.0-elapsed)
-
-    def _handle_cix_request(self, path):
-        self.progress("importing", path)
-        #XXX Consider not bothering if MD5 of file is already in DB.
-        #       md5sum = md5(cix).hexdigest()
-        #    c.f. "Can an MD5 for a CIX file be added?" in my notes.
-        try:
-            fin = open(path, 'r')
-            try:
-                cix = fin.read()
-            finally:
-                fin.close()
-        except EnvironmentError, ex:
-            self._had_errors = True
-            self.error("Error importing CIX file '%s': %s\n%s",
-                       path, ex, _indent(traceback.format_exc()))
-            return
-        db = Database(self.citadel)
-        try:
-            db.update(cix, recover=0, scan_imports=False)
-        except CodeIntelError, ex:
-            self._had_errors = True
-            self.error("Error importing CIX file '%s': %s\n%s",
-                       path, ex, _indent(traceback.format_exc()))
-            return
-
-    def _handle_lang_request(self, path, lang, extra):
-        if lang == "*":
-            langs = self.citadel.get_supported_langs()
-        else:
-            langs = [lang]
-
-        for lang in langs:
-            # See if have any pre-created CIX files for this language to use
-            # instead of or in addition to actually scanning the core
-            # library.
-            stdcix = os.path.join(os.path.dirname(__file__),
-                                  lang.lower()+".cix")
-            if os.path.exists(stdcix):
-                self._handle_cix_request(stdcix)
-
-            try:
-                importer = self.citadel.import_handler_from_lang(lang)
-            except CodeIntelError, ex:
-                if lang != "*":
-                    self._had_errors = True
-                    self.error("cannot handle 'language' batch update "
-                               "request for %s: %s", lang, ex)
-                continue
-            try:
-                importer.setCorePath(path, extra)
-                UPDATE_EVERY = 50
-                n = 0
-                scheduler = self._get_scheduler()
-                for file in importer.genScannableFiles(skipRareImports=True,
-                                                       importableOnly=True):
-                    if n % UPDATE_EVERY == 0:
-                        self.progress("gathering files", n)
-                        if self._aborted:
-                            break
-                    r = ScanRequest(file, lang, PRIORITY_IMMEDIATE,
-                                    scan_imports=False)
-                    scheduler.addRequest(r)
-                    n += 1
-            except CodeIntelError, ex:
-                self._had_errors = True
-                self.error("error handling %s request: %s\n%s",
-                           lang, ex, _indent(traceback.format_exc()))
-
-    def _handle_directory_request(self, path, lang):
-        if lang == "*":
-            langs = self.citadel.mgr.get_citadel_langs()
-        else:
-            langs = [lang]
-
-        for lang in langs:
-            try:
-                importer = self.citadel.import_handler_from_lang(lang)
-            except CodeIntelError, ex:
-                if lang == "*":
-                    continue
-                else:
-                    raise CodeIntelError("cannot handle 'directory' batch "
-                                         "update request for '%s': %s"
-                                         % (lang, ex))
-            UPDATE_EVERY = 10
-            n = 0
-            scheduler = self._get_scheduler()
-            for file in importer.genScannableFiles([path]):
-                if n % UPDATE_EVERY == 0:
-                    self.progress("gathering files", n)
-                    if self._aborted:
-                        break
-                r = ScanRequest(file, lang, PRIORITY_IMMEDIATE,
-                                scan_imports=False)
-                scheduler.addRequest(r)
-                n += 1
 
 
 

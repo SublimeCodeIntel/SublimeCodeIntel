@@ -1,14 +1,11 @@
 /**
- * To schedule execution of callback after delay milliseconds. Returns a
- * timeoutId for possible use with clearTimeout(). Optionally, you can also
- * pass arguments to the callback.
+ * All of the timer functions are globals. You do not need to require()
+ * this module in order to use them.
  */
 var timers = {};
 
 /**
  * To schedule the repeated execution of callback every delay milliseconds.
- * Returns a intervalId for possible use with clearInterval(). Optionally,
- * you can also pass arguments to the callback.
  * @param callback
  * @param delay
  * @param arg
@@ -16,12 +13,13 @@ var timers = {};
 timers.setInterval = function(callback, delay, arg) {}
 
 /**
- * To schedule execution of callback after delay milliseconds. Returns a
- * timeoutId for possible use with clearTimeout(). Optionally, you can also
- * pass arguments to the callback.
+ * To schedule execution of a one-time callback after delay milliseconds.
+ * Returns a timeoutId for possible use with clearTimeout(). Optionally you
+ * can also pass arguments to the callback.
  * @param callback
  * @param delay
  * @param arg
+ * @returns a timeoutId for possible use with clearTimeout(). Optionally you can also pass arguments to the callback
  */
 timers.setTimeout = function(callback, delay, arg) {}
 
@@ -36,7 +34,6 @@ timers.clearTimeout = function(timeoutId) {}
  * @param intervalId
  */
 timers.clearInterval = function(intervalId) {}
-
 
 exports = timers;
 

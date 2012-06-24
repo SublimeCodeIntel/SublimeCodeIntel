@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """Python support for CodeIntel"""
@@ -237,7 +237,7 @@ class PythonImportsEvaluator(Evaluator):
                             ((is_dir_import and "directory" or "module"), name)
                             for name, is_dir_import in imports
                         )
-                        
+
                     if self.trg.type == "module-members":
                         # Also add top-level members of the specified module.
                         dotted_prefix = '.'.join(imp_prefix)
@@ -246,7 +246,7 @@ class PythonImportsEvaluator(Evaluator):
                             for name in blob.names:
                                 elem = blob.names[name]
                                 cplns.append((elem.get("ilk") or elem.tag, name))
-                            
+
                             #TODO: Consider using the value of __all__
                             #      if defined.
                             for e in blob:
@@ -331,7 +331,7 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
 
     # Used by ProgLangTriggerIntelMixin.preceding_trg_from_pos().
     trg_chars = tuple(" (.")
-    
+
     citdl_from_literal_type = {"string": "str"}
 
     def async_eval_at_trg(self, buf, trg, ctlr):
@@ -433,11 +433,11 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
 
     def _gen_python_import_paths_from_dirs(self, dirs):
         """Generate all Python import paths from a given list of dirs.
-        
+
         This involves handling .pth files on the given dirs. It generates
         import "paths" rather than "dirs" because Python .egg files can be
         returned.
-        
+
         Dev Notes:
         - Python's .pth files can have *executable* Python code. This
           currently is not handled (those kinds of lines are skipped).
@@ -472,7 +472,7 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
         if extra_dirs:
             extra_dirs = set(
                 self._gen_python_import_paths_from_dirs(extra_dirs)
-            )                
+            )
             log.debug("Python extra lib dirs: %r", extra_dirs)
         return tuple(extra_dirs)
 
@@ -486,14 +486,14 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
         python = None
         if env.has_pref(self.interpreterPrefName):
             python = env.get_pref(self.interpreterPrefName).strip() or None
-        
+
         if not python or not exists(python):
             import which
-            syspath = env.get_envvar("PATH", "") 
+            syspath = env.get_envvar("PATH", "")
             path = [d.strip() for d in syspath.split(os.pathsep)
                               if d.strip()]
             try:
-                python = which.which("python", path=path) 
+                python = which.which("python", path=path)
             except which.WhichError:
                 pass # intentionally supressed
 
@@ -513,6 +513,7 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                 info = None, None, None, None, []
             else:
                 info = self._python_info_from_python(python, env)
+            env.cache[cache_key] = info
         return info
 
     def _buf_indep_libs_from_env(self, env):
@@ -541,7 +542,7 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
             paths_from_libname = {"sitelib": [], "envlib": [], "stdlib": []}
             canon_sitelibdir = sitelibdir and normcase(sitelibdir) or None
             canon_prefix = prefix and normcase(prefix) or None
-            canon_libdir = normcase(libdir)
+            canon_libdir = libdir and normcase(libdir) or ""
             canon_libdir_plat_prefix = normcase(join(libdir, "plat-"))
             canon_libdir_lib_prefix = normcase(join(libdir, "lib-"))
             for dir in sys_path:
@@ -572,10 +573,10 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
 
             # - envlib, sitelib, cataloglib, stdlib
             if paths_from_libname["envlib"]:
-                libs.append( db.get_lang_lib(self.lang, "envlib", 
+                libs.append( db.get_lang_lib(self.lang, "envlib",
                                 paths_from_libname["envlib"]) )
             if paths_from_libname["sitelib"]:
-                libs.append( db.get_lang_lib(self.lang, "sitelib", 
+                libs.append( db.get_lang_lib(self.lang, "sitelib",
                                 paths_from_libname["sitelib"]) )
             catalog_selections = env.get_pref("codeintel_selected_catalogs")
             libs += [
@@ -630,10 +631,10 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
 #class PythonCitadelEvaluator(CitadelEvaluator):
 #    def post_process_cplns(self, cplns):
 #        """Drop special __FOO__ methods.
-#        
+#
 #        Note: Eventually for some Python completions we might want to leave
 #        these in. For example:
-#        
+#
 #            class Bar(Foo):
 #                def __init__(self):
 #                    Foo.<|>    # completions should include "__init__" here
@@ -670,7 +671,7 @@ class PythonBuffer(CitadelBuffer):
         python-complete-pythondoc-tags
         complete-available-imports
         complete-module-members
-        
+
         Not yet implemented:
             complete-available-classes
             calltip-base-signature
@@ -804,7 +805,7 @@ class PythonBuffer(CitadelBuffer):
             # Non-triggering examples:
             #   FOO..
             #   FOO[1].         too hard to determine sequence element types
-            #   from FOO import (BAR.         
+            #   from FOO import (BAR.
             # Not sure if want to support:
             #   "foo".          do we want to support literals? what about
             #                   lists? tuples? dicts?
@@ -1071,27 +1072,13 @@ class PythonImportHandler(ImportHandler):
                 #    extension: need to grow filetype-from-content smarts.
                 files.append(path)
 
-    def genScannableFiles(self, path=None, skipRareImports=False,
-                          importableOnly=False):
-        if path is None:
-            path = self._getPath()
-        searchedDirs = {}
-        for dirname in path:
-            #XXX Use os.walk().
-            files = []
-            os.path.walk(dirname, self._findScannableFiles,
-                         (files, searchedDirs, skipRareImports,
-                          importableOnly))
-            for file in files:
-                yield file
-
     def _gen_suffixes(self):
         """Generate a sequence of scannable file suffixes in the
-           preferred order of scanning. 
+           preferred order of scanning.
         """
         yield ".py"
         yield ".pyw"
-        
+
         if _SCAN_BINARY_FILES:
             yield ".pyc"
             yield ".pyo"
@@ -1112,20 +1099,20 @@ class PythonImportHandler(ImportHandler):
              "qooz":   ("qooz.so",            None,       False),
 
         Note: .pyd are .so handling depends on the platform.
-        
+
         If several files happen to have the same name but different
         suffixes, the one with preferred suffix wins. The suffixe preference
         is defined by the order of elements in the sequence generated
         by _gen_suffixes().
-        
+
         This particularly means that sources always win over binaries.
         """
         if imp_dir == "<Unsaved>":
             #TODO: stop these getting in here.
             return {}
-        
+
         importables = {}
-        
+
         if os.path.isdir(imp_dir):
             suffixes = dict((s, i) for i, s
                                    in enumerate(self._gen_suffixes(), 1))
@@ -1140,13 +1127,13 @@ class PythonImportHandler(ImportHandler):
                         if suffix in suffixes:
                             modules.append((suffixes[suffix], mod,
                                             (name, None, False)))
-            
+
             modules.sort(key=lambda mod: mod[0])
-            
+
             for _, mod, importable in modules:
                 if mod not in importables:
                     importables[mod] = importable
-        
+
         return importables
 
 

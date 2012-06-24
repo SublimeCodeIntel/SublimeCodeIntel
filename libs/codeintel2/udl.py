@@ -383,7 +383,7 @@ class UDLBuffer(CitadelBuffer):
         else:
             name_from_num \
                 = self._style_name_from_style_num_from_lang["UDL"]
-        const_name = self._style_name_from_style_num_from_lang["UDL"][style_num]
+        const_name = name_from_num[style_num]
         style_names.append(const_name)
         
         # Get a style group from styles.py.

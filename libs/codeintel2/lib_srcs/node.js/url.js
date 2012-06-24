@@ -1,17 +1,16 @@
 /**
- * This module has utilities for URL resolution and parsing. Call
- * require('url') to use it.
+ * This module has utilities for URL resolution and parsing.
  */
 var url = {};
 
 /**
- * Take a URL string, and return an object. Pass true as the second
- * argument to also parse the query string using the querystring module.
+ * Take a URL string, and return an object.
  * @param urlStr
- * @param parseQueryString=false
- * @returns URL
+ * @param parseQueryString
+ * @param slashesDenoteHost
+ * @returns {URL}
  */
-url.parse = function(urlStr, parseQueryString) {}
+url.parse = function(urlStr, parseQueryString, slashesDenoteHost) {}
 
 /**
  * Take a base URL, and a href URL, and resolve them as a browser would for
@@ -27,20 +26,21 @@ url.resolve = function(from, to) {}
  */
 url.format = function(urlObj) {}
 
+/* see http://nodejs.org/docs/v0.6.12/api/url.html#url_url */
+function URL() {}
+URL.prototype = {
+    "href": "",
+    "protocol": "",
+    "host": "",
+    "auth": "",
+    "hostname": "",
+    "port": "",
+    "pathname": "",
+    "search": "",
+    "path": "",
+    "query": "",
+    "hash": "",
+};
 
-                /* see http://nodejs.org/docs/v0.4.2/api/url.html#uRL */
-                function URL() {}
-                URL.prototype = {
-                    "href": 0,
-                    "protocol": 0,
-                    "host": 0,
-                    "auth": 0,
-                    "hostname": 0,
-                    "port": 0,
-                    "pathname": 0,
-                    "search": 0,
-                    "query": 0,
-                    "hash": 0,
-                };
-                exports = url;
+exports = url;
 

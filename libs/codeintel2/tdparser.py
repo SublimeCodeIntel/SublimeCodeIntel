@@ -35,7 +35,7 @@ def gen_python_tokens(source):
     for token, value, begin, end in (t[:4] for t in stream):
         if token in type_map:
             yield type_map[token], value, begin, end
-        elif token == tokenize.NL:
+        elif token == tokenize.NEWLINE:
             continue
         elif token == tokenize.ENDMARKER:
             break
@@ -449,9 +449,9 @@ def py_expr_grammar():
         self.first = []
         while self.token.id != "}":
             self.first.append(self.expression())
-            advance(":")
+            self.advance(":")
             self.first.append(self.expression())
-            if token.id == ",":
+            if self.token.id == ",":
                 self.advance(",")
             else:
                 break
@@ -558,7 +558,10 @@ class PyExprParser(Parser):
 
 
 if __name__ == '__main__':
+    import sys
+    if len(sys.argv) < 2:
+        print "Usage: tdparser.py filename"
     parser = PyExprParser()
-    res = parser.parse_bare_arglist("fsrc, fdst, length=16*1024")
+    res = parser.parse_bare_arglist(file(sys.argv[1]).read())
     print res
 

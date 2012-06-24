@@ -56,7 +56,7 @@ import ciElementTree as ET
 from codeintel2.common import *
 from codeintel2 import util
 from codeintel2.database.util import rmdir
-
+from codeintel2.database.langlibbase import LangDirsLibBase
 
 
 #---- globals
@@ -68,7 +68,7 @@ log = logging.getLogger("codeintel.db")
 
 #---- Database zone and lib implementations
 
-class LangDirsLib(object):
+class LangDirsLib(LangDirsLibBase):
     """A zone providing a view into an ordered list of dirs in a
     db/$lang/... area of the db.
 
@@ -86,6 +86,7 @@ class LangDirsLib(object):
       system and will scan it, load it and return the blob for it.
     """
     def __init__(self, lang_zone, lock, lang, name, dirs):
+        LangDirsLibBase.__init__(self)
         self.lang_zone = lang_zone
         self._lock = lock
         self.mgr = lang_zone.mgr
@@ -96,7 +97,6 @@ class LangDirsLib(object):
             = self.mgr.citadel.import_handler_from_lang(self.lang)
 
         self._blob_imports_from_prefix_cache = {}
-        self._have_ensured_scanned_from_dir_cache = {}
         self._importables_from_dir_cache = {}
 
         # We keep a "weak" merged cache of blobname lookup for all dirs
@@ -195,6 +195,7 @@ class LangDirsLib(object):
 
         Returns the empty list if no hits.
         """
+        self.ensure_all_dirs_scanned(ctlr=ctlr)
         blobs = []
         # we can't use self.get_blob because that only returns one answer; we
         # we need all of them.
@@ -202,7 +203,6 @@ class LangDirsLib(object):
         self._acquire_lock()
         try:
             for dir in self.dirs:
-                self.ensure_dir_scanned(dir)
                 dbfile_from_blobname = self.lang_zone.dfb_from_dir(dir, {})
                 blobbase = dbfile_from_blobname.get(basename)
                 if blobbase is not None:
@@ -236,6 +236,11 @@ class LangDirsLib(object):
         """
         assert isinstance(lpath, tuple)  # common mistake to pass in a string
 
+        # Need to have (at least once) scanned all importables.
+        # Responsibility for ensuring the scan data is *up-to-date*
+        # is elsewhere.
+        self.ensure_all_dirs_scanned(ctlr=ctlr)
+
         if curr_buf:
             curr_blobname = curr_buf.blob_from_lang.get(self.lang, {}).get("name")
             curr_buf_dir = dirname(curr_buf.path)
@@ -246,11 +251,6 @@ class LangDirsLib(object):
             if ctlr and ctlr.is_aborted():
                 log.debug("ctlr aborted")
                 break
-
-            # Need to have (at least once) scanned all importables.
-            # Responsibility for ensuring the scan data is *up-to-date*
-            # is elsewhere.
-            self.ensure_dir_scanned(dir, ctlr=ctlr)
 
             toplevelname_index = self.lang_zone.load_index(
                     dir, "toplevelname_index", {})
@@ -264,6 +264,11 @@ class LangDirsLib(object):
                         #LIMITATION: *Imported* names at each scope are
                         # not being included here. This is fine while we
                         # just care about JavaScript.
+                        if curr_buf:
+                            if "__file_local__" in elem.get("attributes", "").split():
+                                # this is a file-local element in a different blob,
+                                # don't look at it
+                                raise KeyError
                         elem = elem.names[p]
                 except KeyError:
                     continue
@@ -291,14 +296,13 @@ class LangDirsLib(object):
         is required for the different completion evaluators that might use
         this API.
         """
+        self.ensure_all_dirs_scanned(ctlr=ctlr)
         cplns = []
         # Naive implementation (no caching)
         for dir in self.dirs:
             if ctlr and ctlr.is_aborted():
                 log.debug("ctlr aborted")
                 break
-
-            self.ensure_dir_scanned(dir, ctlr=ctlr)
 
             try:
                 toplevelname_index = self.lang_zone.load_index(
@@ -309,68 +313,6 @@ class LangDirsLib(object):
                 continue
             cplns += toplevelname_index.toplevel_cplns(prefix=prefix, ilk=ilk)
         return cplns
-
-    def ensure_all_dirs_scanned(self, ctlr=None):
-        """Ensure that all importables in this dir have been scanned
-        into the db at least once.
-
-        Note: This is identical to MultiLangDirsLib.ensure_dir_scanned().
-        Would be good to share.
-        """
-        for dir in self.dirs:
-            if ctlr and ctlr.is_aborted():
-                log.debug("ctlr aborted")
-                break
-            self.ensure_dir_scanned(dir, ctlr)
-
-    def ensure_dir_scanned(self, dir, ctlr=None):
-        """Ensure that all importables in this dir have been scanned
-        into the db at least once.
-
-        Note: This is identical to MultiLangDirsLib.ensure_dir_scanned().
-        Would be good to share.
-        """
-        if dir not in self._have_ensured_scanned_from_dir_cache:
-            event_reported = False
-            res_index = self.lang_zone.load_index(dir, "res_index", {})
-            importables = self._importables_from_dir(dir)
-            importable_values = [i[0] for i in importables.values()
-                                 if i[0] is not None]
-            for base in importable_values:
-                if ctlr and ctlr.is_aborted():
-                    log.debug("ctlr aborted")
-                    return
-                if base not in res_index:
-                    if not event_reported:
-                        self.lang_zone.db.report_event(
-                            "scanning %s files in '%s'" % (self.lang, dir))
-                        event_reported = True
-                    try:
-                        buf = self.mgr.buf_from_path(join(dir, base),
-                                                     lang=self.lang)
-                    except (EnvironmentError, CodeIntelError), ex:
-                        # This can occur if the path does not exist, such as a
-                        # broken symlink, or we don't have permission to read
-                        # the file, or the file does not contain text.
-                        continue
-                    if ctlr is not None:
-                        ctlr.info("load %r", buf)
-                    buf.scan_if_necessary()
-
-            # Remove scanned paths that don't exist anymore.
-            removed_values = set(res_index.keys()).difference(importable_values)
-            for base in removed_values:
-                if ctlr and ctlr.is_aborted():
-                    log.debug("ctlr aborted")
-                    return
-                if not event_reported:
-                    self.lang_zone.db.report_event(
-                        "scanning %s files in '%s'" % (self.lang, dir))
-                    event_reported = True
-                basename = join(dir, base)
-                self.lang_zone.remove_path(basename)
-
-            self._have_ensured_scanned_from_dir_cache[dir] = True
 
     def _importables_from_dir(self, dir):
         if dir not in self._importables_from_dir_cache:
@@ -1050,6 +992,9 @@ class LangZone(object):
                     blobname = blob.get("name")
                     toplevelnames_from_ilk = new_res_data.setdefault(blobname, {})
                     for toplevelname, elem in blob.names.iteritems():
+                        if "__file_local__" in elem.get("attributes", "").split():
+                            # don't put file local things in toplevel names
+                            continue
                         ilk = elem.get("ilk") or elem.tag
                         if ilk not in toplevelnames_from_ilk:
                             toplevelnames_from_ilk[ilk] = set([toplevelname])
@@ -1277,9 +1222,10 @@ class LangZone(object):
         until process completion. The plan is to have a thread
         periodically cull memory.
         """
-        #TODO: Database.cull_mem(). Add it. Get indexer to call it.
         #TOTEST: Does Python/Komodo actually release this memory or
         #        are we kidding ourselves?
+        log.debug("LangZone: culling memory")
+        TIME_SINCE_ACCESS = 300.0 # 5 minutes since last access
         self._acquire_lock()
         try:
             N = 30
@@ -1290,11 +1236,13 @@ class LangZone(object):
             now = time.time()
             for dbsubpath, (index, atime) \
                     in self._index_and_atime_from_dbsubpath.items():
-                if now - atime > 300.0: # >5 minutes since last access
+                if now - atime > TIME_SINCE_ACCESS:
                     if dbsubpath in self._is_index_dirty_from_dbsubpath:
                         self.save_index(dbsubpath, index)
                         del self._is_index_dirty_from_dbsubpath[dbsubpath]
                     del self._index_and_atime_from_dbsubpath[dbsubpath]
+        except:
+            log.exception("Exception culling memory")
         finally:
             self._release_lock()
 
@@ -1362,4 +1310,31 @@ class LangZone(object):
         self._ordered_dirslib_cache_keys.insert(0, canon_dirs)
 
         return langdirslib
+
+
+    def reportMemory(self, reporter, closure=None):
+        """
+        Report on memory usage from this LangZone. See nsIMemoryMultiReporter
+        """
+        log.debug("%s LangZone: reporting memory", self.lang)
+        from xpcom import components
+        kind_other = components.interfaces.nsIMemoryReporter.KIND_OTHER
+        units_count = components.interfaces.nsIMemoryReporter.UNITS_COUNT
+        process = ""
+        reporter.callback(process,
+                          "komodo /codeintel/langzone/%s/index-cache" % (self.lang,),
+                          kind_other,
+                          units_count,
+                          len(self._index_and_atime_from_dbsubpath),
+                          "Number of cached indices",
+                          closure)
+
+        # also calculate the size in bytes
+        reporter.callback(process,
+                          "explicit/komodo/codeintel/%s/index-cache" % (self.lang,),
+                          components.interfaces.nsIMemoryReporter.KIND_HEAP,
+                          components.interfaces.nsIMemoryReporter.UNITS_BYTES,
+                          util.getMemoryUsage(self._index_and_atime_from_dbsubpath),
+                          "The number of bytes of %s codeintel index caches" % (self.lang,),
+                          closure)
 

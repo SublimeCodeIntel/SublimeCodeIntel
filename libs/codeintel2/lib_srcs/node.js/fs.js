@@ -15,20 +15,47 @@ var fs = {};
 fs.rename = function(path1, path2, callback) {}
 
 /**
- * Synchronous version of string-based fs.write(). Returns the number of
+ * Synchronous version of buffer-based fs.write(). Returns the number of
  * bytes written.
+ * @param fd
+ * @param buffer
+ * @param offset
+ * @param length
+ * @param position
+ * @returns {Number} the number of bytes written
+ */
+fs.writeSync = function(fd, buffer, offset, length, position) {}
+
+/**
+ * Synchronous version of string-based fs.write(). encoding defaults to
+ * 'utf8'. Returns the number of bytes written.
  * @param fd
  * @param str
  * @param position
- * @param encoding='utf8'
+ * @param encoding='utf8' {String}
+ * @returns {Number} the number of bytes written
  */
 fs.writeSync = function(fd, str, position, encoding) {}
 
 /**
  * WriteStream is a Writable Stream.
+ * @constructor
  */
 fs.WriteStream = function() {}
-fs.WriteStream.prototype = {}
+
+/**
+ * The number of bytes written so far. Does not include data that is still
+ * queued for writing.
+ */
+fs.WriteStream.prototype.bytesWritten = 0;
+
+/** @__local__ */ fs.WriteStream.__events__ = {};
+
+/**
+ * Emitted when the WriteStream's file is opened.
+ * @param fd {Number}
+ */
+fs.WriteStream.__events__.open = function(fd) {};
 
 /**
  * Synchronous chmod(2).
@@ -38,10 +65,11 @@ fs.WriteStream.prototype = {}
 fs.chmodSync = function(path, mode) {}
 
 /**
- * Objects returned from fs.stat() and fs.lstat() are of this type.
+ * Objects returned from fs.stat(), fs.lstat() and fs.fstat() and their
+ * synchronous counterparts are of this type.
+ * @constructor
  */
 fs.Stats = function() {}
-fs.Stats.prototype = {}
 
 /**
  * Asynchronous chmod(2). No arguments other than a possible exception are
@@ -56,12 +84,14 @@ fs.chmod = function(path, mode, callback) {}
  * Synchronous readdir(3). Returns an array of filenames excluding '.' and
  * '..'.
  * @param path
+ * @returns {Array} an array of filenames excluding '.' and '..'
  */
 fs.readdirSync = function(path) {}
 
 /**
- * Synchronous readlink(2). Returns the resolved path.
+ * Synchronous readlink(2). Returns the symbolic link's string value.
  * @param path
+ * @returns {String} the symbolic link's string value
  */
 fs.readlinkSync = function(path) {}
 
@@ -80,9 +110,7 @@ fs.closeSync = function(fd) {}
 fs.close = function(fd, callback) {}
 
 /**
- * Asynchronous file open. See open(2). Flags can be 'r', 'r+', 'w', 'w+',
- * 'a', or 'a+'. mode defaults to 0666. The callback gets two arguments
- * (err, fd).
+ * Asynchronous file open. See open(2). flags can be:
  * @param path
  * @param flags
  * @param mode
@@ -93,7 +121,7 @@ fs.open = function(path, flags, mode, callback) {}
 /**
  * Synchronous lstat(2). Returns an instance of fs.Stats.
  * @param path
- * @returns Stats
+ * @returns {fs.Stats} an instance of fs.Stats
  */
 fs.lstatSync = function(path) {}
 
@@ -107,15 +135,15 @@ fs.linkSync = function(srcpath, dstpath) {}
 /**
  * Synchronous stat(2). Returns an instance of fs.Stats.
  * @param path
- * @returns Stats
+ * @returns {fs.Stats} an instance of fs.Stats
  */
 fs.statSync = function(path) {}
 
 /**
  * Asynchronous mkdir(2). No arguments other than a possible exception are
- * given to the completion callback.
+ * given to the completion callback. mode defaults to 0777.
  * @param path
- * @param mode
+ * @param mode=0777 {Number}
  * @param callback
  */
 fs.mkdir = function(path, mode, callback) {}
@@ -142,15 +170,16 @@ fs.write = function(fd, buffer, offset, length, position, callback) {}
 /**
  * Synchronous realpath(2). Returns the resolved path.
  * @param path
+ * @returns the resolved path
  */
 fs.realpathSync = function(path) {}
 
 /**
  * Asynchronously writes data to a file, replacing the file if it already
- * exists. data can be a string or a buffer.
+ * exists.
  * @param filename
  * @param data
- * @param encoding='utf8'
+ * @param encoding
  * @param callback
  */
 fs.writeFile = function(filename, data, encoding, callback) {}
@@ -171,7 +200,8 @@ fs.unwatchFile = function(filename) {}
 
 /**
  * Asynchronous fstat(2). The callback gets two arguments (err, stats)
- * where stats is a fs.Stats object.
+ * where stats is a fs.Stats object. fstat() is identical to stat(), except
+ * that the file to be stat-ed is specified by the file descriptor fd.
  * @param fd
  * @param callback
  */
@@ -179,13 +209,21 @@ fs.fstat = function(fd, callback) {}
 
 /**
  * ReadStream is a Readable Stream.
+ * @constructor
  */
 fs.ReadStream = function() {}
-fs.ReadStream.prototype = {}
+
+/** @__local__ */ fs.ReadStream.__events__ = {};
+
+/**
+ * Emitted when the ReadStream's file is opened.
+ * @param fd {Number}
+ */
+fs.ReadStream.__events__.open = function(fd) {};
 
 /**
  * Asynchronous realpath(2). The callback gets two arguments (err,
- * resolvedPath).
+ * resolvedPath). May use process.cwd to resolve relative paths.
  * @param path
  * @param callback
  */
@@ -193,11 +231,24 @@ fs.realpath = function(path, callback) {}
 
 /**
  * Asynchronous stat(2). The callback gets two arguments (err, stats) where
- * stats is a `fs.Stats` object. It looks like this:
+ * stats is a fs.Stats object. See the fs.Stats section below for more
+ * information.
  * @param path
  * @param callback
  */
 fs.stat = function(path, callback) {}
+
+/**
+ * Synchronous version of buffer-based fs.read. Returns the number of
+ * bytesRead.
+ * @param fd
+ * @param buffer
+ * @param offset
+ * @param length
+ * @param position
+ * @returns {Number} the number of bytesRead
+ */
+fs.readSync = function(fd, buffer, offset, length, position) {}
 
 /**
  * Synchronous version of string-based fs.read. Returns the number of
@@ -206,6 +257,7 @@ fs.stat = function(path, callback) {}
  * @param length
  * @param position
  * @param encoding
+ * @returns {Number} the number of bytesRead
  */
 fs.readSync = function(fd, length, position, encoding) {}
 
@@ -231,7 +283,7 @@ fs.lstat = function(path, callback) {}
 /**
  * Synchronous fstat(2). Returns an instance of fs.Stats.
  * @param fd
- * @returns Stats
+ * @returns {fs.Stats} an instance of fs.Stats
  */
 fs.fstatSync = function(fd) {}
 
@@ -239,7 +291,7 @@ fs.fstatSync = function(fd) {}
  * The synchronous version of fs.writeFile.
  * @param filename
  * @param data
- * @param encoding='utf8'
+ * @param encoding
  */
 fs.writeFileSync = function(filename, data, encoding) {}
 
@@ -248,16 +300,18 @@ fs.writeFileSync = function(filename, data, encoding) {}
  * are given to the completion callback.
  * @param linkdata
  * @param path
+ * @param type
  * @param callback
  */
-fs.symlink = function(linkdata, path, callback) {}
+fs.symlink = function(linkdata, path, type, callback) {}
 
 /**
  * Synchronous symlink(2).
  * @param linkdata
  * @param path
+ * @param type
  */
-fs.symlinkSync = function(linkdata, path) {}
+fs.symlinkSync = function(linkdata, path, type) {}
 
 /**
  * Synchronous rmdir(2).
@@ -275,9 +329,7 @@ fs.rmdirSync = function(path) {}
 fs.link = function(srcpath, dstpath, callback) {}
 
 /**
- * Asynchronous readdir(3). Reads the contents of a directory. The callback
- * gets two arguments (err, files) where files is an array of the names of
- * the files in the directory excluding '.' and '..'.
+ * Asynchronous readdir(3). Reads the contents of a directory.
  * @param path
  * @param callback
  */
@@ -287,7 +339,7 @@ fs.readdir = function(path, callback) {}
  * Returns a new ReadStream object (See Readable Stream).
  * @param path
  * @param options
- * @returns stream.ReadableStream
+ * @returns {stream.ReadableStream}
  */
 fs.createReadStream = function(path, options) {}
 
@@ -296,6 +348,7 @@ fs.createReadStream = function(path, options) {}
  * filename.
  * @param filename
  * @param encoding
+ * @returns the contents of the filename
  */
 fs.readFileSync = function(filename, encoding) {}
 
@@ -352,7 +405,7 @@ fs.watchFile = function(filename, options, listener) {}
  * Returns a new WriteStream object (See Writable Stream).
  * @param path
  * @param options
- * @returns stream.WritableStream
+ * @returns {stream.WritableStream}
  */
 fs.createWriteStream = function(path, options) {}
 
@@ -366,7 +419,7 @@ fs.openSync = function(path, flags, mode) {}
 
 /**
  * Asynchronous readlink(2). The callback gets two arguments (err,
- * resolvedPath).
+ * linkString).
  * @param path
  * @param callback
  */
@@ -378,25 +431,188 @@ fs.readlink = function(path, callback) {}
  */
 fs.unlinkSync = function(path) {}
 
-
-/** @__local__ */ var __events__ = {};
 /**
- * fd is the file descriptor used by the WriteStream.
- * @param fd {Number}
+ * Asynchronous chown(2). No arguments other than a possible exception are
+ * given to the completion callback.
+ * @param path
+ * @param uid
+ * @param gid
+ * @param callback
  */
-__events__.open = function(fd) {};
+fs.chown = function(path, uid, gid, callback) {}
 
-                /* see http://nodejs.org/docs/v0.4.2/api/fs.html#fs.Stats */
-                fs.Stats.prototype = {
-                    isFile: function() {},
-                    isDirectory: function() {},
-                    isBlockDevice: function() {},
-                    isCharacterDevice: function() {},
-                    isSymbolicLink: function() {},
-                    isFIFO: function() {},
-                    isSocket: function() {}
-                };
-                /* required for createReadStream() / createWriteStream() */
-                var stream = require('stream');
-                exports = fs;
+/**
+ * Synchronous chown(2).
+ * @param path
+ * @param uid
+ * @param gid
+ */
+fs.chownSync = function(path, uid, gid) {}
+
+/**
+ * Asynchronous fchmod(2). No arguments other than a possible exception are
+ * given to the completion callback.
+ * @param fd
+ * @param mode
+ * @param callback
+ */
+fs.fchmod = function(fd, mode, callback) {}
+
+/**
+ * Synchronous fchmod(2).
+ * @param fd
+ * @param mode
+ */
+fs.fchmodSync = function(fd, mode) {}
+
+/**
+ * Asynchronous fchown(2). No arguments other than a possible exception are
+ * given to the completion callback.
+ * @param fd
+ * @param uid
+ * @param gid
+ * @param callback
+ */
+fs.fchown = function(fd, uid, gid, callback) {}
+
+/**
+ * Synchronous fchown(2).
+ * @param fd
+ * @param uid
+ * @param gid
+ */
+fs.fchownSync = function(fd, uid, gid) {}
+
+/**
+ * Objects returned from fs.watch() are of this type.
+ * @constructor
+ */
+fs.FSWatcher = function() {}
+
+/**
+ * Stop watching for changes on the given fs.FSWatcher.
+ */
+fs.FSWatcher.prototype.close = function() {}
+
+/** @__local__ */ fs.FSWatcher.__events__ = {};
+
+/**
+ * Emitted when something changes in a watched directory or file. See more
+ * details in fs.watch.
+ * @param event {String}
+ * @param filename {String}
+ */
+fs.FSWatcher.__events__.change = function(event, filename) {};
+
+/**
+ * Emitted when an error occurs.
+ * @param exception {Error}
+ */
+fs.FSWatcher.__events__.error = function(exception) {};
+
+/**
+ * Asynchronous fsync(2). No arguments other than a possible exception are
+ * given to the completion callback.
+ * @param fd
+ * @param callback
+ */
+fs.fsync = function(fd, callback) {}
+
+/**
+ * Synchronous fsync(2).
+ * @param fd
+ */
+fs.fsyncSync = function(fd) {}
+
+/**
+ * Change the file timestamps of a file referenced by the supplied file
+ * descriptor.
+ * @param fd
+ * @param atime
+ * @param mtime
+ */
+fs.futimes = function(fd, atime, mtime) {}
+
+/**
+ * Change the file timestamps of a file referenced by the supplied file
+ * descriptor.
+ * @param fd
+ * @param atime
+ * @param mtime
+ */
+fs.futimesSync = function(fd, atime, mtime) {}
+
+/**
+ * Asynchronous lchmod(2). No arguments other than a possible exception are
+ * given to the completion callback.
+ * @param path
+ * @param mode
+ * @param callback
+ */
+fs.lchmod = function(path, mode, callback) {}
+
+/**
+ * Synchronous lchmod(2).
+ * @param path
+ * @param mode
+ */
+fs.lchmodSync = function(path, mode) {}
+
+/**
+ * Asynchronous lchown(2). No arguments other than a possible exception are
+ * given to the completion callback.
+ * @param path
+ * @param uid
+ * @param gid
+ * @param callback
+ */
+fs.lchown = function(path, uid, gid, callback) {}
+
+/**
+ * Synchronous lchown(2).
+ * @param path
+ * @param uid
+ * @param gid
+ */
+fs.lchownSync = function(path, uid, gid) {}
+
+/**
+ * Change file timestamps of the file referenced by the supplied path.
+ * @param path
+ * @param atime
+ * @param mtime
+ */
+fs.utimes = function(path, atime, mtime) {}
+
+/**
+ * Change file timestamps of the file referenced by the supplied path.
+ * @param path
+ * @param atime
+ * @param mtime
+ */
+fs.utimesSync = function(path, atime, mtime) {}
+
+/**
+ * Watch for changes on filename, where filename is either a file or a
+ * directory. The returned object is a fs.FSWatcher.
+ * @param filename
+ * @param options
+ * @param listener
+ */
+fs.watch = function(filename, options, listener) {}
+
+/* see http://nodejs.org/docs/v0.6.12/api/fs.html#fs.Stats */
+fs.Stats.prototype = {
+    isFile: function() {},
+    isDirectory: function() {},
+    isBlockDevice: function() {},
+    isCharacterDevice: function() {},
+    isSymbolicLink: function() {},
+    isFIFO: function() {},
+    isSocket: function() {},
+};
+/* required for createReadStream() / createWriteStream() */
+var stream = require('stream');
+
+exports = fs;
 

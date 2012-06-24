@@ -349,10 +349,38 @@ class SciMozAccessor(Accessor):
         #    "be expensive. Are you sure you want to use this method? "
         #    "Try accessor.gen_pos_and_char_fwd() first.")
     def gen_tokens(self):
-        #PERF: This is not a great solution but see bug 54217.
-        acc = SilverCityAccessor(self.silvercity_lexer, self.text)
-        for token in acc.gen_tokens():
-            yield token
+        if self.silvercity_lexer:
+            #PERF: This is not a great solution but see bug 54217.
+            acc = SilverCityAccessor(self.silvercity_lexer, self.text)
+            for token in acc.gen_tokens():
+                yield token
+        else:
+            # Silvercity lexer doesn't exist, use styles straight from SciMoz.
+            scimoz = self.scimoz()
+            styled_text = scimoz.getStyledText(0, scimoz.length)
+            text = styled_text[::2]
+            styles = styled_text[1::2]
+            start_index = 0
+            prev_style = -1
+            last_i = len(styles) - 1
+            for i in range(len(styles)):
+                style = styles[i]
+                if style != prev_style or i == last_i:
+                    token_text = text[start_index:i]
+                    if token_text:
+                        token = {
+                            'style': ord(prev_style),
+                            'text': token_text,
+                            'start_index': start_index,
+                            'end_index': i-1,
+                            'start_column': 0, # unset
+                            'end_column': 0,   # unset
+                            'start_line': 0,   # unset
+                            'end_line': 0,     # unset
+                        }
+                        yield token
+                    start_index = i
+                    prev_style = style
     def contiguous_style_range_from_pos(self, pos):
         curr_style = self.style_at_pos(pos)
         i = pos - 1

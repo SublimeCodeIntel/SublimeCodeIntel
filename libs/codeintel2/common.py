@@ -333,10 +333,12 @@ class Definition(object):
     doc = None         # e.g. "Xyz is just nasty stuff..."
     attributes = None  # e.g. "local private"
     returns = None     # e.g. "int"
+    scopestart = None  # e.g. 320 (1-based)
+    scopeend = None    # e.g. 355 (1-based)
 
     def __init__(self, lang, path, blobname, lpath, name, line, ilk,
                  citdl, doc, signature=None, attributes=None,
-                 returns=None):
+                 returns=None, scopestart=None, scopeend=None):
         self.lang = lang
         self.path = path
         self.blobname = blobname
@@ -349,15 +351,34 @@ class Definition(object):
         self.signature = signature
         self.attributes = attributes
         self.returns = returns
+        self.scopestart = scopestart
+        self.scopeend = scopeend
 
     def __repr__(self):
         if self.path is None:
-            return "<Definition: %s '%s' at %s#%s>"\
-                    % (self.ilk, self.name, self.blobname, self.line)
+            return "<Definition: %s '%s' at %s#%s lpath=%s>"\
+                    % (self.ilk, self.name, self.blobname, self.line, self.lpath)
         else:
-            return "<Definition: %s '%s' at %s#%s in %s>"\
+            return "<Definition: %s '%s' at %s#%s in %s lpath=%s>"\
                     % (self.ilk, self.name, self.blobname, self.line,
-                       basename(self.path))
+                       basename(self.path), self.lpath)
+
+    def equals(self, other):
+        """ Equality comparision for XPCOM """
+        if _xpcom_:
+            try:
+                other = UnwrapObject(other)
+            except:
+                pass
+        for attr in ("lang", "path", "blobname", "lpath", "name", "line", "ilk",
+                     "citdl", "doc", "signature", "attributes", "returns"):
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+        return True
+
+    def toString(self):
+        """ toString implementation for XPCOM """
+        return repr(self)
 
 
 class CILEDriver(object):
@@ -457,6 +478,7 @@ class EvalController(object):
         self.calltips = None
         self.defns = None
         self.desc = None
+        self.keep_existing = False
 
     def close(self):
         """Done with this eval controller, clear any references"""
@@ -539,7 +561,7 @@ class Evaluator(object):
     that the rules described for Buffer.async_eval_at_trg() are followed
     (see buffer.py). Typically this just means:
     - ensuring ctlr.done() is called,
-    - reacting to ctrl.is_aborted(), and
+    - reacting to ctlr.is_aborted(), and
     - optionally calling the other EvalController methods as appropriate.
 
     A subclass should also implement readable __str__ output.

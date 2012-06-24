@@ -1,62 +1,78 @@
-/**
- * These object are available in all modules. Some of these objects aren't
- * actually in the global scope but in the module scope - this will be
- * noted.
- */
-var global_objects = {};
 
 /**
- * The global namespace object.
+ * In browsers, the top-level scope is the global scope. That means that in
+ * browsers if you're in the global scope var something will define a
+ * global variable. In Node this is different. The top-level scope is not
+ * the global scope; var something inside a Node module will be local to
+ * that module.
  */
-global_objects.global = 0;
+var global = {};
 
 /**
  * Used to print to stdout and stderr. See the stdio section.
  */
-global_objects.console = 0;
+var console = {};
 
 /**
  * The process object. See the process object section.
+ * @type {process}
  */
-global_objects.process = 0;
+var process = {};
 
 /**
- * To require modules. See the Modules section. require isn't actually a
- * global but rather local to each module.
+ * To require modules. See the Modules section.
  */
-global_objects.require = function() {}
+require = function() {}
 
 /**
- * The filename of the script being executed. This is the absolute path,
- * and not necessarily the same filename passed in as a command line
- * argument.
+ * Use the internal require() machinery to look up the location of a
+ * module, but rather than loading the module, just return the resolved
+ * filename.
  */
-global_objects.__filename = 0;
+require.resolve = function() {}
 
-global_objects.clearTimeout = function(t) {}
+/**
+ * Modules are cached in this object when they are required. By deleting a
+ * key value from this object, the next require will reload the module.
+ */
+require.cache = 0;
+
+/**
+ * The filename of the code being executed. This is the resolved absolute
+ * path of this code file. For a main program this is not necessarily the
+ * same filename used in the command line. The value inside a module is the
+ * path to that module file.
+ */
+var __filename = {};
 
 /**
  * The timer functions are global variables. See the timers section.
- * @param t
  */
-global_objects.clearInterval = function(t) {}
+clearInterval = function() {}
 
 /**
  * A reference to the current module. In particular module.exports is the
- * same as the exports object. See src/node.js for more information. module
- * isn't actually a global but rather local to each module.
+ * same as the exports object. See src/node.js for more information.
  */
-global_objects.module = 0;
-
-global_objects.setInterval = function(cb, ms) {}
+var module = {};
 
 /**
- * The dirname of the script being executed.
+ * The timer functions are global variables. See the timers section.
+ * @param cb
+ * @param ms
  */
-global_objects.__dirname = 0;
+setInterval = function(cb, ms) {}
 
-global_objects.setTimeout = function(cb, ms) {}
+/**
+ * The name of the directory that the currently executing script resides
+ * in.
+ */
+var __dirname = {};
 
+/**
+ * Used to handle binary data. See the buffer section.
+ */
+var Buffer = {};
 
 exports = global_objects;
 

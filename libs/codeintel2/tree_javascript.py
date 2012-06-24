@@ -108,8 +108,8 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             if not cplns:
                 raise CodeIntelError("No completions found")
         # For logging messages every call
-        #print indent('\n'.join("%s: %s" % (lvl, m)
-        #                for lvl,m in self.ctlr.log))
+        #print indent('\n'.join("%s: %s" % (lvl, args and m % (args) or m)
+        #                for lvl,m, args in self.ctlr.log))
         #print indent('\n'.join(["Hit: %r" % (cpln, ) for cpln in cplns]))
         return cplns
 
@@ -164,10 +164,9 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         """
         The type of the global variable
         """
-        return {
-            "JavaScript": "Window",
-            "Node.js":    "global",
-        }.get(self.lang)
+        if self.trg.lang == "Node.js":
+            return "global"
+        return "Window"
 
     _langintel = None
     @property
@@ -650,14 +649,30 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
     def _hits_from_variable_type_inference(self, elem, scoperef):
         """Resolve the type inference for 'elem' at 'scoperef'."""
         assert elem.tag == "variable"
+
+        hits = []
+
+        citdl = elem.get("citdl")
+
+        if citdl == "require()":
+            # Node.js / CommonJS hack: try to resolve things via require()
+            requirename = elem.get('required_library_name')
+            if requirename:
+                self.log("_hits_from_variable_type_inference: resolving require(%r)",
+                         requirename)
+                hits += self._hits_from_commonjs_require(requirename, scoperef)
+
         if len(elem) != 0:
             # This is CIX for a JavaScript custom Object instance: a
             # common pattern in JS. See test javascript/cpln/local2.
-            return [(elem, scoperef)]
-        citdl = elem.get("citdl")
+            # remember to also return things from require()
+            return hits + [(elem, scoperef)]
+
         if not citdl:
             raise CodeIntelError("no type-inference info for %r" % elem)
+
         self.log("resolve '%s' type inference for %r:", citdl, elem)
+
         if citdl == elem.get("name") and citdl not in elem.names:
             # The citdl expression is the same as the variable name, this will
             # create a recursive citdl lookup loop. What we likely want is a
@@ -691,15 +706,15 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                     raise CodeIntelError("could not resolve recursive citdl expression %r" % citdl)
                 # Continue looking using _hits_from_citdl with the parent.
                 self.log("Continue search for %r from the parent scope.", citdl)
-        if citdl == "require()":
-            requirename = elem.get('required_library_name')
-            self.log("_hits_from_variable_type_inference: resolving require(%r)",
-                     requirename)
-            if requirename:
-                hits = self._hits_from_commonjs_require(requirename, scoperef)
-                if hits:
-                    return hits
-        return self._hits_from_citdl(citdl, scoperef)
+
+        try:
+            hits += self._hits_from_citdl(citdl, scoperef)
+        except EvalError:
+            # shut up eval errors if we managed to get _some_ hits
+            if not hits:
+                raise
+
+        return hits
 
     def _hits_from_type_inference(self, citdl, scoperef):
         """Resolve the 'citdl' type inference at 'scoperef'."""
@@ -847,7 +862,9 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         # From the local scope, walk up the parent chain including matches as
         # we go.
         # XXX - Can we skip the global (stdlib) blob in here?
+        loopcount = -1
         while scoperef and scoperef[0] is not None:
+            loopcount += 1
             # Iterate over the contents of the scope.
             self.log("_completion_names_from_scope:: checking scoperef: %r",
                      scoperef)
@@ -860,8 +877,9 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                 if name and name.startswith(expr):
                     if name not in all_completions:
                         hit_elem = elem.names[name]
-                        if "__local__" in hit_elem.get("attributes", "").split():
-                            # Skip things that should be local to the parent scope
+                        if loopcount and "__local__" in hit_elem.get("attributes", "").split():
+                            # Skip things that should only be local to the
+                            # original scope.
                             #self.log("_completion_names_from_scope:: skipping local %r",
                             #         name)
                             continue
