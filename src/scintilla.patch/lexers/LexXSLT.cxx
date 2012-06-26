@@ -1,16 +1,28 @@
+// Scintilla source code edit control
+/** @file LexXSLT.cxx
+ ** Lexer for XSLT
+ ** Written by ActiveState Komodo Crew
+ **/
+// Copyright (C) 2000-2011 by ActiveState Software Inc.
+// The License.txt file describes the conditions under which this software may be distributed.
+
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <assert.h>
+#include <ctype.h>
 
-#include "Platform.h"
-
-#include "PropSet.h"
-#include "Accessor.h"
-#include "KeyWords.h"
+#include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
+
+#include "WordList.h"
+#include "LexAccessor.h"
+#include "Accessor.h"
+#include "StyleContext.h"
+#include "CharacterSet.h"
+#include "LexerModule.h"
 
 #ifdef SCI_NAMESPACE
 using namespace Scintilla;

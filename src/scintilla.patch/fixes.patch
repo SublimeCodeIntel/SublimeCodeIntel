@@ -104,51 +104,143 @@ diff -r -du src/CellBuffer.cxx src/CellBuffer.cxx
 diff -r -du src/Document.cxx src/Document.cxx
 --- src/Document.cxx	2005-08-29 18:09:20.000000000 -0700
 +++ src/Document.cxx	2007-05-01 17:00:17.000000000 -0700
-@@ -154,24 +154,27 @@
- 
- int Document::GetMark(int line) {
- 	return static_cast<LineMarkers *>(perLineData[ldMarkers])->MarkValue(line);
- }
- 
- int Document::AddMark(int line, int markerNum) {
--	if (line <= LinesTotal()) {
-+	if (line >= 0 && line <= LinesTotal()) {
- 		int prev = static_cast<LineMarkers *>(perLineData[ldMarkers])->
- 			AddMark(line, markerNum, LinesTotal());
- 		DocModification mh(SC_MOD_CHANGEMARKER, LineStart(line), 0, 0, 0, line);
- 		NotifyModified(mh);
- 		return prev;
- 	} else {
- 		return 0;
+@@ -515,6 +515,139 @@
  	}
  }
  
- void Document::AddMarkSet(int line, int valueSet) {
-+	if (line < 0 || line > LinesTotal()) {
-+		return;
-+	}
- 	unsigned int m = valueSet;
- 	for (int i = 0; m; i++, m >>= 1)
- 		if (m & 1)
- 			static_cast<LineMarkers *>(perLineData[ldMarkers])->
- 				AddMark(line, i, LinesTotal());
- 	DocModification mh(SC_MOD_CHANGEMARKER, LineStart(line), 0, 0, 0, line);
-@@ -271,6 +271,18 @@
- 	}
- }
- 
-+// Quick-n-dirty position helper.  Could be optimized by not using
-+// MovePositionOutsideChar.  charPos may be neg or pos
-+int Document::GetBytePositionForCharOffset(int bytePos, int charOffset, bool checkLineEnd) {
-+	int moveDir = charOffset >=0 ? 1 : -1;
-+	int charCount = charOffset * moveDir;
++// Quick-n-dirty position helper.  Implements scimoz.positionAtChar.
++// checkLineEnd (3rd arg) is never used.
++int Document::GetBytePositionForCharOffset(int bytePos, int charOffset,
++					   bool checkLineEnd) {
++	/**
++	 * There's a subtlety in this routine involving Unicode characters that
++	 * are >= 0x10000 : Scintilla has no problem representing these as
++	 * 4 UTF-8 bytes starting with header byte 0b11110xxx (0xf0 - 0xf7),
++	 * and correctly maps this to a single * character.  But both
++	 * JS and Python encode Unicode characters with UCS-2, and these
++	 * characters are mapped to a surrogate pair.  So suppose that char "&"
++	 * is actually Unicode \U0001011E. JS and Python count this character
++	 * as 2 characters.  So when this function finds the UTF-8 for such
++	 * a character, it knows that the UCS-2 parts of Komodo have said
++	 * this character accounts for 2 chars towards a string length,
++	 * and returns the appropriate byte position.
++	 *
++	 * Also, if any of the arguments point to a non-Komodo situation, run
++	 * the old code. This covers cases where we have a non-utf8 code page or
++	 * checkLineEnd is on (and I'm not sure how that can happen.)
++	 */
 +	int newPos = bytePos;
-+	for (int i = 0; i < charCount; ++i) {
-+		newPos = MovePositionOutsideChar(newPos + moveDir, moveDir, checkLineEnd);
++	int charCount;
++	if (checkLineEnd || dbcsCodePage != SC_CP_UTF8) {
++		// Run the old code.
++		int moveDir = charOffset >=0 ? 1 : -1;
++		charCount = charOffset * moveDir;
++		for (int i = 0; i < charCount; ++i) {
++			newPos = MovePositionOutsideChar(newPos + moveDir, moveDir, checkLineEnd);
++		}
++		return newPos;
++	}
++	int docLength = Length();
++	if (newPos < 0) {
++		// Can't access a position in the buffer.
++		// Should we return 0 or just bounce newPos back?
++		return 0;
++	}
++	if (newPos > docLength) {
++		// This doesn't make sense for either direction.
++		return docLength;
++	}
++	charCount = charOffset;
++	// First synchronize on the first char
++	unsigned char ch;
++	if (newPos < docLength && IsTrailByte(ch = static_cast<unsigned char>(cb.CharAt(newPos)))) {
++		// If we're sitting on a non-ascii char, move to
++		// the start of it, and process it in the main loop below.
++		int startUTF8, endUTF8;
++		if (InGoodUTF8(newPos, startUTF8, endUTF8)) {
++			newPos = startUTF8;
++			// If we're moving backwards, land on a 0xfx byte,
++			// don't count this partial character as 2, since we
++			// didn't hop over the whole thing.
++		}
++	}
++	if (charCount <= 0) {
++		// Move backwards looking for utf8 sequences of
++		// 0xf0 0xhh 0xhh 0xhh
++		// where 0xhh starts with 0b10xx xxxx
++		// and treat them like two characters.
++		charCount *= -1;
++		while (charCount > 0 && --newPos >= 0) {
++			ch = static_cast<unsigned char>(cb.CharAt(newPos));
++			if (!IsTrailByte(ch)) {
++				charCount -= 1;
++				if ((ch & 0xf8) == 0xf0) {
++					// We're at the start of a multi-ucs2 char character,
++					// so count it as 2 characters.
++					// Assume any byte matching 0b11110xxx heads a 4-byte
++					// utf-8 sequence.  If not, we should have handled
++					// the non-utf8 code-page code.
++					charCount -= 1;
++				}
++			}
++		}
++		if (newPos < 0) {
++			newPos = 0;
++		}
++		return newPos;
++	}
++	if (newPos == docLength) {
++		// Otherwise we can never access characters past docLength
++		return docLength;
++	}
++	bool inError = false;
++	while (--charCount >= 0) {
++		// Look for non-ascii byte values
++		ch = static_cast<unsigned char>(cb.CharAt(newPos));
++		if (ch < (unsigned char) 0x80) {
++			// \x00 - \x7f
++			newPos += 1;
++		} else if (ch < (unsigned char) 0xc2) {
++			// \x80 - \xbf
++			// \xc0 and \xc1 are error header bytes in
++			// canonical utf8:  0b11000001 10??????
++			// only has 7 bits of information, doesn't happen in scintilla
++			inError = true;
++		} else if (ch < (unsigned char) 0xe0) {
++			// \xc2 - \xdf
++			newPos += 2;
++		} else if (ch < (unsigned char) 0xf0) {
++			// \xe0 - \xef
++			newPos += 3;
++		} else if (ch < (unsigned char) 0xf8) {
++			// \xf0 - \xf7
++			// In UCS-2 we're told that this value occupies 2 chars,
++			// so we need to treat this character like 2 towards CharCount
++			--charCount;
++			newPos += 4;
++		} else {
++			// \xf8 - \xff not expected in scintilla utf8
++			// Error, but we need to advance.
++			inError = true;
++		}
++		if (inError) {
++			inError = false;
++			fprintf(stderr, "Unexpected char at pos %d, cpos %d, char %d",
++				newPos, charOffset - charCount - 1, ch);
++			while (++newPos < docLength) {
++				ch = static_cast<unsigned char>(cb.CharAt(newPos));
++				if (!IsTrailByte(ch)) {
++					break;
++				}
++			}
++		}
++		if (newPos >= docLength) {
++			newPos = docLength;
++			break;
++		}
 +	}
 +	return newPos;
 +}
-+
  // Normalise a position so that it is not halfway through a two byte character.
  // This can occur in two situations -
  // When lines are terminated with \r\n pairs which should be treated as one character.
@@ -164,16 +256,18 @@ diff -r -du src/Document.cxx src/Document.cxx
 diff -r -du src/Document.h src/Document.h
 --- src/Document.h	2005-08-29 18:09:20.000000000 -0700
 +++ src/Document.h	2007-05-01 17:00:17.000000000 -0700
-@@ -137,6 +137,9 @@
+@@ -137,8 +137,11 @@
  	int LenChar(int pos);
+ 	bool InGoodUTF8(int pos, int &start, int &end) const;
  	int MovePositionOutsideChar(int pos, int moveDir, bool checkLineEnd=true);
  
 +	// ACTIVESTATE	
 +	int GetBytePositionForCharOffset(int bytePos, int charOffset, bool checkLineEnd=true);
 +
- 	// Gateways to modifying document
- 	void ModifiedAt(int pos);
- 	bool DeleteChars(int pos, int len);
+ 	int NextPosition(int pos, int moveDir) const;
+ 	bool NextCharacter(int &pos, int moveDir);	// Returns true if pos changed
+ 	int SCI_METHOD CodePage() const;
+ 	bool SCI_METHOD IsDBCSLeadByte(char ch) const;
 diff -r -du src/Editor.cxx src/Editor.cxx
 --- src/Editor.cxx	2005-08-29 18:09:20.000000000 -0700
 +++ src/Editor.cxx	2007-05-01 17:00:17.000000000 -0700
@@ -191,8 +285,24 @@ diff -r -du src/Editor.cxx src/Editor.cxx
  	return MovePositionOutsideChar(SelectionPosition(pos), moveDir, checkLineEnd).Position();
  }
  
-@@ -5726,13 +5731,21 @@
- 		}
+@@ -1090,12 +1098,14 @@
+ 	Point pt = PointMainCaret();
+ 	if (pt.y < rcClient.top) {
+ 		MovePositionTo(SPositionFromLocation(
+-		            Point(lastXChosen - xOffset, rcClient.top)),
++		            Point(lastXChosen - xOffset, rcClient.top),
++                    false, false, (virtualSpaceOptions & SCVS_USERACCESSIBLE) != 0),
+ 					Selection::noSel, ensureVisible);
+ 	} else if ((pt.y + vs.lineHeight - 1) > rcClient.bottom) {
+ 		int yOfLastLineFullyDisplayed = rcClient.top + (LinesOnScreen() - 1) * vs.lineHeight;
+ 		MovePositionTo(SPositionFromLocation(
+-		            Point(lastXChosen - xOffset, rcClient.top + yOfLastLineFullyDisplayed)),
++		            Point(lastXChosen - xOffset, rcClient.top + yOfLastLineFullyDisplayed),
++                    false, false, (virtualSpaceOptions & SCVS_USERACCESSIBLE) != 0),
+ 		        Selection::noSel, ensureVisible);
+ 	}
+ }
+@@ -5900,12 +5909,20 @@
  	}
  	lastClickTime = curTime;
  	lastXChosen = pt.x + xOffset;
@@ -214,7 +324,7 @@ diff -r -du src/Editor.cxx src/Editor.cxx
  
  bool Editor::PointIsHotspot(Point pt) {
  	int pos = PositionFromLocation(pt, true);
-@@ -8083,7 +8096,32 @@
+@@ -8291,7 +8308,32 @@
  		break;
  
  	case SCI_GETPASTECONVERTENDINGS:
@@ -250,7 +360,7 @@ diff -r -du src/Editor.cxx src/Editor.cxx
 diff -r -du src/Editor.h src/Editor.h
 --- src/Editor.h	2005-08-29 18:09:20.000000000 -0700
 +++ src/Editor.h	2007-05-01 17:00:17.000000000 -0700
-@@ -361,5 +361,9 @@
+@@ -361,7 +361,11 @@
  	void SetEmptySelection(int currentPos_);
  	bool RangeContainsProtected(int start, int end) const;
  	bool SelectionContainsProtected();
@@ -259,13 +369,13 @@ diff -r -du src/Editor.h src/Editor.h
 +	int GetBytePositionForCharOffset(int bytePos, int charOffset, bool checkLineEnd=true);
 +
  	int MovePositionOutsideChar(int pos, int moveDir, bool checkLineEnd=true) const;
-  	SelectionPosition MovePositionOutsideChar(SelectionPosition pos, int moveDir, bool checkLineEnd=true) const;
-	int MovePositionTo(SelectionPosition newPos, Selection::selTypes sel=Selection::noSel, bool ensureVisible=true);
+ 	SelectionPosition MovePositionOutsideChar(SelectionPosition pos, int moveDir, bool checkLineEnd=true) const;
+ 	int MovePositionTo(SelectionPosition newPos, Selection::selTypes sel=Selection::noSel, bool ensureVisible=true);
  	int MovePositionTo(int newPos, Selection::selTypes sel=Selection::noSel, bool ensureVisible=true);
-diff -r -du src/KeyWords.cxx src/KeyWords.cxx
---- src/KeyWords.cxx	2005-08-29 18:09:20.000000000 -0700
-+++ src/KeyWords.cxx	2007-05-01 17:00:17.000000000 -0700
-@@ -209,9 +213,8 @@
+diff -r -du src/Catalogue.cxx src/Catalogue.cxx
+--- src/Catalogue.cxx	2005-08-29 18:09:20.000000000 -0700
++++ src/Catalogue.cxx	2007-05-01 17:00:17.000000000 -0700
+@@ -209,10 +213,9 @@
  	LINK_LEXER(lmSpice);
  	LINK_LEXER(lmSQL);
  	LINK_LEXER(lmTACL);
@@ -273,6 +383,7 @@ diff -r -du src/KeyWords.cxx src/KeyWords.cxx
  	LINK_LEXER(lmTAL);
 -	LINK_LEXER(lmTCL);
  	LINK_LEXER(lmTeX);
+ 	LINK_LEXER(lmTxt2tags);
  	LINK_LEXER(lmVB);
  	LINK_LEXER(lmVBScript);
 @@ -217,6 +220,10 @@

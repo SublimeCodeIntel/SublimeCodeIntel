@@ -7,17 +7,21 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <assert.h>
+#include <ctype.h>
 
-#include "Platform.h"
-
-#include "PropSet.h"
-#include "Accessor.h"
-#include "KeyWords.h"
+#include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
+
+#include "WordList.h"
+#include "LexAccessor.h"
+#include "Accessor.h"
+#include "StyleContext.h"
+#include "CharacterSet.h"
+#include "LexerModule.h"
 
 #ifdef SCI_NAMESPACE
 using namespace Scintilla;
@@ -326,6 +330,31 @@ static bool atStartOfFormatStmt(unsigned int &pos,
     return true;
 }
 
+/** inputsymbolScan
+ * look ahead to see if we have a glob expression (Camel 3rd pg. 83
+ * or `perldoc -f glob`
+ * Input: styler ref, pos ref, docLength
+ * Output: if we have a '>' on the same line, assume it's a glob expn.
+ *
+ * Note that we can resolve the ambiguity of '<' the following ways:
+ * If binaryOperatorExpected, then '<' can't start a glob expn.  Simple.
+ *
+ */
+static int inputsymbolScan(LexAccessor &styler, unsigned int pos, unsigned int endPos) {
+    // looks forward for matching > on same line; a bit ugly
+    unsigned int fw = pos;
+    while (++fw < endPos) {
+        int fwch = static_cast<unsigned char>(styler.SafeGetCharAt(fw));
+        if (fwch == '\r' || fwch == '\n') {
+            return 0;
+        } else if (fwch == '>') {
+            if (styler.Match(fw - 2, "<=>"))	// '<=>' case
+                return 0;
+            break;
+        }
+    }
+    return fw - pos;
+}
 
 static char opposite(char ch) {
     if (ch == '(')
@@ -337,6 +366,29 @@ static char opposite(char ch) {
     if (ch == '<')
         return '>';
     return ch;
+}
+
+/* getNumUtf8ContinuationBytes
+ * Mask the char with a 1 in a spot to determine what kind of
+ * lead byte we have.  For example, any 7-bit value masked
+ * with 0x80 will always give 0.
+ * A 2-byte lead-byte masked with 0b11100000 => 0b11000000, etc.
+ *
+ * Return value: either number of internal utf8 bytes, or -1
+ * to indicate something went wrong, and further checking might be needed.
+ */
+static int getNumUtf8ContinuationBytes(char ch) {
+    unsigned int cval = (unsigned int) ch;
+    if ((cval & 0x80) == 0) return 0;         // 1000 0000  ==> 0000 0000
+    else if ((cval & 0xe0) == 0xc0) return 1; // 1110 0000  ==> 1100 0000
+    else if ((cval & 0xf0) == 0xe0) return 2; // 1111 0000  ==> 1110 0000
+    else if ((cval & 0xf8) == 0xf0) return 3; // 1111 1000  ==> 1111 0000
+    else if ((cval & 0xfc) == 0xf8) return 4; // 1111 1100  ==> 1111 1000
+    else if ((cval & 0xfe) == 0xfc) return 5; // 1111 1110  ==> 1111 1100
+    // Otherwise we're either at an internal byte or a non-utf8 char.
+    // Return -1 and let the caller decide what to do.
+    assert("Perl colorizer: Internal Error in getNumUtf8ContinuationBytes: didn't match anything" && 0);
+    return -1;
 }
 
 // Calculates the current fold level (for the relevant line) when the lexer has 
@@ -1520,9 +1572,8 @@ void ColourisePerlDoc(unsigned int startPos, int length, int , // initStyle
 
                 } else {
                     styler.ColourTo(i-1, state);
-                    preferRE = false;
-                    binaryOperatorExpected = false;
-                    braceStartsBlock = true;
+                    // Check for glob expressions first
+                    bool doDefaultHandling = true;
                     if (chNext == '=') {
                         if (chNext2 == '>') {
                             i += 2;
@@ -1530,9 +1581,37 @@ void ColourisePerlDoc(unsigned int startPos, int length, int , // initStyle
                         } else {
                             advanceOneChar(i, ch, chNext, chNext2);
                         }
+                    } else if (!binaryOperatorExpected) {
+                        if (chNext == '>') {
+                            // <> reads from argv, returns a value in scalar context
+                            advanceOneChar(i, ch, chNext, chNext2);
+                            styler.ColourTo(i, SCE_PL_OPERATOR);
+                            preferRE = false;
+                            binaryOperatorExpected = true;
+                            braceStartsBlock = false;
+                            doDefaultHandling = false;
+                        } else {
+                            int numCharsToSkip = inputsymbolScan(styler, i + 1, lengthDoc);
+                            if (numCharsToSkip > 0) {
+                                i += numCharsToSkip + 1;
+                                styler.ColourTo(i, SCE_PL_STRING);
+                                ch = styler.SafeGetCharAt(i);
+                                chNext = styler.SafeGetCharAt(i + 1);
+                                preferRE = false;
+                                binaryOperatorExpected = true;
+                                braceStartsBlock = false;
+                                doDefaultHandling = false;
+                                // Stay in default state.
+                            }
+                        }
                     }
-                    // Leave state at default for all three operators
-                    styler.ColourTo(i,SCE_PL_OPERATOR);
+                    if (doDefaultHandling) {
+                        preferRE = false;
+                        binaryOperatorExpected = false;
+                        braceStartsBlock = true;
+                        // Leave state at default for all interpretations but glob
+                        styler.ColourTo(i,SCE_PL_OPERATOR);
+                    }
                 }
             } else if (ch == '=' && isSafeAlpha(chNext) && (i == 0 || isEOLChar(chPrev))) {
                 styler.ColourTo(i - 1, state);
@@ -2027,6 +2106,10 @@ void ColourisePerlDoc(unsigned int startPos, int length, int , // initStyle
                 }
                 state = SCE_PL_DEFAULT;
                 braceStartsBlock = false;
+                if (lookingAtBareword(styler, i + 1, actualLengthDoc)) {
+                    ch = colouriseBareword(styler, i, state, actualLengthDoc);
+                    chNext = styler.SafeGetCharAt(i + 1);
+                }
             } else if (ch == '(') {
                 // It's a function name, using indirect accessor
                 // notation:
@@ -2212,6 +2295,16 @@ void ColourisePerlDoc(unsigned int startPos, int length, int , // initStyle
                 if (Quote.Count == 0) {
                     Quote.Rep--;
                     if (Quote.Rep <= 0) {
+                        int numBytesToSkip = getNumUtf8ContinuationBytes(ch);
+                        if (numBytesToSkip <= 0) {
+                            // Do nothing
+                        } else if (numBytesToSkip == 1) {
+                            advanceOneChar(i, ch, chNext, chNext2);
+                        } else {
+                            i += numBytesToSkip;
+                            ch = styler.SafeGetCharAt(i);
+                            chNext = styler.SafeGetCharAt(i + 1);
+                        }
                         styler.ColourTo(i, state);
                         state = SCE_PL_DEFAULT;
                         braceStartsBlock = true;
@@ -2308,6 +2401,7 @@ static void FoldPerlDoc(unsigned int startPos, int length, int, WordList *[],
                         Accessor &styler) {
     bool foldComment = styler.GetPropertyInt("fold.comment") != 0;
     bool foldCompact = styler.GetPropertyInt("fold.compact", 1) != 0;
+    bool foldAtElse = styler.GetPropertyInt("fold.at.else", 1) != 0;
     unsigned int endPos = startPos + length;
     int state;
     synchronizeDocStart(startPos, endPos, state, styler);
@@ -2328,6 +2422,7 @@ static void FoldPerlDoc(unsigned int startPos, int length, int, WordList *[],
             
     int levelPrev = styler.LevelAt(lineCurrent) & SC_FOLDLEVELNUMBERMASK;
     int levelCurrent = levelPrev;
+    int levelMinPrev = levelPrev;
     int lengthDoc = styler.Length();
     char chNext = styler[startPos];
     int styleNext = safeStyleAt(startPos, styler);
@@ -2341,6 +2436,9 @@ static void FoldPerlDoc(unsigned int startPos, int length, int, WordList *[],
             if ((ch == '/') && (chNext == '/')) {
                 char chNext2 = styler.SafeGetCharAt(i + 2);
                 if (chNext2 == '{') {
+                    if (levelMinPrev > levelCurrent) {
+                        levelMinPrev = levelCurrent;
+                    }
                     levelCurrent++;
                 } else if (levelCurrent > 0 && chNext2 == '}') {
                     levelCurrent--;
@@ -2348,6 +2446,9 @@ static void FoldPerlDoc(unsigned int startPos, int length, int, WordList *[],
             }
         } else if (style == SCE_PL_OPERATOR || style == SCE_PL_VARIABLE_INDEXER) {
             if (strchr("{[(", ch)) {
+                if (levelMinPrev > levelCurrent) {
+                    levelMinPrev = levelCurrent;
+                }
                 levelCurrent++;
             } else if (levelCurrent > 0 && strchr(")]}", ch)) {
                 levelCurrent--;
@@ -2366,16 +2467,20 @@ static void FoldPerlDoc(unsigned int startPos, int length, int, WordList *[],
             }
         }
         if (atEOL) {
-            int lev = levelPrev;
+            int levelUse = foldAtElse ? levelMinPrev : levelPrev;
+            if (levelUse < 0) {
+                levelUse = 0;
+            }
+            int lev = levelUse;
             if (visibleChars == 0 && foldCompact)
                 lev |= SC_FOLDLEVELWHITEFLAG;
-            if ((levelCurrent > levelPrev) && (visibleChars > 0))
+            if ((levelCurrent > levelUse) && (visibleChars > 0))
                 lev |= SC_FOLDLEVELHEADERFLAG;
             if (lev != styler.LevelAt(lineCurrent)) {
                 styler.SetLevel(lineCurrent, lev);
             }
             lineCurrent++;
-            levelPrev = levelCurrent;
+            levelMinPrev = levelPrev = levelCurrent;
             visibleChars = 0;
         }
         if (!isspacechar(ch))

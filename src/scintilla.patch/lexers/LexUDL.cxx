@@ -10,11 +10,12 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <assert.h>
+#include <ctype.h>
 
-#include <string> // for current_delimiter
+#include <string>
 
 // Perl-compatible regular expression library -- see pcre.org
 #define PCRE_STATIC
@@ -34,18 +35,24 @@
 #endif
 
 #include "Platform.h"
-
-#include "PropSet.h"
-#include "Accessor.h"
-#include "KeyWords.h"
+#include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
+
+#include "WordList.h"
+#include "LexAccessor.h"
+#include "Accessor.h"
+#include "StyleContext.h"
+#include "CharacterSet.h"
+#include "LexerModule.h"
 
 #ifdef SCI_NAMESPACE
 using namespace Scintilla;
 #endif
 
+#ifndef assert
 #define assert PLATFORM_ASSERT
+#endif
 
 //XXX Identical to Perl, put in common area
 static inline bool isEOLChar(char ch) {
@@ -514,7 +521,7 @@ class LookBackTests {
     };
 
     bool StyleInRange(int style) {
-        return style >= base_style && style < (base_style + num_styles);
+        return style >= base_style && style <= (base_style + num_styles);
     };
 
     private:        
@@ -1113,6 +1120,7 @@ public:
                               int lineEndPos,
                              Accessor &styler,
                              int& foldChange,
+                             int& minChange,
                              bool& hasNonSpace,
                               StringStack *p_tagStack);
     int NumTransitions() {
@@ -1914,6 +1922,7 @@ void MainInfo::GetFoldChangeForLine(int lineStartPos,
                                     int lineEndPos,
                                     Accessor& styler,
                                     int& foldChange,
+                                    int& minChange,
                                     bool& hasNonSpace,
                                     StringStack *p_tagStack
                                     )
@@ -1921,7 +1930,7 @@ void MainInfo::GetFoldChangeForLine(int lineStartPos,
     // Fill the line
     // lineEndPos points one past the last char we're interested in.
 
-    foldChange = 0;
+    foldChange = minChange = 0;
     hasNonSpace = false;
     char *buf = new char[lineEndPos - lineStartPos + 1];
     if (!buf) return;
@@ -2174,6 +2183,9 @@ void MainInfo::GetFoldChangeForLine(int lineStartPos,
                     }
                     i += amtMatched;
                     pos += amtMatched;
+                    if (direction > 0 && minChange > netChange) {
+                        minChange = netChange;
+                    }
                     netChange += direction;
                     break;
                 }
@@ -3302,7 +3314,7 @@ static void ColouriseTemplate1Doc(unsigned int startPos,
                 if (lookingAtString(p_TranBlock->p_search_string,
                                     i, newPos, lengthDoc, styler)) {
 #if UDL_DEBUG_OTHER
-                    fprintf(stderr, "Matched [%s] at pos %d\n",
+                    fprintf(stderr, "Matched [%s](1) at pos %d\n",
                             p_TranBlock->p_search_string, i);
 #endif
                     passedPart1 = true;
@@ -3317,7 +3329,7 @@ static void ColouriseTemplate1Doc(unsigned int startPos,
                                    p_MainInfo, p_BufferStateInfo,
                                    styler)) {
 #if UDL_DEBUG_OTHER
-                    fprintf(stderr, "Matched [%s] at pos %d\n",
+                    fprintf(stderr, "Matched [%s](2) at pos %d\n",
                             p_TranBlock->p_search_string, i);
 #endif
                     passedPart1 = true;
@@ -3463,6 +3475,7 @@ static void FoldUDLDoc(unsigned int startPos, int length, int
         lastLine = 0;
     }
     const bool foldCompact = styler.GetPropertyInt("fold.compact", 1) != 0;
+    const bool foldAtElse = styler.GetPropertyInt("fold.at.else", 1) != 0;
     // bool foldComment = styler.GetPropertyInt("fold.comment") != 0;
     int curr_family;
     int istate; // the internal state
@@ -3514,17 +3527,22 @@ static void FoldUDLDoc(unsigned int startPos, int length, int
         startLinePos = endLinePos;
         endLinePos = lineNo == lineEnd ? endPos + 1 : styler.LineStart(lineNo + 1);
         int foldChange = 0;
-        p_MainInfo->GetFoldChangeForLine(startLinePos, endLinePos, styler, foldChange, hasNonSpace, p_tagStack);
+        int minChange = 0;
+        p_MainInfo->GetFoldChangeForLine(startLinePos, endLinePos, styler, foldChange, minChange, hasNonSpace, p_tagStack);
         //fprintf(stderr, "**************** Change at line %d: %d\n", lineNo, foldChange);
         levelCurrent += foldChange;
         if (levelCurrent < 0)
             levelCurrent = 0;
         
-        int lev = levelPrev;
+        int levelUse = foldAtElse ? levelPrev + minChange : levelPrev;
+        if (levelUse < 0) {
+            levelUse = 0;
+        }
+        int lev = levelUse;
         if (!hasNonSpace && foldCompact) {
             lev |= SC_FOLDLEVELWHITEFLAG;
         }
-        if ((levelCurrent > levelPrev) && hasNonSpace) {
+        if ((levelCurrent > levelUse) && hasNonSpace) {
             lev |= SC_FOLDLEVELHEADERFLAG;
         }
         styler.SetLevel(lineNo, lev|SC_FOLDLEVELBASE);

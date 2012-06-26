@@ -1,0 +1,10 @@
+--- SilverCity.orig/PySilverCity/SilverCity/Lexer.py
++++ SilverCity/PySilverCity/SilverCity/Lexer.py
+@@ -1,5 +1,7 @@
+ class Lexer:
+     def tokenize_by_style(self, buffer, call_back = None):
++        if isinstance(buffer, unicode):
++            buffer = buffer.encode('utf8')
+         if call_back is not None:
+             return self._lexer.tokenize_by_style(
+                     buffer,

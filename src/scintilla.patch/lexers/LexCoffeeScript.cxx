@@ -7,19 +7,22 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <assert.h>
+#include <ctype.h>
 
 #include "Platform.h"
-
-#include "PropSet.h"
-#include "Accessor.h"
-#include "StyleContext.h"
-#include "KeyWords.h"
+#include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
+
+#include "WordList.h"
+#include "LexAccessor.h"
+#include "Accessor.h"
+#include "StyleContext.h"
 #include "CharacterSet.h"
+#include "LexerModule.h"
 
 #ifdef SCI_NAMESPACE
 using namespace Scintilla;
@@ -114,9 +117,9 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 	bool continuationLine = false;
 	bool isIncludePreprocessor = false;
 
+	int lineCurrent = styler.GetLine(startPos);
 	if (initStyle == SCE_C_PREPROCESSOR) {
 		// Set continuationLine if last character of previous line is '\'
-		int lineCurrent = styler.GetLine(startPos);
 		if (lineCurrent > 0) {
 			int chBack = styler.SafeGetCharAt(startPos-1, 0);
 			int chBack2 = styler.SafeGetCharAt(startPos-2, 0);
@@ -132,21 +135,30 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 
 	// look back to set chPrevNonWhite properly for better regex colouring
 	int endPos = startPos + length;
-	if (startPos > 0) {
-		unsigned int back = startPos;
-		styler.Flush();
-		while (back > 0 && IsSpaceEquiv(styler.StyleAt(--back)))
-			;
-		if (styler.StyleAt(back) == SCE_C_OPERATOR) {
-			chPrevNonWhite = styler.SafeGetCharAt(back);
+	unsigned int origStartPos = startPos;
+	// First move to the start of the line
+	startPos = styler.LineStart(lineCurrent);
+	// Also make sure we aren't starting in the middle of an inner string expression
+	// ( " ... #{ ...
+	unsigned int origLineCurrent = lineCurrent;
+	styler.Flush();
+	for (; lineCurrent > 0; --lineCurrent) {
+		if (styler.GetLineState(lineCurrent - 1) == 0) {
+			// Break at start of this line
+			// with the style from the end of the previous line.
+			startPos = styler.LineStart(lineCurrent);
+			initStyle = styler.StyleAt(startPos - 1);
+			break;
 		}
-		if (startPos != back) {
-			initStyle = styler.StyleAt(back);
-		}
-		startPos = back;
 	}
+	if (lineCurrent == 0 && lineCurrent < origLineCurrent) {
+	    startPos = 0;
+	    initStyle = SCE_C_DEFAULT;
+	}
+	unsigned int numOpenBraces = 0;
 
 	StyleContext sc(startPos, endPos - startPos, initStyle, styler);
+	lineCurrent = styler.GetLine(startPos);
 
 	for (; sc.More(); sc.Forward()) {
 
@@ -161,6 +173,7 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 		// Handle line continuation generically.
 		if (sc.ch == '\\') {
 			if (sc.chNext == '\n' || sc.chNext == '\r') {
+				styler.SetLineState(lineCurrent++, numOpenBraces);
 				sc.Forward();
 				if (sc.ch == '\r' && sc.chNext == '\n') {
 					sc.Forward();
@@ -168,6 +181,8 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 				continuationLine = true;
 				continue;
 			}
+		} else if (sc.ch == '\n') {
+			styler.SetLineState(lineCurrent++, numOpenBraces);
 		}
 
 		// Determine if the current state should terminate.
@@ -264,10 +279,13 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 						isIncludePreprocessor = false;
 					}
 				} else if (sc.ch == '\\') {
-					if (sc.chNext == '\"' || sc.chNext == '\'' || sc.chNext == '\\') {
+					if (sc.chNext == '\"' || sc.chNext == '\'' || sc.chNext == '\\' || sc.chNext == '#') {
 						sc.Forward();
 					}
 				} else if (sc.ch == '\"') {
+					sc.ForwardSetState(SCE_C_DEFAULT);
+				} else if (sc.ch == '#' && sc.chNext == '{') {
+					numOpenBraces += 1;
 					sc.ForwardSetState(SCE_C_DEFAULT);
 				}
 				break;
@@ -293,11 +311,6 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 					if (sc.chNext == '\\' || sc.chNext == '/') {
 						sc.Forward();
 					}
-				}
-				break;
-			case SCE_C_STRINGEOL:
-				if (sc.atLineStart) {
-					sc.SetState(SCE_C_DEFAULT);
 				}
 				break;
 			case SCE_C_VERBATIM:
@@ -387,11 +400,14 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 			} else if (sc.ch == '\'') {
 				sc.SetState(SCE_C_CHARACTER);
 			} else if (sc.ch == '#') {
-                if (sc.Match("###")) {
-                    sc.SetState(SCE_C_COFFEESCRIPT_COMMENTBLOCK);
-                } else {
-                    sc.SetState(SCE_C_COMMENTLINE);
-                }
+				if (sc.Match("###")) {
+				    sc.SetState(SCE_C_COFFEESCRIPT_COMMENTBLOCK);
+				} else {
+				    sc.SetState(SCE_C_COMMENTLINE);
+				}
+			} else if (sc.ch == '}' && numOpenBraces > 0) {
+				numOpenBraces -= 1;
+				sc.SetState(SCE_C_STRING);
 			} else if (isoperator(static_cast<char>(sc.ch))) {
 				sc.SetState(SCE_C_OPERATOR);
 			}

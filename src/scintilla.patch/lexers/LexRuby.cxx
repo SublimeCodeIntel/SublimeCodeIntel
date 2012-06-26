@@ -7,17 +7,21 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <assert.h>
+#include <ctype.h>
 
-#include "Platform.h"
-
-#include "PropSet.h"
-#include "Accessor.h"
-#include "KeyWords.h"
+#include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
+
+#include "WordList.h"
+#include "LexAccessor.h"
+#include "Accessor.h"
+#include "StyleContext.h"
+#include "CharacterSet.h"
+#include "LexerModule.h"
 
 #ifdef SCI_NAMESPACE
 using namespace Scintilla;
@@ -363,6 +367,53 @@ static bool RE_CanFollowKeyword(const char *keyword) {
         return true;
     }
     return false;
+}
+
+static bool isHashRocketSuccessorColon(int i, Accessor &styler) {
+    // Precondition: i points to the current character, so move back one.
+    // Looking for instances of <letter+>: following ":" or "{"
+    int pos;
+    char ch;
+    for (pos = i - 1; pos > 0; --pos) {
+        ch = styler[pos];
+        if (!isSafeWordcharOrHigh(ch)) {
+            break;
+        }
+    }
+    if (pos == 0 || pos == i - 1) {
+        // Hit beginning, or didn't move back
+        return false;
+    }
+    bool flushed = false;
+    while (pos > 0) {
+        if (strchr(" \t\r\n", ch)) {
+            pos -= 1;
+            if (pos <= 0) {
+                return false;
+            }
+            ch = styler[pos];
+        } else {
+            if (!flushed) {
+                // Flush styles so we can skip comments
+                styler.Flush();
+                flushed = true;
+            }
+            if (actual_style(styler.StyleAt(pos)) != SCE_RB_COMMENTLINE) {
+                // Not white-space or comment, so don't move back
+                break;
+            }
+            // Look for start of comment and then recheck whitespace
+            // This handles a block of comments
+            while (--pos > 0) {
+                if (actual_style(styler.StyleAt(pos)) != SCE_RB_COMMENTLINE) {
+                    ch = styler[pos];
+                    // start of comment.  Is it preceded by whitespace?
+                    break;
+                }
+            }
+        }
+    }
+    return (ch == ',' || ch == '{');
 }
 
 // Look at chars up to but not including endPos
@@ -828,13 +879,13 @@ static void ColouriseRbDoc(unsigned int startPos, int length, int initStyle,
                 state = SCE_RB_COMMENTLINE;
             } else if (ch == '=') {
                 // =begin indicates the start of a comment (doc) block
-                if (i == 0 || (isEOLChar(chPrev)
+                if ((i == 0 || isEOLChar(chPrev))
                     && chNext == 'b'
                     && styler.SafeGetCharAt(i + 2) == 'e'
                     && styler.SafeGetCharAt(i + 3) == 'g'
                     && styler.SafeGetCharAt(i + 4) == 'i'
                     && styler.SafeGetCharAt(i + 5) == 'n'
-                    && !isSafeWordcharOrHigh(styler.SafeGetCharAt(i + 6)))) {
+                    && !isSafeWordcharOrHigh(styler.SafeGetCharAt(i + 6))) {
                     styler.ColourTo(i - 1, state);
                     state = SCE_RB_POD;
                 } else {
@@ -1076,7 +1127,10 @@ static void ColouriseRbDoc(unsigned int startPos, int length, int initStyle,
                 }
             }
         } else if (state == SCE_RB_WORD) {
-            if (ch == '.' || !isSafeWordcharOrHigh(ch)) {
+            if (ch == ':' && chNext != ':' && isHashRocketSuccessorColon(i, styler)) {
+                styler.ColourTo(i, SCE_RB_SYMBOL);
+                state = SCE_RB_DEFAULT;
+            } else if (ch == '.' || !isSafeWordcharOrHigh(ch)) {
                 // Words include x? in all contexts,
                 // and <letters>= after either 'def' or a dot
                 // Move along until a complete word is on our left
@@ -1226,7 +1280,6 @@ static void ColouriseRbDoc(unsigned int startPos, int length, int initStyle,
                     state = SCE_RB_DEFAULT;
                     i--;
                     chNext = ch;
-                    chNext2 = chNext;
                     preferRE = false;
                 } else if (HereDoc.Quoted) {
                     if (ch == HereDoc.Quote) { // closing quote => end of delimiter
@@ -1393,7 +1446,6 @@ static void ColouriseRbDoc(unsigned int startPos, int length, int initStyle,
                         }
                     }
                     chNext = styler.SafeGetCharAt(i + 1);
-                    chNext2 = styler.SafeGetCharAt(i + 2);
                 }
             }
         // Quotes of all kinds...

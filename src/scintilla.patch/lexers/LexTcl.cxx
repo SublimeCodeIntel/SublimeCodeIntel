@@ -9,17 +9,21 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <assert.h>
+#include <ctype.h>
 
-#include "Platform.h"
-
-#include "PropSet.h"
-#include "Accessor.h"
-#include "KeyWords.h"
+#include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
+
+#include "WordList.h"
+#include "LexAccessor.h"
+#include "Accessor.h"
+#include "StyleContext.h"
+#include "CharacterSet.h"
+#include "LexerModule.h"
 
 #ifdef SCI_NAMESPACE
 using namespace Scintilla;
@@ -49,14 +53,14 @@ static char *stateToString(int state) {
     }
 }
 
-static void describeString(unsigned int end, int state, Accessor &styler) {
+static void describeString(int end, int state, Accessor &styler) {
     char s[1024];
-    unsigned int start = styler.GetStartSegment();
-    unsigned int len = end - start + 1;
+    int start = styler.GetStartSegment();
+    int len = end - start + 1;
 
     if (!len) { return; }
 
-    for (unsigned int i = 0; i < len && i < 100; i++) {
+    for (int i = 0; i < len && i < 100; i++) {
 	s[i] = styler[start + i];
 	s[i + 1] = '\0';
     }
@@ -75,18 +79,20 @@ static void describeString(unsigned int end, int state, Accessor &styler) {
 #endif
 
 static inline bool isTclOperator(char ch) {
-    return strchr("(){}[];!%^&*-=+|<>?/", ch) != NULL;
+    // Fix bug 74850 -- the backslash acts as an operator outside strings
+    // Otherwise other code processors won't see escaped things, esp. \{ and \}
+    return strchr("(){}[];!%^&*-=+|<>?/\\", ch) != NULL;
 }
 
-static void classifyWordTcl(unsigned int start,
-			    unsigned int end,
+static void classifyWordTcl(int start,
+			    int end,
 			    WordList &keywords,
 			    Accessor &styler) {
     char s[100];
     char chAttr;
     bool wordIsNumber = isdigit(styler[start]) || (styler[start] == '.');
 
-    for (unsigned int i = 0; i < end - start + 1 && i < 40; i++) {
+    for (int i = 0; i < end - start + 1 && i < 40; i++) {
 	s[i] = styler[start + i];
 	s[i + 1] = '\0';
     }
@@ -118,106 +124,117 @@ static inline bool IsIOStyle(int style) {
 // Null transitions when we see we've reached the end
 // and need to relex the curr char.
 
-static void redo_char(unsigned int &i, char &ch, char &chNext, int &state) {
+static void redo_char(int &i, char &ch, char &chNext, int &state) {
     i--;
     chNext = ch;
     state = SCE_TCL_DEFAULT;
-}
-
-// Because of the quote-in-brace problem, sync at the first
-// line that starts with a keyword
-
-static void synchronizeDocStart(unsigned int& startPos,
-				int &length,
-				int &initStyle,
-				Accessor &styler
-				// Left for compatibility with other lexers
-				// ,bool skipWhiteSpace=false
-				) {
-
-    styler.Flush();
-    int style = actual_style(styler.StyleAt(startPos));
-    switch (style) {
-	case SCE_TCL_STDIN:
-	case SCE_TCL_STDOUT:
-	case SCE_TCL_STDERR:
-	    // Don't do anything else with these.
-	    return;
-    }
-    int start_line, start_line_pos, start_style;
-    char ch;
-    int minLinesUp = 3;
-    for (start_line = styler.GetLine(startPos) - minLinesUp; start_line > 0; start_line--) {
-	start_line_pos = styler.LineStart(start_line);
-	start_style = actual_style(styler.StyleAt(start_line_pos));
-	// We like lines that start with a keyword or comment
-	if (start_style == SCE_TCL_WORD
-	    || start_style == SCE_TCL_COMMENT) {
-	    length += startPos - start_line_pos;
-	    startPos = start_line_pos;
-	    initStyle = start_style;
-	    return;
-	} else if (start_style == SCE_TCL_DEFAULT) {
-	    // Look for ^\s+<keyword>
-	    int i = start_line_pos;
-	    int lim = styler.LineStart(start_line + 1); // has to exist
-	    for (i = start_line_pos; i < lim; i++) {
-		ch = styler[i];
-		if (ch != ' ' && ch != '\t') {
-		    break;
-		} else {
-		    int next_style = actual_style(styler.StyleAt(i + 1));
-		    if (next_style == SCE_TCL_WORD) {
-			length += startPos - start_line_pos;
-			startPos = start_line_pos;
-			initStyle = start_style;
-			return;
-		    } else if (next_style != SCE_TCL_DEFAULT) {
-			break;
-		    }
-		}
-	    }
-	} else {
-	    break;
-	}
-    }
-    // Go back to the beginning.
-    length += startPos;
-    startPos = 0;
-    initStyle = SCE_TCL_DEFAULT;
 }
 
 static inline bool isSafeAlnum(char ch) {
     return ((unsigned int) ch >= 128) || isalnum(ch) || ch == '_';
 }
 
-static inline void advanceOneChar(unsigned int& i, char&ch, char& chNext, char chNext2) {
+static inline void advanceOneChar(int& i, char&ch, char& chNext, char chNext2) {
     i++;
     ch = chNext;
     chNext = chNext2;
 }
 
-static void ColouriseTclDoc(unsigned int startPos,
+#define BITSTATE_TOP_LEVEL  0x00
+#define BITSTATE_IN_STRING  0x01
+#define BITSTATE_IN_COMMAND 0x02
+#define BITSTATE_IN_BRACE   0x03
+#define BITSTATE_MASK       0x03
+#define BITSTATE_MASK_SIZE  2
+
+#define pushBitState(bitState, mask) bitState = ((bitState) << BITSTATE_MASK_SIZE) | (mask)
+
+#define popBitState(bitState) bitState >>= BITSTATE_MASK_SIZE;
+
+#define testBitStateNotTopLevel(bitState, mask) \
+  (((bitState) & BITSTATE_MASK) == (mask))
+
+static bool testBitStateOrTopLevel(unsigned int bitState,
+				   unsigned int mask) {
+    unsigned int part = bitState & BITSTATE_MASK;
+    return !part || part == mask;
+}
+
+/**
+ * We're in a situation like { ... " ...
+ * Look at the line to the right of the '"'.  If it contains a
+ * closing close-brace before we hit a '"' or eol or eof, return true
+ *
+ * The caller can then color the '"' as a tcl_literal.
+ */
+static bool lineContainsClosingBrace(int pos,
+				     int lengthDoc,
+				     Accessor &styler) {
+    char ch;
+    int numBraces = 0;
+    for (; pos < lengthDoc; pos++) {
+	ch = styler.SafeGetCharAt(pos);
+	if (ch == '\\') {
+	    pos++;
+	} else if (ch == '"') {
+	    return false;
+	} else if (ch == '\n') {
+	    return false;
+	} else if (ch == '{') {
+	    numBraces++;
+	} else if (ch == '}') {
+	    numBraces--;
+	    if (numBraces < 0) {
+		return true;
+	    }
+	}
+    }
+    return false;
+}
+
+static bool continuesComment(int pos,
+			     Accessor &styler) {
+    int style;
+    styler.Flush();
+    for (; pos >= 0; --pos) {
+	style = actual_style(styler.StyleAt(pos));
+	if (style == SCE_TCL_COMMENT) {
+	    return true;
+	} else if (style != SCE_TCL_DEFAULT) {
+	    return false;
+	}
+    }
+    return false;
+}
+
+static void ColouriseTclDoc(unsigned int startPos_,
 			    int length,
 			    int initStyle,
 			    WordList *keywordlists[],
 			    Accessor &styler) {
     WordList &keywords = *keywordlists[0];
 
+    long bitState = 0;
+    int startPos = (int) startPos_; // avoid unsigned int due to
+                                    // bdry conditions at buffer start
+
     int inEscape	= 0;
     int inStrBraceCnt	= 0;
-    int inCmtBraceCnt    = 0; 
+    // inCmtBraceCnt -- keeps track of the brace count in a block of
+    // comments.  End it when we hit a different state.
+    // This means that the synchronization always starts at a block of
+    // comments as well.
+    int inCmtBraceCnt   = 0;
     int lastQuoteSpot   = -1;
     // We're not always sure of the command start, but make an attempt
     bool cmdStart	= true;
     // Keep track of whether a variable is using braces or it is an array
     bool varBraced	= 0;
-    bool isMultiLineString = false;
 
     //fprintf(stderr, "Start lexing at pos %d, len %d, style %d\n", startPos, length, initStyle);
     
     int state;
-    unsigned int lengthDoc = startPos + length;
+    int lengthDoc = startPos + length;
     if (IsIOStyle(initStyle)) {
 	// KOMODO
 	// Skip initial IO Style?
@@ -225,12 +242,38 @@ static void ColouriseTclDoc(unsigned int startPos,
 	       && IsIOStyle(actual_style(styler.StyleAt(startPos)))) {
 	    startPos++;
 	}
-	state = SCE_P_DEFAULT;
     } else {
-	synchronizeDocStart(startPos, length, initStyle, styler);
-	lengthDoc = startPos + length;
-	state = initStyle;
+	int start_line, style, start_line_pos = 0, pos;
+	char ch;
+	for (start_line = styler.GetLine(startPos);
+	     start_line > 0;
+	     --start_line) {
+	    // Don't stop after an escaped line.
+	    start_line_pos = styler.LineStart(start_line);
+	    pos = start_line_pos - 1;
+	    ch = styler.SafeGetCharAt(pos);
+	    if (pos > 0 && ch == '\n') {
+		pos -= 1;
+		ch = styler.SafeGetCharAt(pos);
+	    }
+	    if (pos > 0 && ch == '\r') {
+		pos -= 1;
+		ch = styler.SafeGetCharAt(pos);
+	    }
+	    if (ch == '\\'
+		|| actual_style(styler.StyleAt(pos)) == SCE_TCL_COMMENT) {
+		continue;
+	    }
+	    bitState = styler.GetLineState(start_line - 1);
+	    if (!testBitStateNotTopLevel(bitState, BITSTATE_IN_STRING)) {
+		// Simplify: don't start in a multi-line string
+		break;
+	    }
+	}
+	lengthDoc = startPos + length + (start_line_pos - startPos);
+	startPos = start_line_pos;
     }
+    state = SCE_TCL_DEFAULT;
     //fprintf(stderr, "After sync, start at pos %d, len %d, style %d\n", startPos, length, initStyle);
     char chPrev		= ' ';
     char chNext		= styler[startPos];
@@ -239,16 +282,14 @@ static void ColouriseTclDoc(unsigned int startPos,
     int visibleChars = 0;
     int lineCurrent = styler.GetLine(startPos);
     int levelPrev   = styler.LevelAt(lineCurrent) & SC_FOLDLEVELNUMBERMASK;
+    int levelMinPrev   = levelPrev;
     int levelCurrent = levelPrev;
     bool foldCompact = styler.GetPropertyInt("fold.compact", 1) != 0;
-
-    struct tag_lineInfo {
-	int lineCurrent, levelCurrent, levelPrev, visibleChars;
-    } heldLineInfo = {0, 0, 0, 0};
+    bool foldAtElse = styler.GetPropertyInt("fold.at.else", 1) != 0;
 
     styler.StartAt(startPos);
     styler.StartSegment(startPos);
-    for (unsigned int i = startPos; i < lengthDoc; i++) {
+    for (int i = startPos; i < lengthDoc; i++) {
 	char ch = chNext;
 	chNext = styler.SafeGetCharAt(i + 1);
 
@@ -257,6 +298,7 @@ static void ColouriseTclDoc(unsigned int startPos,
 	    chPrev = ' ';
 	    i += 1;
 	    visibleChars++;
+	    cmdStart = false;
 	    continue;
 	}
 
@@ -278,6 +320,7 @@ static void ColouriseTclDoc(unsigned int startPos,
 	    // Trigger on CR only (Mac style) or either on LF from CR+LF
 	    // (Dos/Win) or on LF alone (Unix) Avoid triggering two times on
 	    // Dos/Win End of line
+	    styler.SetLineState(lineCurrent, bitState);
 	    if (state == SCE_TCL_EOL) {
 		colourString(i, state, styler);
 		state = SCE_TCL_DEFAULT;
@@ -286,22 +329,26 @@ static void ColouriseTclDoc(unsigned int startPos,
 	    fprintf(stderr, "end of line %d, levelPrev=0x%0x, levelCurrent=0x%0x\n",
 		    lineCurrent, levelPrev, levelCurrent);
 #endif
-	    int lev = levelPrev;
+	    int levelUse = foldAtElse ? levelMinPrev : levelPrev;
+	    int lev = levelUse;
 	    if (lev < SC_FOLDLEVELBASE) {
 		lev = SC_FOLDLEVELBASE;
 	    }
 	    if (visibleChars == 0 && foldCompact) {
 		lev |= SC_FOLDLEVELWHITEFLAG;
 	    }
-	    if ((levelCurrent > levelPrev) && (visibleChars > 0)) {
+	    if ((levelCurrent > levelUse) && (visibleChars > 0)) {
 		lev |= SC_FOLDLEVELHEADERFLAG;
 	    }
 	    if (lev != styler.LevelAt(lineCurrent)) {
 		styler.SetLevel(lineCurrent, lev);
 	    }
 	    lineCurrent++;
-	    levelPrev = levelCurrent;
+	    levelMinPrev = levelPrev = levelCurrent;
 	    visibleChars = 0;
+	    if (state == SCE_TCL_DEFAULT && !inEscape) {
+		cmdStart = true;
+	    }
 	} else if (!isspacechar(ch)) {
 	    visibleChars++;
 	}
@@ -310,17 +357,33 @@ static void ColouriseTclDoc(unsigned int startPos,
 	    if ((ch == '#') && cmdStart) {
 		colourString(i-1, state, styler);
 		state = SCE_TCL_COMMENT;
-		inCmtBraceCnt = 0; 
+		if (i > 0 && !continuesComment(i - 1, styler)) {
+		    inCmtBraceCnt = 0;
+		}
+		cmdStart = false;
 	    } else if ((ch == '\"') && !inEscape) {
-		colourString(i-1, state, styler);
-		isMultiLineString = false;
-		state = SCE_TCL_STRING;
-		inStrBraceCnt = 0;
-		lastQuoteSpot = i;
-		heldLineInfo.lineCurrent = lineCurrent;
-		heldLineInfo.levelCurrent = levelCurrent;
-		heldLineInfo.levelPrev = levelPrev;
-		heldLineInfo.visibleChars = visibleChars;
+		if (testBitStateNotTopLevel(bitState, BITSTATE_IN_BRACE)) {
+		    if (lineContainsClosingBrace(i + 1, lengthDoc, styler)) {
+			// Do nothing, treat it like a literal.
+			colourString(i-1, state, styler);
+			colourString(i, SCE_TCL_LITERAL, styler);
+		    } else {
+			colourString(i-1, state, styler);
+			state = SCE_TCL_STRING;
+			pushBitState(bitState, BITSTATE_IN_STRING);
+			inStrBraceCnt = 0;
+			// Count braces in this string
+			// Note that this brace-count doesn't survive
+			// when a string is broken by a command.
+		    }
+		} else {
+		    colourString(i-1, state, styler);
+		    state = SCE_TCL_STRING;
+		    pushBitState(bitState, BITSTATE_IN_STRING);
+		    // Ignore braces in this string
+		    inStrBraceCnt = -1;
+		}
+		cmdStart = false;
 	    } else if (ch == '$') {
 		colourString(i-1, state, styler);
 		if (chNext == '{') {
@@ -334,12 +397,14 @@ static void ColouriseTclDoc(unsigned int startPos,
 		    colourString(i, SCE_TCL_OPERATOR, styler);
 		    // Stay in default mode.
 		}
+		cmdStart = false;
 	    } else if (isTclOperator(ch) || ch == ':') {
 		if (ch == '-' && isascii(chNext) && isalpha(chNext)) {
 		    colourString(i-1, state, styler);
 		    // We could call it an identifier, but then we'd need another
 		    // state.  classifyWordTcl will do the right thing.
 		    state = SCE_TCL_WORD;
+		    cmdStart = false;
 		} else {
 		    // color up this one character as our operator
 		    // multi-character operators will have their second
@@ -348,12 +413,32 @@ static void ColouriseTclDoc(unsigned int startPos,
 		    colourString(i, SCE_TCL_OPERATOR, styler);
 		    if (!inEscape) {
 			if (ch == '{' || ch == '[') {
+			    if (ch == '{') {
+				if (levelMinPrev > levelCurrent) {
+				    levelMinPrev = levelCurrent;
+				}
+				pushBitState(bitState, BITSTATE_IN_BRACE);
+			    } else {
+				pushBitState(bitState, BITSTATE_IN_COMMAND);
+			    }
 			    ++levelCurrent;
 			    cmdStart = true;
-			} else if  (ch == ']' || ch == '}') {
+			} else if (ch == ']' || ch == '}') {
 			    if ((levelCurrent & SC_FOLDLEVELNUMBERMASK) > SC_FOLDLEVELBASE) {
 				--levelCurrent;
 			    }
+			    if (ch == ']') {
+				if (testBitStateNotTopLevel(bitState, BITSTATE_IN_COMMAND)) {
+				    popBitState(bitState);
+				    if (testBitStateNotTopLevel(bitState, BITSTATE_IN_STRING)) {
+					state = SCE_TCL_STRING;
+				    }
+				}
+			    } else if (testBitStateNotTopLevel(bitState, BITSTATE_IN_BRACE)) {
+				popBitState(bitState);
+			    }
+			} else if (ch == ';' && testBitStateOrTopLevel(bitState, BITSTATE_IN_BRACE)) {
+			    cmdStart = true;
 			}
 		    }
 		}
@@ -366,6 +451,9 @@ static void ColouriseTclDoc(unsigned int startPos,
 				    keywords, styler);
 		    // Stay in the default state
 		}
+		cmdStart = false;
+	    } else if (!isspacechar(ch)) {
+		cmdStart = false;
 	    }
 	} else if (state == SCE_TCL_WORD) {
 	    if (!iswordchar(chNext)) {
@@ -407,12 +495,6 @@ static void ColouriseTclDoc(unsigned int startPos,
 			state = SCE_TCL_DEFAULT;
 		    }
 		}
-	    } else if (state == SCE_TCL_OPERATOR) {
-		/* not reached */
-		if (ch == '}') {
-		    colourString(i-1, state, styler);
-		    state = SCE_TCL_DEFAULT;
-		}
 	    } else if (state == SCE_TCL_COMMENT) {
 		/*
 		 * The line continuation character also works for comments.
@@ -420,19 +502,25 @@ static void ColouriseTclDoc(unsigned int startPos,
 		if ((ch == '\r' || ch == '\n') && !inEscape) {
 		    colourString(i-1, state, styler);
 		    state = SCE_TCL_DEFAULT;
+		    cmdStart = true;
 		} else if ((ch == '{') && !inEscape) {
 		    inCmtBraceCnt++;
 		} else if ((ch == '}') && !inEscape) {
 		    inCmtBraceCnt--;
-		    if (inCmtBraceCnt < 0) {
-			if (levelCurrent > levelPrev) {
-			    colourString(i - 1, state, styler);
-			    redo_char(i, ch, chNext, state); // pass by ref
-			}
+		    // Ignore braces at the top-level
+		    // If we're processing a comment, the current bit-state
+		    // is either clear or IN_BRACE
+		    // Don't worry about 
+		    if (inCmtBraceCnt == -1 && testBitStateNotTopLevel(bitState,
+								       BITSTATE_IN_BRACE)) {
+			popBitState(bitState);
+			colourString(i - 1, state, styler);
+			colourString(i, SCE_TCL_OPERATOR, styler);
+			state = SCE_TCL_DEFAULT;
 		    }
 		}
-	    } else if (state == SCE_TCL_STRING) {
-		if ((ch == '\r' || ch == '\n') && !inEscape) {
+	    } else if (state == SCE_TCL_STRING && !inEscape) {
+		if (ch == '\r' || ch == '\n') {
 		    /*
 		     * In the case of EOL in a string where the line
 		     * continuations character isn't used, leave us in the
@@ -444,69 +532,38 @@ static void ColouriseTclDoc(unsigned int startPos,
 		    // and whip back.
 		    
 		    //!! colourString(i-1, state, styler);
-		    isMultiLineString = true;
 		    //colourString(i, SCE_TCL_EOL, styler);
 		    /*
 		     * We are in a string, but in Tcl you can never really
 		     * say when a command starts or not until eval.
 		     */
 		    cmdStart = true;
-		} else if ((ch == '\"') && !inEscape) {
+		} else if (ch == '\"') {
+		    colourString(i, state, styler);
+		    popBitState(bitState);
+		    // We always pop to a default state
+		    state = SCE_TCL_DEFAULT;
+		} else if (ch == '[') {
+		    pushBitState(bitState, BITSTATE_IN_COMMAND);
 		    colourString(i, state, styler);
 		    state = SCE_TCL_DEFAULT;
-		} else if ((ch == '{') && !inEscape) {
+		    ++levelCurrent;
+		    cmdStart = true;
+		} else if (ch == '{') {
 		    inStrBraceCnt++;
-		} else if ((ch == '}') && !inEscape) {
+		} else if (ch == '}') {
 		    inStrBraceCnt--;
 		    if (inStrBraceCnt < 0) {
-			bool inside_brace;
-			if (levelCurrent > levelPrev) {
-			    inside_brace = true;
-			} else {
-			    int lev = styler.LevelAt(lineCurrent > 0 ? lineCurrent - 1 : 0);
-			    //fprintf(stderr, "pos %d, line %d, raw level=0x%0x\n", i, lineCurrent, lev);
-			    inside_brace = (((lev
-					      & (SC_FOLDLEVELNUMBERMASK
-						 & ~SC_FOLDLEVELBASE))) > 0);
-			}
-			if (inside_brace) {
-			    /*
-			     * We have hit a situation where brace counting
-			     * inside the string is < 0, so this was likely
-			     * a lone unescaped " character is a {}ed string.
-			     * Color it as a literal, and then relex from
-			     * the point after it.
-			     */
-			    state = SCE_TCL_DEFAULT;
-			    if (lastQuoteSpot >= 0) {
-				if (isMultiLineString) {
-				    // recolor
-				    styler.StartSegment(lastQuoteSpot);
-				    isMultiLineString = false;
-				}
-				colourString(lastQuoteSpot, SCE_TCL_LITERAL, styler);
-				chPrev = styler[i = lastQuoteSpot];
-				chNext = styler[lastQuoteSpot + 1];
-				lastQuoteSpot = -1;
-				lineCurrent = heldLineInfo.lineCurrent;
-				levelCurrent = heldLineInfo.levelCurrent;
-				levelPrev = heldLineInfo.levelPrev;
-				visibleChars = heldLineInfo.visibleChars;
-				continue;
-			    
-			    } else {
-				colourString(i-1, SCE_TCL_LITERAL, styler);
-				colourString(i, SCE_TCL_OPERATOR, styler);
-			    }
-			}
+			// End the string here.
+			colourString(i - 1, state, styler);
+			popBitState(bitState);
+			colourString(i - 1, SCE_TCL_OPERATOR, styler);
+			state = SCE_TCL_DEFAULT;
+			--levelCurrent;
 		    }
 		}
 	    }
 	}
-
-	cmdStart = ((!inEscape && strchr("\r\n;[", ch)) // XXX '[' not needed?
-		    || (cmdStart && strchr(" \t[{", ch)));
-
 	chPrev = ch;
     }
     // Make sure to colorize last part of document
