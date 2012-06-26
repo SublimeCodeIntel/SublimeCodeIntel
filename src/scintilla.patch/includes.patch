@@ -1,17 +1,54 @@
 --- include/Scintilla.iface	2007-11-04 02:03:56.000000000 -0800
 +++ include/Scintilla.iface	2007-11-11 17:14:56.000000000 -0800
-@@ -2279,14 +2297,18 @@
- val SCLEX_COBOL=92
- val SCLEX_TACL=93
+@@ -2112,14 +2112,35 @@
+ # Retrieve the number of bits the current lexer needs for styling.
+ get int GetStyleBitsNeeded=4011(,)
+ 
+ # Retrieve the name of the lexer.
+ # Return the length of the text.
+ get int GetLexerLanguage=4012(, stringresult text)
+ 
++### ACTIVESTATE Functions 5000+ ####
++
++# Set the drag caret position
++set void SetDragPosition=5002(position pos,)
++
++# Returns the position of the caret.
++get position GetDragPosition=5003(,)
++
++# Returns the position of the character.
++fun position PositionAtChar=5004(position start, int charoffset)
++
++# Returns the position of the column.
++fun position PositionAtColumn=5005(int line, int column)
++
++# Returns the position of the caret.
++fun position CharPosAtPosition=5006(position pos,)
++
++# Temporarily stop mouse tracking - until the next mouse button event.
++fun void ReleaseMouseCapture=5007(,)
++
++
+ # For private communication between an application and a known lexer.
+ fun int PrivateLexerCall=4013(int operation, int pointer)
+ 
+ # Retrieve a '\n' separated list of properties understood by the current lexer.
+ fun int PropertyNames=4014(, stringresult names)
+ 
+ enu TypeProperty=SC_TYPE_
+@@ -2279,15 +2297,19 @@
  val SCLEX_SORCUS=94
  val SCLEX_POWERPRO=95
  val SCLEX_NIMROD=96
  val SCLEX_SML=97
  val SCLEX_MARKDOWN=98
-+val SCLEX_XSLT=99
+ val SCLEX_TXT2TAGS=99
+ val SCLEX_A68K=100
+ val SCLEX_MODULA=101
++val SCLEX_XSLT=102
 +# User-defined languages
-+val SCLEX_UDL=100
-+val SCLEX_COFFEESCRIPT=101
++val SCLEX_UDL=103
++val SCLEX_COFFEESCRIPT=104
  
  # When a lexer specifies its language as SCLEX_AUTOMATIC it receives a
  # value assigned in sequence from SCLEX_AUTOMATIC+1.
@@ -39,7 +76,7 @@
  val SCE_C_COMMENT=1
  val SCE_C_COMMENTLINE=2
  val SCE_C_COMMENTDOC=3
-@@ -2325,14 +2351,20 @@
+@@ -2325,16 +2351,22 @@
  val SCE_C_VERBATIM=13
  val SCE_C_REGEX=14
  val SCE_C_COMMENTLINEDOC=15
@@ -47,12 +84,14 @@
  val SCE_C_COMMENTDOCKEYWORD=17
  val SCE_C_COMMENTDOCKEYWORDERROR=18
  val SCE_C_GLOBALCLASS=19
-+val SCE_C_STDIN=20
-+val SCE_C_STDOUT=21
-+val SCE_C_STDERR=22
-+val SCE_C_COFFEESCRIPT_COMMENTBLOCK=23
-+val SCE_C_COFFEESCRIPT_VERBOSE_REGEX=24
-+val SCE_C_COFFEESCRIPT_VERBOSE_REGEX_COMMENT=25
+ val SCE_C_STRINGRAW=20
+ val SCE_C_TRIPLEVERBATIM=21
++val SCE_C_STDIN=22
++val SCE_C_STDOUT=23
++val SCE_C_STDERR=24
++val SCE_C_COFFEESCRIPT_COMMENTBLOCK=25
++val SCE_C_COFFEESCRIPT_VERBOSE_REGEX=26
++val SCE_C_COFFEESCRIPT_VERBOSE_REGEX_COMMENT=27
  # Lexical states for SCLEX_D
  lex D=SCLEX_D SCE_D_
  val SCE_D_DEFAULT=0
@@ -134,25 +173,22 @@
  val SCE_RB_COMMENTLINE=2
  val SCE_RB_POD=3
  val SCE_RB_NUMBER=4
-@@ -2906,8 +2950,10 @@
+@@ -2906,9 +2950,12 @@
  val SCE_CSS_EXTENDED_IDENTIFIER=19
  val SCE_CSS_EXTENDED_PSEUDOCLASS=20
  val SCE_CSS_EXTENDED_PSEUDOELEMENT=21
-+val SCE_CSS_NUMBER=22
-+val SCE_CSS_STRINGEOL=23
+ val SCE_CSS_MEDIA=22
++val SCE_CSS_NUMBER=23
++val SCE_CSS_STRINGEOL=24
++val SCE_CSS_MIXIN=25
  # Lexical states for SCLEX_POV
  lex POV=SCLEX_POV SCE_POV_
  val SCE_POV_DEFAULT=0
  val SCE_POV_COMMENT=1
  val SCE_POV_COMMENTLINE=2
-@@ -3713,14 +3746,144 @@
- val SCE_MARKDOWN_BLOCKQUOTE=15
- val SCE_MARKDOWN_STRIKEOUT=16
- val SCE_MARKDOWN_HRULE=17
- val SCE_MARKDOWN_LINK=18
- val SCE_MARKDOWN_CODE=19
- val SCE_MARKDOWN_CODE2=20
- val SCE_MARKDOWN_CODEBK=21
+@@ -3713,6 +3746,136 @@
+ val SCE_MODULA_OPERATOR=16
+ val SCE_MODULA_BADSTR=17
  
 +# Lexical states for the SCLEX_XML (XML files)
 +val SCE_XML_DEFAULT=0
@@ -287,6 +323,19 @@
  # Events
  
  evt void StyleNeeded=2000(int position)
- evt void CharAdded=2001(int ch)
- evt void SavePointReached=2002(void)
- evt void SavePointLeft=2003(void)
+--- include/Scintilla.h   Thu Sep 27 11:10:30 2007
++++ include/Scintilla.h Mon Oct 29 16:38:27 2007
+@@ -680,7 +680,13 @@
+ #define SCI_GETPROPERTYEXPANDED 4009
+ #define SCI_GETPROPERTYINT 4010
+ #define SCI_GETSTYLEBITSNEEDED 4011
+ #define SCI_GETLEXERLANGUAGE 4012
++#define SCI_SETDRAGPOSITION 5002
++#define SCI_GETDRAGPOSITION 5003
++#define SCI_POSITIONATCHAR 5004
++#define SCI_POSITIONATCOLUMN 5005
++#define SCI_CHARPOSATPOSITION 5006
++#define SCI_RELEASEMOUSECAPTURE 5007
+ #define SCI_PRIVATELEXERCALL 4013
+ #define SCI_PROPERTYNAMES 4014
+ #define SC_TYPE_BOOLEAN 0

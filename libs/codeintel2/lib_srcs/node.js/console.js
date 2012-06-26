@@ -1,5 +1,9 @@
+
 /**
- * Browser-like object for printing to stdout and stderr.
+ * For printing to stdout and stderr. Similar to the console object
+ * functions provided by most web browsers, here the output is sent to
+ * stdout or stderr.
+ * @type {Object}
  */
 var console = {};
 
@@ -35,6 +39,9 @@ console.error = function() {}
  */
 console.timeEnd = function(label) {}
 
+/**
+ * Same as console.log but prints to stderr.
+ */
 console.warn = function() {}
 
 /**
@@ -48,7 +55,6 @@ console.time = function(label) {}
  * @param obj
  */
 console.dir = function(obj) {}
-
 
 exports = console;
 

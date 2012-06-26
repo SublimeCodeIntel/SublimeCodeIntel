@@ -1,6 +1,6 @@
 diff -u -r1.73 LexCPP.cxx
---- src/LexPython.cxx	23 Apr 2007 01:19:47 -0000	1.46
-+++ src/LexPython.cxx	2 Oct 2007  17:16:35 -0000
+--- lexers/LexPython.cxx	23 Apr 2007 01:19:47 -0000	1.46
++++ lexers/LexPython.cxx	2 Oct 2007  17:16:35 -0000
 @@ -24,8 +24,40 @@
  using namespace Scintilla;
  #endif
@@ -38,7 +38,7 @@ diff -u -r1.73 LexCPP.cxx
 +
 +
  /* kwCDef, kwCTypeName only used for Cython */
- enum kwType { kwOther, kwClass, kwDef, kwImport, kwCDef, kwCTypeName };
+ enum kwType { kwOther, kwClass, kwDef, kwImport, kwCDef, kwCTypeName, kwCPDef };
  
  static const int indicatorWhitespace = 1;
  

@@ -63,7 +63,8 @@ assert.notDeepEqual = function(actual, expected, message) {}
 assert.notStrictEqual = function(actual, expected, message) {}
 
 /**
- * Tests if actual is equal to expected using the operator provided.
+ * Throws an exception that displays the values for actual and expected
+ * separated by the provided operator.
  * @param actual
  * @param expected
  * @param message
@@ -96,7 +97,6 @@ assert.strictEqual = function(actual, expected, message) {}
  * @param message
  */
 assert.deepEqual = function(actual, expected, message) {}
-
 
 exports = assert;
 

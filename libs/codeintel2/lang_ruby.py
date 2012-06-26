@@ -685,7 +685,7 @@ class RubyLangIntel(CitadelLangIntel,
                     # a string.
                     suppress = True
             elif last_ch in TRIGGER_IN_STRING_CHARS:
-                supress = True
+                suppress = True
         elif last_style in styleClassifier.completion_skip_styles:
             # If the user requests code-completion and previous char is
             # in this style, suppress it.
@@ -1492,24 +1492,6 @@ class RubyImportHandler(ImportHandler):
                 #    scripts, which might likely not have the
                 #    extension: need to grow filetype-from-content smarts.
                 files.append(path)
-
-    def genScannableFiles(self, path=None, skipRareImports=False,
-                          importableOnly=False):
-        if path is None:
-            path = self._getPath()
-        searchedDirs = {}
-        for dirname in path:
-            if dirname in ("", "."):
-                # Do NOT traverse the common '.' element of '$:'. It is
-                # environment-dependent so not useful for the typical call
-                # of this method.
-                continue
-            files = []
-            os.path.walk(dirname, self._findScannableFiles,
-                         (files, searchedDirs, skipRareImports,
-                          importableOnly))
-            for file in files:
-                yield file
 
     def find_importables_in_dir(self, dir):
         """See citadel.py::ImportHandler.find_importables_in_dir() for

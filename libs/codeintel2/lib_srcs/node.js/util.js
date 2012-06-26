@@ -31,10 +31,11 @@ util.pump = function(readableStream, writableStream, callback) {}
 /**
  * Return a string representation of object, which is useful for debugging.
  * @param object
- * @param showHidden=false
- * @param depth=2
+ * @param showHidden
+ * @param depth
+ * @param colors
  */
-util.inspect = function(object, showHidden, depth) {}
+util.inspect = function(object, showHidden, depth, colors) {}
 
 /**
  * Output with timestamp on stdout.
@@ -42,6 +43,40 @@ util.inspect = function(object, showHidden, depth) {}
  */
 util.log = function(string) {}
 
+/**
+ * Returns a formatted string using the first argument as a printf-like
+ * format.
+ * @returns a formatted string using the first argument as a printf-like format
+ */
+util.format = function() {}
+
+/**
+ * Returns true if the given "object" is an Array. false otherwise.
+ * @param object
+ * @returns true if the given "object" is an Array. false otherwise
+ */
+util.isArray = function(object) {}
+
+/**
+ * Returns true if the given "object" is a Date. false otherwise.
+ * @param object
+ * @returns true if the given "object" is a Date. false otherwise
+ */
+util.isDate = function(object) {}
+
+/**
+ * Returns true if the given "object" is an Error. false otherwise.
+ * @param object
+ * @returns true if the given "object" is an Error. false otherwise
+ */
+util.isError = function(object) {}
+
+/**
+ * Returns true if the given "object" is a RegExp. false otherwise.
+ * @param object
+ * @returns true if the given "object" is a RegExp. false otherwise
+ */
+util.isRegExp = function(object) {}
 
 exports = util;
 

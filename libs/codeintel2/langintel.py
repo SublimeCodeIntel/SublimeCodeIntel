@@ -162,6 +162,9 @@ class LangIntel(object):
             return elem.get("name") + "(" + classrefs + ")"
         return elem.get("name")+"()"
 
+    def cb_trait_detail_from_elem(self, elem):
+        return elem.get("name")
+
     def cb_interface_detail_from_elem(self, elem):
         interfacerefs = elem.get("interfacerefs")
         if interfacerefs:
@@ -218,6 +221,8 @@ class LangIntel(object):
                     detail = self.cb_interface_detail_from_elem(elem)
                 elif ilk == "namespace":
                     detail = self.cb_namespace_detail_from_elem(elem)
+                elif ilk == "trait":
+                    detail = self.cb_trait_detail_from_elem(elem)
                 else: # what else could it be?
                     log.warn("don't know how to get cb detail for '%s' elem",
                              ilk)

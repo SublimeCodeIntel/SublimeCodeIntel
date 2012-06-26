@@ -112,8 +112,8 @@ _javadoc1 = re.compile(r'\s*\/\*(.*)\*\/', re.S)
 _javadoc2 = re.compile(r'^(\s*\*)', re.M)
 _linedoc = re.compile(r'^(\s*#|\s*\/\/)', re.M)
 _indent = re.compile(r'^([ \t]*)', re.M)
-_param = re.compile(r'^\s*@param\s+(?P<type>\w+)\s+\$(?P<name>\w+)(?:\s+?(?P<doc>.*?))?', re.M|re.U)
-_return = re.compile(r'^\s*@return\s+(?P<type>\w+)(?:\s+(?P<doc>.*))?', re.M|re.U)
+_param = re.compile(r'^\s*@param\s+(?P<type>[\w\\]+)\s+\$(?P<name>\w+)(?:\s+?(?P<doc>.*?))?', re.M|re.U)
+_return = re.compile(r'^\s*@return\s+(?P<type>[\w\\]+)(?:\s+(?P<doc>.*))?', re.M|re.U)
 
 def uncommentDocString(doc):
     # remove block style leading and end comments

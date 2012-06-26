@@ -177,20 +177,6 @@ class TclImportHandler(ImportHandler):
                     continue
                 files.append(path)
 
-    def genScannableFiles(self, path=None, skipRareImports=False,
-                          importableOnly=False):
-        if path is None:
-            path = self._getPath()
-        searchedDirs = {}
-        for dirname in path:
-            if dirname == os.curdir:
-                continue
-            files = []
-            os.path.walk(dirname, self._findScannableFiles,
-                         (files, searchedDirs, skipRareImports))
-            for file in files:
-                yield file
-
 
 class TclCILEDriver(CILEDriver):
     lang = lang

@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """JavaScript support for Code Intelligence
@@ -59,6 +59,7 @@ from os.path import splitext, basename, exists, dirname, normpath
 import sys
 import types
 import logging
+import operator
 from cStringIO import StringIO
 import weakref
 from glob import glob
@@ -88,7 +89,7 @@ from codeintel2.jsdoc import JSDoc, JSDocParameter, jsdoc_tags
 from codeintel2.gencix_utils import *
 from codeintel2.database.langlib import LangDirsLib
 from codeintel2.udl import UDLBuffer, is_udl_csl_style
-from codeintel2.accessor import AccessorCache
+from codeintel2.accessor import AccessorCache, KoDocumentAccessor
 from codeintel2.langintel import (ParenStyleCalltipIntelMixin,
                                   ProgLangTriggerIntelMixin,
                                   PythonCITDLExtractorMixin)
@@ -193,7 +194,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
     # global vars is just annoying.
     cb_group_global_vars = False
     # Define the trigger chars we use, used by ProgLangTriggerIntelMixin
-    trg_chars = tuple(".(@'\" ")
+    trg_chars = tuple(".(,@'\" ")
     calltip_trg_chars = tuple('(')   # excluded ' ' for perf (bug 55497)
     # Define literal mapping to citdl member, used in PythonCITDLExtractorMixin
     citdl_from_literal_type = {"string": "String"}
@@ -206,6 +207,67 @@ class JavaScriptLangIntel(CitadelLangIntel,
         if len(elem) and data["img"].startswith("variable"):
             data["img"] = data["img"].replace("variable", "namespace")
         return data
+
+    def _functionCalltipTrigger(self, ac, jsClassifier, pos, DEBUG=False):
+        # Implicit calltip triggering from an arg separater ",", we trigger a
+        # calltip if we find a function open paren "(" and function identifier
+        #   http://bugs.activestate.com/show_bug.cgi?id=93864
+        if DEBUG:
+            print "Arg separater found, looking for start of function, pos: %r" % (pos, )
+        ac.getPrevPosCharStyle()
+        # Move back to the open paren of the function
+        paren_count = 0
+        p = pos
+        min_p = max(0, p - 100) # look back max 100 chars
+        while p > min_p:
+            p, c, style = ac.getPrecedingPosCharStyle(ignore_styles=jsClassifier.comment_styles)
+            if DEBUG:
+                print '  p: %r, ch: %r, st: %d' % (p, c, style)
+            loopcount = 0
+            while style == jsClassifier.operator_style and loopcount < 10:
+                loopcount += 1
+                if c == ")":
+                    paren_count += 1
+                    if DEBUG:
+                        print '    paren_count: %r' % (paren_count, )
+                elif c == "(":
+                    if DEBUG:
+                        print '    paren_count: %r' % (paren_count, )
+                    if paren_count == 0:
+                        # We found the open brace of the func
+                        trg_from_pos = p+1
+                        p, ch, style = ac.getPrevPosCharStyle()
+                        if DEBUG:
+                            print "  function start found, pos: %d" % (p, )
+                        if style in jsClassifier.ignore_styles:
+                            # Find previous non-ignored style then
+                            p, c, style = ac.getPrecedingPosCharStyle(style, jsClassifier.ignore_styles)
+                        if style == jsClassifier.identifier_style:
+                            # Ensure that this isn't a new function declaration.
+                            p, c, style = ac.getPrecedingPosCharStyle(style, jsClassifier.ignore_styles)
+                            if style == jsClassifier.keyword_style:
+                                p, prev_text = ac.getTextBackWithStyle(style, jsClassifier.ignore_styles, max_text_len=len("function")+1)
+                                if prev_text in ("function", ):
+                                    # Don't trigger here
+                                    return None
+                            return Trigger(lang, TRG_FORM_CALLTIP,
+                                           "call-signature",
+                                           trg_from_pos, implicit=True)
+                        return None
+                    else:
+                        paren_count -= 1
+                elif c in ";{}":
+                    # Gone too far and noting was found
+                    if DEBUG:
+                        print "  no function found, hit stop char: %s at p: %d" % (c, p)
+                    return None
+                p, c, style = ac.getPrevPosCharStyle()
+                if DEBUG:
+                    print '  p: %r, ch: %r, st: %d' % (p, c, style)
+        # Did not find the function open paren
+        if DEBUG:
+            print "  no function found, ran out of chars to look at, p: %d" % (p,)
+        return None
 
     def trg_from_pos(self, buf, pos, implicit=True,
                      lang=None):
@@ -391,7 +453,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
                     if DEBUG:
                         print "triggering 'javascript-complete-names' at " \
                               "pos: %d" % (last_pos - 2, )
-                                
+
                     return Trigger(self.lang, TRG_FORM_CPLN,
                                    "names", last_pos - 2, implicit,
                                    citdl_expr="".join(reversed(citdl_expr)))
@@ -447,10 +509,14 @@ class JavaScriptLangIntel(CitadelLangIntel,
                         return None
                 return Trigger(lang, TRG_FORM_CPLN,
                                "object-members", pos, implicit)
-            elif last_char == "(":
+            elif last_char in "(,":
                 # p is now at the end of the identifier, go back and check
                 # that we are not defining a function
                 ac = AccessorCache(accessor, p)
+                # Implicit calltip triggering from an arg separater ","
+                #   http://bugs.activestate.com/show_bug.cgi?id=93864
+                if implicit and last_char == ',':
+                    return self._functionCalltipTrigger(ac, jsClassifier, p, DEBUG)
                 # Get the previous style, if it's a keyword style, check that
                 # the keyword is not "function"
                 prev_pos, prev_char, prev_style = ac.getPrecedingPosCharStyle(jsClassifier.identifier_style, jsClassifier.ignore_styles)
@@ -626,7 +692,13 @@ class JavaScriptLangIntel(CitadelLangIntel,
         if extra_dirs:
             log.debug("%s extra lib dirs: %r", self.lang, extra_dirs)
             max_depth = env.get_pref("codeintel_max_recursive_dir_depth", 10)
+            # Always include common JS associations - bug 91915.
             js_assocs = env.assoc_patterns_from_lang("JavaScript")
+            if self.lang != "JavaScript":
+                # Add any language specific associations.
+                js_assocs = set(js_assocs)
+                js_assocs.update(env.assoc_patterns_from_lang(self.lang))
+                js_assocs = list(js_assocs)
             extra_dirs = tuple(
                 util.gen_dirs_under_dirs(extra_dirs,
                     max_depth=max_depth,
@@ -668,14 +740,6 @@ class JavaScriptLangIntel(CitadelLangIntel,
                                   self._invalidate_cache)
             env.add_pref_observer("codeintel_scan_exclude_dir",
                                   self._invalidate_cache)
-            # (Bug 68850) Both of these 'live_*' prefs on the *project*
-            # prefset can result in a change of project base dir. It is
-            # possible that we can get false positives here if there is ever
-            # a global pref of this name.
-            env.add_pref_observer("import_live",
-                self._invalidate_cache_and_rescan_extra_dirs)
-            env.add_pref_observer("import_dirname",
-                self._invalidate_cache_and_rescan_extra_dirs)
 
             db = self.mgr.db
             libs = []
@@ -690,10 +754,10 @@ class JavaScriptLangIntel(CitadelLangIntel,
             # might slow down completion.
             num_import_dirs = len(extra_dirs)
             if num_import_dirs > 100:
-                db.report_event("This buffer is configured with %d %s "
-                                "import dirs: this may result in poor "
-                                "completion performance" %
-                                (num_import_dirs, self.lang))
+                msg = "This buffer is configured with %d %s import dirs: " \
+                      "this may result in poor completion performance" % \
+                      (num_import_dirs, self.lang)
+                self.mgr.report_message(msg, "\n".join(extra_dirs))
 
             if buf.lang == self.lang:
                 # - curdirlib (before extradirslib; only if pure JS file)
@@ -761,12 +825,13 @@ class JavaScriptBuffer(CitadelBuffer):
 
     def __init__(self, *args, **kwargs):
         CitadelBuffer.__init__(self, *args, **kwargs)
-        
-        # Encourage the database to pre-scan dirs relevant to completion
-        # for this buffer -- because of recursive-dir-include-everything
-        # semantics for JavaScript this first-time scan can take a while.
-        request = PreloadBufLibsRequest(self)
-        self.mgr.idxr.stage_request(request, 1.0)
+
+        if isinstance(self.accessor, KoDocumentAccessor):
+            # Encourage the database to pre-scan dirs relevant to completion
+            # for this buffer -- because of recursive-dir-include-everything
+            # semantics for JavaScript this first-time scan can take a while.
+            request = PreloadBufLibsRequest(self)
+            self.mgr.idxr.stage_request(request, 1.0)
 
     @property
     def libs(self):
@@ -830,6 +895,10 @@ class JavaScriptBuffer(CitadelBuffer):
 
 
 class JavaScriptImportHandler(ImportHandler):
+
+    # The file extensions that this import handler will use when importing.
+    import_file_extensions = (".js", )
+
     def setCorePath(self, compiler=None, extra=None):
         self.corePath = []
 
@@ -848,7 +917,7 @@ class JavaScriptImportHandler(ImportHandler):
             path = os.path.join(dirname, names[i])
             if os.path.isdir(path):
                 pass
-            elif os.path.splitext(names[i])[1] in (".js",):
+            elif os.path.splitext(names[i])[1] in self.import_file_extensions:
                 #XXX The list of extensions should be settable on
                 #    the ImportHandler and Komodo should set whatever is
                 #    set in prefs.
@@ -856,23 +925,6 @@ class JavaScriptImportHandler(ImportHandler):
                 #    scripts, which might likely not have the
                 #    extension: need to grow filetype-from-content smarts.
                 files.append(path)
-
-    def genScannableFiles(self, path=None, skipRareImports=False,
-                          importableOnly=False):
-        if path is None:
-            path = self._getPath()
-        searchedDirs = {}
-        for dirname in path:
-            if dirname == os.curdir:
-                # Do NOT traverse the common '.' element of @INC. It is
-                # environment-dependent so not useful for the typical call
-                # of this method.
-                continue
-            files = []
-            os.path.walk(dirname, self._findScannableFiles,
-                         (files, searchedDirs))
-            for file in files:
-                yield file
 
     def find_importables_in_dir(self, dir):
         """See citadel.py::ImportHandler.find_importables_in_dir() for
@@ -910,7 +962,7 @@ class JavaScriptImportHandler(ImportHandler):
         importables = {}
         for name in nondirs:
             base, ext = splitext(name)
-            if ext != ".js":
+            if ext not in self.import_file_extensions:
                 continue
             if base in dirs:
                 importables[base] = (name, None, True)
@@ -983,7 +1035,7 @@ class JavaScriptCILEDriver(CILEDriver):
 
     def scan_csl_tokens(self, file_elem, blob_name, csl_tokens):
         """csl_tokens are pure JavaScript UDL tokens.
-        
+
         There is no need to parse out other types of tokens.
         """
 
@@ -1007,22 +1059,11 @@ class JavaScriptCILEDriver(CILEDriver):
         jscile.convertToElementTreeModule(blob_elem)
 
 
-def _sortByLineCmp(val1, val2):
-    try:
-    #if hasattr(val1, "line") and hasattr(val2, "line"):
-        return cmp(val1.line, val2.line)
-    except AttributeError:
-        return cmp(val1, val2)
-
-def sortByLine(seq):
-    seq.sort(_sortByLineCmp)
-    return seq
-
 # Everything is JS is an object.... MUMUHAHAHAHAHAHAAAA.......
 
 class JSObject:
     def __init__(self, name, parent, lineno, depth, type=None,
-                 doc=None, isLocal=False, isHidden=False, path=None):
+                 doc=None, isLocal=False, isHidden=False, path=None, pos=None):
         self.name = name
         self.parent = parent
         self.cixname = self.__class__.__name__[2:].lower()
@@ -1031,6 +1072,7 @@ class JSObject:
         self.depth = depth
         self.type = type
         self.path = path
+        self.pos = pos # Used for argument positions - 0 indexed.
         self._class = None  # Used when part of a class
         self.classes = {} # declared sub-classes
         self.members = {} # all private member variables used in class
@@ -1097,12 +1139,30 @@ class JSObject:
         return self.variables or self.functions or self.classes or self.members
 
     def isAnonymous(self):
-        return self.name == "(anonymous)"
+        return self.name.startswith("(anonymous")
 
     def addClassRef(self, baseclass):
         assert isinstance(baseclass, (str, unicode)), "baseclass %r is not a str" % (baseclass,)
         if baseclass not in self.classrefs:
             self.classrefs.append(baseclass)
+
+    def _mergeVariables(self, existingvar, newvar):
+        # If there is no citdl type yet, assign it the given type
+        if newvar.type and not existingvar.type:
+            log.debug("marging VAR:%s, setting type: %r", existingvar.name, newvar.type)
+            existingvar.type = newvar.type
+        # TODO: We could choose the simpler type, i.e. if types were "foo" or
+        #       "int", then we should choose "int" as it's a base JS type.
+        #if newvar.type and newvar.type != existingvar.type:
+        #    print "  %r existing type: %r,  new type: %r" % (existingvar.name, existingvar.type, newvar.type)
+        # See if the locality has changed - bug 93726.
+        if "__file_local__" in existingvar.attributes and \
+           not "__file_local__" in newvar.attributes:
+            existingvar.removeAttribute("__file_local__")
+            # This should be the main definition of this variable - so prefer
+            # other fields (like citdl) too.
+            if newvar.type:
+                existingvar.type = newvar.type
 
     def addVariable(self, name, value=None, metadata=None):
         """Add a variable in this scope (possibly as a property)
@@ -1120,10 +1180,8 @@ class JSObject:
                      name, value.line, value.type, self.name, metadata)
             v = value
             self.variables[name] = v
-        # Else if there is no citdl type yet, assign it the given type
-        elif value.type and not v.type:
-            log.debug("existing VAR:%s, setting type: %r", name, value.type)
-            v.type = value.type
+        else:
+            self._mergeVariables(v, value)
         if metadata:
             if v.metadata is None:
                 v.metadata = metadata
@@ -1146,10 +1204,8 @@ class JSObject:
         if v is None:
             log.info("CLASSMBR: %r, in %s %r", name, self.cixname, self.name)
             self.members[name] = v = value
-        # Else if there is no citdl type yet, assign it the given type
-        elif value.type and not v.type:
-            log.debug("existing VAR:%s, setting type: %r", name, value.type)
-            v.type = value.type
+        else:
+            self._mergeVariables(v, value)
         return v
 
     def getReturnType(self):
@@ -1177,7 +1233,11 @@ class JSObject:
     def outline(self, depth=0):
         result = []
         if self.cixname == "function":
-            result.append("%s%s %s(%s)" % (" " * depth, self.cixname, self.name, ", ".join(self.args)))
+            s = "%s%s %s(%s)" % (" " * depth, self.cixname, self.name, ", ".join(self.args))
+            r = self.getReturnType()
+            if r:
+                s += " => %s" % (r, )
+            result.append(s)
         elif self.cixname == "class" and self.classrefs:
             result.append("%s%s %s [%s]" % (" " * depth, self.cixname, self.name, self.classrefs))
         elif self.cixname == "variable" and (self.type or (self.jsdoc and self.jsdoc.type)):
@@ -1288,10 +1348,20 @@ class JSObject:
         if self.cixname == "class":
             for baseclass in self.classrefs:
                 addClassRef(cixobject, baseclass)
+        if self.jsdoc and self.jsdoc.baseclasses:
+            for baseclass in self.jsdoc.baseclasses:
+                if baseclass not in self.classrefs:
+                    addClassRef(cixobject, baseclass)
 
-        allValues = self.functions.values() + self.members.values() + \
-                    self.classes.values() + self.variables.values() + \
-                    self.anonymous_functions
+        # Note that arguments must be kept in the order they were defined.
+        variables = self.variables.values()
+        arguments = [x for x in variables if isinstance(x, JSArgument)]
+        variables = [x for x in variables if not isinstance(x, JSArgument)]
+        allValues = sorted(arguments, key=operator.attrgetter("pos", "name")) + \
+                    sorted(self.functions.values() + self.members.values() + \
+                           self.classes.values() + variables + \
+                           self.anonymous_functions,
+                            key=operator.attrgetter("line", "name"))
 
         # If this is a variable with child elements, yet has a citdl type of
         # something that is not an "Object", don't bother to adding these child
@@ -1301,13 +1371,13 @@ class JSObject:
         # handler combine the completions from the citdl and also the child
         # elements, but this is not yet possible.
         if allValues and self.cixname == 'variable' and \
-           cixobject.get("citdl") and cixobject.get("citdl") != "Object":
+           cixobject.get("citdl") and cixobject.get("citdl") not in ("Object", "require()"):
             log.info("Variable of type: %r contains %d child elements, "
                      "ignoring them.", cixobject.get("citdl"), len(allValues))
             return None
 
         # Sort and include contents
-        for v in sortByLine(allValues):
+        for v in allValues:
             if not v.isHidden:
                 v.toElementTree(cixobject)
 
@@ -1315,11 +1385,11 @@ class JSObject:
 
 class JSVariable(JSObject):
     def __init__(self, name, parent, line, depth, vartype='', doc=None,
-                 isLocal=False, path=None):
+                 isLocal=False, path=None, pos=None):
         if isinstance(vartype, list):
             vartype = ".".join(vartype)
         JSObject.__init__(self, name, parent, line, depth, type=vartype,
-                          doc=doc, isLocal=isLocal, path=path)
+                          doc=doc, isLocal=isLocal, path=path, pos=pos)
 
 class JSAlias(JSVariable):
     """An alias, which is a simple assignment from a variable (or possibly a
@@ -1394,9 +1464,9 @@ class JSFunction(JSObject):
         self._parent_assigned_vars = []
         self._callers = set()
         self.args = list(args or [])
-        for arg in self.args:
+        for pos, arg in enumerate(self.args):
             self.addVariable(arg, JSArgument(name=arg, parent=self, line=lineno,
-                                             depth=depth))
+                                             depth=depth, pos=pos))
 
     ##
     # @rtype {string or JSObject} add this possible return type
@@ -1673,7 +1743,7 @@ class JSFile:
         # Sort and include contents
         allValues = self.functions.values() + self.variables.values() + \
                     self.classes.values() + self.anonymous_functions
-        for v in sortByLine(allValues):
+        for v in sorted(allValues, key=operator.attrgetter("line", "name")):
             if not v.isHidden:
                 v.toElementTree(cixmodule)
 
@@ -1746,6 +1816,7 @@ class JavaScriptCiler:
         self.lastScope = None
 
         self._metadata = {}
+        self._anonid = 0
 
         # Document styles used for deciding what to do
         # Note: Can be customized by calling setStyleValues()
@@ -1758,7 +1829,7 @@ class JavaScriptCiler:
         self.JS_CILE_STYLES = self.JS_STRINGS + \
                               (self.JS_WORD, self.JS_IDENTIFIER,
                                self.JS_OPERATOR, self.JS_NUMBER)
-                              
+
 
     # Allows to change styles used by scanner
     # Needed for UDL languages etc... where the style bits are different
@@ -1908,6 +1979,9 @@ class JavaScriptCiler:
             if isinstance(foundVar, JSAlias) and aliasDepth < 10:
                 lastScope = scope = foundVar.scope
                 namelist = foundVar.target + namelist
+                if namelist[-1].endswith("()"):
+                    # resolved to a function call; drop the call syntax
+                    namelist[-1] = namelist[-1][:-2]
                 lastNamelist = namelist[:]
                 aliasDepth += 1
                 log.debug("_resolveAlias: found alias %r on %r; new names %r",
@@ -1948,6 +2022,7 @@ class JavaScriptCiler:
             noVariables = True
         # Work up the scope stack looking for the classname
         aliasDepth = 0
+        firstAliasFound = None
         while scope:
             currentScope = scope
             log.debug("Looking in scope %r", currentScope.name)
@@ -1965,6 +2040,8 @@ class JavaScriptCiler:
                     if namesDict:
                         foundScope = namesDict.get(name)
                         if isinstance(foundScope, JSAlias) and aliasDepth < 10:
+                            if firstAliasFound is None:
+                                firstAliasFound = foundScope
                             # This is an alias; look again with its target
                             namelist[:namePos+1] = foundScope.target
                             currentScope = scope = foundScope.scope
@@ -1991,21 +2068,11 @@ class JavaScriptCiler:
                 return currentScope
             # Try parent scope
             scope = scope.parent
+        if firstAliasFound:
+            log.debug("Found alias, but no alias target, returning just the alias: %r", firstAliasFound.name)
+            return firstAliasFound
         log.debug("NO scope found for: %r", namelist)
         return None
-
-    def _lookupVariableTypeFromScope(self, typeNames):
-        """See if we can determine what type this is"""
-        scope = self._locateScopeForName(typeNames[:-1])
-        if scope:
-            scope = scope.variables[typeNames[-2]]
-            while isinstance(scope, JSVariable) and scope.type not in ("int", "string", "object"):
-                scopeType = scope.type
-                #print "scope:%r, scope.type:%r" % (scope.name, scopeType)
-                scope = self._locateScopeForName(scopeType, attrlist=("variables", "classes"))
-            if hasattr(scope, "type"):
-                return scope.type
-        return []
 
     ##
     # Create a JSFunction and add it to the current scope
@@ -2069,15 +2136,20 @@ class JavaScriptCiler:
             jsclass.doc = None
             jsclass.jsdoc = None
 
+    def _createAnonymousFunctionName(self):
+        self._anonid += 1
+        return "(anonymous %d)" % (self._anonid, )
+
     ##
     # Create an anonymous JSFunction and add it to the current scope.
     # @param args {list} list of arguments for the function
     # @param doc {list} list of comment strings for given scope
     #
     def addAnonymousFunction(self, args=None, doc=None, isHidden=False):
-        log.debug("addAnonymousFunction: (%s)", args)
+        name = self._createAnonymousFunctionName()
+        log.info("addAnonymousFunction: %s(%s)", name, args)
         toScope = self.currentScope
-        fn = JSFunction("(anonymous)", toScope, args, self.lineno, self.depth,
+        fn = JSFunction(name, toScope, args, self.lineno, self.depth,
                         doc=doc, isLocal=True, isHidden=isHidden,
                         path=self.path)
         toScope.anonymous_functions.append(fn)
@@ -2139,7 +2211,9 @@ class JavaScriptCiler:
             # Look for the class first, then if we don't find it look for
             # a function or variable: bug 70324
             jsclass = self._locateScopeForName(scopeNames, attrlist=("classes", ))
-            if jsclass is None:
+            # Note: We could have an alias object, in that case we look for
+            #       something better, see test "variable_aliasing_komodo.js"
+            if jsclass is None or not isinstance(jsclass, JSClass):
                 jsclass = self._locateScopeForName(scopeNames, attrlist=("classes", "functions", "variables", ))
                 if isinstance(jsclass, JSFunction):
                     # Convert it to a class
@@ -2521,6 +2595,7 @@ class JavaScriptCiler:
                 scope = applyToScope.addVariable(name, value=v)
                 log.info("Could not find %r in scope: %r, creating variable (type=Object) for it on scope %r!!!",
                          name, fromScope.name, applyToScope.name)
+                scope.attributes.append("__file_local__")
             fromScope = scope
             applyToScope = scope
         return fromScope
@@ -2621,7 +2696,11 @@ class JavaScriptCiler:
 
         if len(namelist) > 1:
             # Ensure the scope exists, else create it
-            toScope = self._findOrCreateScope(namelist[:-1], ("variables", "classes", "functions"), toScope)
+            if "prototype" in namelist:
+                classnames = namelist[:namelist.index("prototype")]
+                toScope = self.addClass(classnames, doc=self.comment)
+            else:
+                toScope = self._findOrCreateScope(namelist[:-1], ("variables", "classes", "functions"), toScope)
             # Assignment to a function, outside the function scope... create a class for it
             if isinstance(toScope, JSFunction):
                 toScope = self._convertFunctionToClass(toScope)
@@ -2649,7 +2728,7 @@ class JavaScriptCiler:
     ##
     # Read everything up to and including the matching close paren
     # @param styles list
-    # @param text list 
+    # @param text list
     # @param p int position in the styles and text list
     # @param paren string type of parenthesis
     def _getParenArguments(self, styles, text, p, paren=None):
@@ -2734,7 +2813,8 @@ class JavaScriptCiler:
         last_style = self.JS_OPERATOR
         while pos < len(styles):
             style = styles[pos]
-            if style == self.JS_IDENTIFIER:
+            if style == self.JS_IDENTIFIER or \
+               (style == self.JS_WORD and text[pos] == "this"):
                 if last_style != self.JS_OPERATOR:
                     break
                 ids.append(text[pos])
@@ -2748,7 +2828,7 @@ class JavaScriptCiler:
     ##
     # Grab all necessary citdl information from the given text
     # @param styles list
-    # @param text list 
+    # @param text list
     # @param p int position in the styles and text list
     # @return the citdl list and the position after the last item swallowed
     def _getCitdlTypeInfo(self, styles, text, p):
@@ -2857,7 +2937,14 @@ class JavaScriptCiler:
                 # Keyword
                 keyword = text[p]
                 if keyword == "new":
-                    typeNames, p = self._getIdentifiersFromPos(styles, text, p+1)
+                    typeNames, p = self._getCitdlTypeInfo(styles, text, p+1)
+                    p -= 1   # We are already at the next position, step back
+                    # When resolving a class, we want to drop the function call
+                    # from the citdl and just use the identifier itself.
+                    for i, t in enumerate(typeNames):
+                        if t.endswith("()"):
+                            typeNames[i] = t[:-2]
+                            break
                     #if not typeNames:
                     #    typeNames = ["object"]
                     isNew = True
@@ -2905,7 +2992,7 @@ class JavaScriptCiler:
         # this.myname = new function(x, y) {
         # var num = mf.field1;
         # names = { "myname": 1, "yourname": 2 }
-        
+
         log.debug("_getVariableDetail: namelist: %r, text:%r", namelist, text[p:])
 
         if len(namelist) > 1 and "prototype" in namelist:
@@ -2972,7 +3059,7 @@ class JavaScriptCiler:
             if len(namelist) > 2 and namelist[-2:] == ["prototype", "constructor"]:
                 # Foo.prototype.constructor = bar; don't treat as an alias
                 pass
-            elif isAlias:
+            elif isAlias and typeNames != namelist:
                 log.debug("_getVariableDetail: %r is an alias to %r",
                           namelist, typeNames)
                 return (TYPE_ALIAS, typeNames, None, p)
@@ -3063,7 +3150,7 @@ class JavaScriptCiler:
             # could not be determined (i.e. foo[myname] = 1), as myname is
             # an unknown.
             unknown_array_namelist = False
- 
+
             if p >= len(styles) or text[p] in ",;":
                 # It's a uninitialized variable?
                 already_known = False
@@ -3439,7 +3526,7 @@ class JavaScriptCiler:
         # Ensure the variables are not already known as member variables.
         d_members = getattr(jsother, "members", {})
         d_variables = getattr(jsother, "variables", {})
-        
+
         for name, jsobj in d_variables.items():
             if name in d_members:
                 # Decide which one to keep then, remove the variable and then
@@ -3450,6 +3537,10 @@ class JavaScriptCiler:
                 log.info("Dupe found: %s %r has both variable and member %r, "
                          "keeping %r", jsother.cixname, jsother.name, name,
                          d_members[name])
+
+        if jsobject.anonymous_functions:
+            jsother.anonymous_functions = jsobject.anonymous_functions
+            jsobject.anonymous_functions = []
 
     def _handleDefineProperty(self, styles, text, p):
         # text example:
@@ -3462,8 +3553,10 @@ class JavaScriptCiler:
             else:
                 scope = self._findOrCreateScope(namelist, ('variables', 'classes', 'functions'))
             v = JSVariable(propertyname, scope, self.lineno, self.depth)
+            if self.lastScope and isinstance(self.lastScope, JSFunction):
+                v.type = "%s()" % (self.lastScope.name, )
             scope.addVariable(propertyname, value=v)
-            
+
     def _handleYAHOOExtension(self, styles, text, p):
         # text example:
         #   ['(', 'Dog', ',', 'Mammal', ',', '{', ')']
@@ -3633,6 +3726,9 @@ class JavaScriptCiler:
             if namelist == ["Object", "defineProperty"]:
                 # Defines a property on a given scope.
                 self._handleDefineProperty(styles, text, p)
+            elif namelist == ["XPCOMUtils", "defineLazyGetter"]:
+                # Mozilla way to define a property on a given scope.
+                self._handleDefineProperty(styles, text, p)
             elif namelist[0] == "YAHOO" and \
                namelist[1:] in (["extend"], ["lang", "extend"]):
                 # XXX - Should YAHOO API catalog be enabled then?
@@ -3741,7 +3837,7 @@ class JavaScriptCiler:
 
     def token_next(self, style, text, start_column, start_line, **other_args):
         """Loops over the styles in the document and stores important info.
-        
+
         When enough info is gathered, will perform a call to analyze the code
         and generate subsequent language structures. These language structures
         will later be used to generate XML output for the document."""
@@ -3975,5 +4071,6 @@ def register(mgr):
                       langintel_class=JavaScriptLangIntel,
                       import_handler_class=JavaScriptImportHandler,
                       cile_driver_class=JavaScriptCILEDriver,
-                      is_cpln_lang=True)
+                      is_cpln_lang=True,
+                      import_everything=True)
 

@@ -9,12 +9,15 @@ var repl = {};
 /**
  * Starts a REPL with prompt as the prompt and stream for all I/O. prompt
  * is optional and defaults to &gt; . stream is optional and defaults to
- * process.stdin.
- * @param prompt='&gt; '
- * @param stream=process.stdin
+ * process.stdin. eval is optional too and defaults to async wrapper for
+ * eval().
+ * @param prompt
+ * @param stream
+ * @param eval
+ * @param useGlobal
+ * @param ignoreUndefined
  */
-repl.start = function(prompt, stream) {}
-
+repl.start = function(prompt, stream, eval, useGlobal, ignoreUndefined) {}
 
 exports = repl;
 

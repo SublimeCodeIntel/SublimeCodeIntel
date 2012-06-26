@@ -689,6 +689,7 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
                 #TODO: skip __hidden__ names
                 self.log("is '%s' accessible on %s? yes: %s",
                          first_token, scoperef, elem.names[first_token])
+                scoperef[1].append(first_token)
                 return elem.names[first_token], scoperef
 
             if "::" not in first_token:
@@ -726,7 +727,7 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
         if ilk == "class": # i.e. a Perl package
             attr = elem.names.get(token)
             if attr is not None:
-                return attr, (scoperef[0], scoperef[1] + [elem.get("name")])
+                return attr, (scoperef[0], scoperef[1] + [token])
 
             # To inherit or not to inherit
             # ============================

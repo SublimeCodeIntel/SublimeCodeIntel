@@ -122,16 +122,16 @@ class PythonImportLibGenerator(object):
             #print "Lazily loading the parent import libs: %r" % (self.imp_prefix, )
             self.index += 1
             lookuppath = dirname(self.bufpath)
-            parent_dirs_left = 10
+            parent_dirs_left = 5
+            import_name = self.imp_prefix[0]
+            if "." in import_name:
+                import_name = import_name.split(".", 1)[0]
             while lookuppath and parent_dirs_left > 0:
-                #print 'lookuppath: %r' % (lookuppath, )
+                #print '    exists: %r - %r' % (exists(join(lookuppath, import_name, "__init__.py")), join(lookuppath, import_name, "__init__.py"))
                 parent_dirs_left -= 1
-                parent_name = basename(lookuppath)
-                if parent_name == self.imp_prefix[0] and \
-                   exists(join(lookuppath, "__init__.py")):
+                if exists(join(lookuppath, import_name, "__init__.py")):
                     # Matching directory - return that as a library.
-                    lookuppath = dirname(lookuppath)
-                    #print "Adding parent dir lib: %r" % (lookuppath)
+                    #print "  adding parent dir lib: %r" % (lookuppath)
                     return self.mgr.db.get_lang_lib(self.lang, "parentdirlib",
                                                     [lookuppath])
                 lookuppath = dirname(lookuppath)
@@ -491,6 +491,7 @@ class PythonTreeEvaluator(TreeEvaluator):
         #      python/cpln/wacky_imports.
         #      XXX Not totally confident that this is the right answer.
         first_token = tokens[0]
+        possible_submodule_tokens = []
 
         self._check_infinite_recursion(first_token)
         orig_libs = self.libs
@@ -509,7 +510,7 @@ class PythonTreeEvaluator(TreeEvaluator):
                 while module_name.startswith("."):
                     lookuppath = dirname(lookuppath)
                     module_name = module_name[1:]
-                libs = [self.mgr.db.get_lang_lib("Python", "curdirlib",
+                libs = [self.mgr.db.get_lang_lib(self.trg.lang, "curdirlib",
                                                  [lookuppath])]
                 if not module_name:
                     module_name = symbol_name
@@ -543,7 +544,7 @@ class PythonTreeEvaluator(TreeEvaluator):
                     submodule_name = import_handler.sep.join(
                                         [module_name, symbol_name])
                     if allow_parentdirlib:
-                        libs = self._add_parentdirlib(libs, (module_name, symbol_name))
+                        libs = self._add_parentdirlib(libs, submodule_name.split("."))
                     try:
                         subblob = import_handler.import_blob_name(
                                     submodule_name, libs, self.ctlr)
@@ -595,17 +596,26 @@ class PythonTreeEvaluator(TreeEvaluator):
                                 module_name, libs, self.ctlr)
                     #XXX Is this correct scoperef for module object?
                     return (blob, (blob, [])),  len(module_tokens)
-                else:
-                    # E.g. tokens:   ('os', 'sep', ...)
-                    #      imp_elem: <import os.path>
-                    #      return:   <blob 'os'> for first token
-                    for i in range(len(module_tokens)-1, 0, -1):
-                        if module_tokens[:i] == tokens[:i]:
-                            blob = import_handler.import_blob_name(
-                                        '.'.join(module_tokens[:i]),
-                                        libs, self.ctlr)
-                            #XXX Is this correct scoperef for module object?
-                            return (blob, (blob, [])),  i
+                elif module_tokens[0] == tokens[0]:
+                    # To check later if there are no exact import matches.
+                    possible_submodule_tokens.append(module_tokens)
+
+        # No matches, check if there is a partial import match.
+        if possible_submodule_tokens:
+            libs = orig_libs # reset libs back to the original
+            if allow_parentdirlib:
+                libs = self._add_parentdirlib(libs, module_tokens)
+            # E.g. tokens:   ('os', 'sep', ...)
+            #      imp_elem: <import os.path>
+            #      return:   <blob 'os'> for first token
+            for i in range(len(module_tokens)-1, 0, -1):
+                for module_tokens in possible_submodule_tokens:
+                    if module_tokens[:i] == tokens[:i]:
+                        blob = import_handler.import_blob_name(
+                                    '.'.join(module_tokens[:i]),
+                                    libs, self.ctlr)
+                        #XXX Is this correct scoperef for module object?
+                        return (blob, (blob, [])),  i
 
         return None, None
 
