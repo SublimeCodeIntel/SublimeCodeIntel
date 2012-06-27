@@ -6,19 +6,19 @@ if [ $OSTYPE = "linux-gnu" ]; then
 	else
 		export CFLAGS='-DPy_UNICODE_SIZE=4 -I../pcre-8.21'
 	fi
-	export LDFLAGS='-L../pcre-8.21/.libs'
-	rm -rf pcre-8.21 && \
-	tar xzf pcre-8.21.tar.gz && \
-	cd pcre-8.21 && \
-	./configure --disable-shared && \
-	mkdir .libs && \
-	make && \
-	cd ..
 fi
+export LDFLAGS='-L/tmp/pcre-8.21/.libs'
 rm -rf cElementTree-1.0.5-20051216 && \
 rm -rf silvercity && \
 rm -rf scintilla && \
 rm -rf sgmlop-1.1.1-20040207 && \
+rm -rf /tmp/pcre-8.21 && \
+tar xzf pcre-8.21.tar.gz -C /tmp/ && \
+cd /tmp/pcre-8.21 && \
+./configure --disable-shared && \
+mkdir .libs && \
+make && \
+cd - && \
 unzip sgmlop-1.1.1-20040207.zip && \
 cd sgmlop-1.1.1-20040207 && \
 cat ../sgmlop*.patch | patch -sup1 && \
@@ -32,7 +32,7 @@ cp -f ../scintilla.patch/lexers/* lexers/ && \
 cd include && python HFacer.py && \
 cd ../.. && \
 tar xzf silvercity.tar.gz && \
-cp -f pcre-8.21/.libs/* silvercity/ && \
+cp -f /tmp/pcre-8.21/.libs/* silvercity/ && \
 cd silvercity && \
 cat ../SilverCity.patch/*.patch | patch -sup1 && \
 cp -f ../SilverCity.patch/*.py PySilverCity/SilverCity/ && \
@@ -50,6 +50,6 @@ rm -rf cElementTree-1.0.5-20051216 && \
 rm -rf silvercity && \
 rm -rf scintilla && \
 rm -rf sgmlop-1.1.1-20040207 && \
-rm -rf pcre-8.21 && \
+rm -rf /tmp/pcre-8.21 && \
 echo "Done!"
 strip ../libs/_local_arch/*.so > /dev/null 2>&1
