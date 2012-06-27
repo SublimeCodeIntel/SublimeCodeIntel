@@ -1,6 +1,6 @@
 #!/bin/bash
 
-reset(){
+reset() {
 	rm -rf /tmp/pcre-8.21
 	rm -rf cElementTree-1.0.5-20051216
 	rm -rf silvercity
