@@ -10,12 +10,3 @@
          ]
      )
  src_files.extend(
-@@ -78,7 +79,7 @@
-                 'Lib/Src']
-
- data_files = ['CSS/default.css']
--libraries = []
-+libraries = ['pcre']
- defines = []
- extra_compile_args = []
- extra_link_args = []
