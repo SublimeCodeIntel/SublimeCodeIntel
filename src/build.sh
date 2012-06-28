@@ -27,7 +27,7 @@ if [ $OSTYPE = "linux-gnu" ]; then
 	LIBPCRE="/tmp/pcre-8.21/.libs/libpcre.a"
 	PYTHON="python"
 	SO="so"
-elif [ $OSTYPE = "darwin11" ]; then
+elif [ ${OSTYPE:0:6} = "darwin" ]; then
 	echo "Mac OS X build!"
 	export ARCHFLAGS="-arch i386 -arch x86_64 $ARCHFLAGS"
 	export CXXFLAGS="-arch i386 -arch x86_64 $CXXFLAGS"
