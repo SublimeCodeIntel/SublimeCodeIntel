@@ -1,0 +1,11 @@
+--- SilverCity/PySilverCity/Src/PyLexerModule.cxx.orig	2012-06-27 17:02:38.000000000 -0500
++++ SilverCity/PySilverCity/Src/PyLexerModule.cxx	2012-06-27 17:02:51.000000000 -0500
+@@ -121,7 +121,7 @@
+ 
+     //fprintf(stderr, ">> PyLexerModule.cxx:tokenize_by_style (PyLexState_tokenize_by_style)...\n");
+ 
+-    if (!PyArg_ParseTuple(args, "es#OO|O", bufEncoding, &buf, &bufSize, &pyWordLists, &pyPropSet, &pyCallback)) {
++    if (!PyArg_ParseTuple(args, "et#OO|O", bufEncoding, &buf, &bufSize, &pyWordLists, &pyPropSet, &pyCallback)) {
+         fprintf(stderr, "Can't get args\n");
+         return NULL;
+     }
