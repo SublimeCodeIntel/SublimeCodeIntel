@@ -21,8 +21,10 @@ if [ $OSTYPE = "linux-gnu" ]; then
 	# In Linux, Sublime Text's Python is compiled with UCS4:
 	echo "Linux build!"
 	if [ `uname -m` == 'x86_64' ]; then
+		export CXXFLAGS="-fPIC -DPy_UNICODE_SIZE=4 -I /tmp/pcre-8.21 $CFLAGS"
 		export CFLAGS="-fPIC -DPy_UNICODE_SIZE=4 -I /tmp/pcre-8.21 $CFLAGS"
 	else
+		export CXXFLAGS="-DPy_UNICODE_SIZE=4 -I /tmp/pcre-8.21 $CFLAGS"
 		export CFLAGS="-DPy_UNICODE_SIZE=4 -I /tmp/pcre-8.21 $CFLAGS"
 	fi
 	LIBPCRE="/tmp/pcre-8.21/.libs/libpcre.a"
@@ -31,8 +33,8 @@ if [ $OSTYPE = "linux-gnu" ]; then
 elif [ ${OSTYPE:0:6} = "darwin" ]; then
 	echo "Mac OS X build!"
 	export ARCHFLAGS="-arch i386 -arch x86_64 $ARCHFLAGS"
-	export CXXFLAGS="-arch i386 -arch x86_64 $CXXFLAGS"
-	export CFLAGS="-arch i386 -arch x86_64 $CFLAGS"
+	export CXXFLAGS="-arch i386 -arch x86_64 -I /tmp/pcre-8.21 $CFLAGS"
+	export CFLAGS="-arch i386 -arch x86_64 -I /tmp/pcre-8.21 $CFLAGS"
 	export LDFLAGS="-arch i386 -arch x86_64 $LDFLAGS"
 	LIBPCRE="/tmp/pcre-8.21/.libs/libpcre.a"
 	PYTHON="python"
@@ -46,6 +48,8 @@ else
 		PYTHON="C:/Python26/python"
 	fi
 	ERR=" (You need to have Visual Studio and run this script from the Command Prompt. You also need the following tools: bash, patch, find and python 2.6 available from the command line)"
+	export CXXFLAGS="-I pcre-8.21 $CFLAGS"
+	export CFLAGS="-I pcre-8.21 $CFLAGS"
 	LIBPCRE="pcre-8.21/libpcre.lib"
 	OSTYPE=""
 	SO="pyd"
