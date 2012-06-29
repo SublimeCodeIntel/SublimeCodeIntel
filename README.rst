@@ -130,6 +130,7 @@ What's New
 ----------
 
 v2.0:
+
 + SublimeCodeIntel's openkomodo codeintel engine updated. The new codeintel is faster and more reliable.
 
 + Binary files for Linux, Windows and Mac OS X updated.
