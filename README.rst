@@ -51,7 +51,7 @@ The "Packages" packages directory is located at:
 Using
 -----
 
-* Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click. To "Jump to Symbol Declaration" use ``ctr+super+alt+Up`` or ``alt+click`` (``super+click`` in Linux) over the symbol, and ``ctr+super+alt+Left`` for going back.
+* Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click. To "Jump to Symbol Declaration" use ``ctr+super+alt+Up`` (or ``alt+click`` in Windows, ``super+click`` in Linux or ``ctrl+click`` in Mac OS X) over the symbol, and ``ctr+super+alt+Left`` for going back.
 
 * Start typing code as usual, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use ``shift+ctrl+space`` (``shift+super+space`` in Mac OS X).
 
