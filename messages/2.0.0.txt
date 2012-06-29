@@ -4,8 +4,7 @@ Please restart Sublime Text 2 after reading this.
 
 NEW FEATURES
 
-+ SublimeCodeIntel's openkomodo codeintel engine updated. The new codeintel is
-  faster and more reliable.
++ SublimeCodeIntel's openkomodo codeintel engine updated. The new codeintel is faster and more reliable.
 
 
 CHANGES/FIXES
