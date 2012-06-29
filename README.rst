@@ -136,20 +136,21 @@ v2.0:
 + Binary files for Linux, Windows and Mac OS X updated.
 
 + Shortcuts for jump to definition have changed.
+
   For Linux:
-    super+click = Jump to definition
-    ctrl+super+alt+Up = Jump to definition
-    ctrl+super+alt+Left = Go back
+    ``super+click`` = Jump to definition
+    ``ctrl+super+alt+Up`` = Jump to definition
+    ``ctrl+super+alt+Left`` = Go back
 
   For Mac OS X:
-    alt+click = Jump to definition
-    ctrl+super+alt+Up = Jump to definition
-    ctrl+super+alt+Left = Go back
+    ``alt+click`` = Jump to definition
+    ``ctrl+super+alt+Up`` = Jump to definition
+    ``ctrl+super+alt+Left`` = Go back
 
   For Mac OS X:
-    alt+click = Jump to definition
-    ctrl+super+alt+Up = Jump to definition
-    ctrl+super+alt+Left = Go back
+    ``alt+click`` = Jump to definition
+    ``ctrl+super+alt+Up`` = Jump to definition
+    ``ctrl+super+alt+Left`` = Go back
 
 - PHP bugs fixed.
 
