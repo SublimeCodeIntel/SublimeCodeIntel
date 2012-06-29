@@ -3,8 +3,8 @@
 3:1
 4:0
 48:1:0:0
-11:6
-12:Django
+11:4
+12:Twig
 13
 14:0:0
 16:0:5
@@ -21,7 +21,7 @@
 14:4:49
 16:4:56
 15:4:33
-17:36
+17:40
 18:0
 19:4
 11:4
@@ -157,78 +157,86 @@
 20:17:41:-1
 18:4
 19:33
-11:6
-12:Django
+11:4
+12:Twig
 43
-11:838
-12:add addslashes and as block by capfirst center closeblock closebrace closev
-12:ariable comment cut cycle date debug default default_if_none dictsort dicts
-12:ortreversed divisibleby else endblock endcomment endfilter endfor endif end
-12:ifchanged endifequal endifnotequal endspaceless endwith escape extends file
-12:sizeformat filter first firstof fix_ampersands floatformat for get_digit if
-12: ifchanged ifequal ifnotequal in include join length length_is linebreaks l
-12:inebreaksbr linenumbers ljust load lower make_list not now openblock openbr
-12:ace openvariable or phone2numeric pluralize pprint random regroup removetag
-12:s reversed rjust slice slugify spaceless ssi stringformat striptags templat
-12:etag time timesince timeuntil title truncatewords truncatewords_html unorde
-12:red_list upper url urlencode urlize urlizetrunc widthratio with wordcount w
-12:ordwrap yesno
+11:568
+12:and attribute autoescape b-and b-or b-xor block block capitalize constant c
+12:onstant convert_encoding cycle date date default defined divisibleby do dum
+12:p embed empty endautoescape endblock endcomment endembed endfilter endfor e
+12:ndif endmacro endraw endsandbox endspaceless endwith escape even extends fi
+12:lter flush for format from if import in include is iterable join json_encod
+12:e keys length lower macro merge nl2br not null number_format odd or parent 
+12:random range raw raw replace reverse sameas sandbox set slice sort spaceles
+12:s striptags title trim upper url_encode use
 21
 22:55:54
+11:10
+12:autoescape
+20:18:54:1
 11:7
 12:comment
-20:18:54:1
+20:19:54:1
 11:2
 12:{#
-20:19:56:1
+20:20:56:1
+11:5
+12:embed
+20:21:54:1
 11:6
 12:filter
-20:20:54:1
+20:22:54:1
 11:3
 12:for
-20:21:54:1
+20:23:54:1
 11:2
 12:if
-20:22:54:1
-11:9
-12:ifchanged
-20:23:54:1
-11:7
-12:ifequal
 20:24:54:1
-11:10
-12:ifnotequal
+11:5
+12:macro
 20:25:54:1
+11:3
+12:raw
+20:26:54:1
+11:7
+12:sandbox
+20:27:54:1
 11:9
 12:spaceless
-20:26:54:1
+20:28:54:1
+11:13
+12:endautoescape
+20:29:54:-1
 11:10
 12:endcomment
-20:27:54:-1
+20:30:54:-1
 11:2
 12:#}
-20:28:56:-1
+20:31:56:-1
+11:8
+12:endembed
+20:32:54:-1
 11:9
 12:endfilter
-20:29:54:-1
+20:33:54:-1
 11:6
 12:endfor
-20:30:54:-1
+20:34:54:-1
 11:5
 12:endif
-20:31:54:-1
-11:12
-12:endifchanged
-20:32:54:-1
+20:35:54:-1
+11:8
+12:endmacro
+20:36:54:-1
+11:6
+12:endraw
+20:37:54:-1
 11:10
-12:endifequal
-20:33:54:-1
-11:13
-12:endifnotequal
-20:34:54:-1
+12:endsandbox
+20:38:54:-1
 11:12
 12:endspaceless
-20:35:54:-1
+20:39:54:-1
 32:4
 33:0:30:57
 33:1:13:61
