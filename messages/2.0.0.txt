@@ -9,6 +9,8 @@ NEW FEATURES
 
 CHANGES/FIXES
 
++ Snippets for functions inserted during autocomplete.
+
 + Binary files for Linux, Windows and Mac OS X updated.
 
 + Shortcuts for jump to definition have changed.
