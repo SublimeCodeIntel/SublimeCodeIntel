@@ -51,11 +51,11 @@ The "Packages" packages directory is located at:
 Using
 -----
 
-* Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click. To "Jump to Symbol Declaration" use ``super+f3`` or ``alt+click`` over the symbol.
+* Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click. To "Jump to Symbol Declaration" use ``ctr+super+alt+Up`` or ``alt+click`` (``super+click`` in Linux) over the symbol, and ``ctr+super+alt+Left`` for going back.
 
-* Start typing code as usual, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use ``shift+ctrl+space``.
+* Start typing code as usual, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use ``shift+ctrl+space`` (``shift+super+space`` in Mac OS X).
 
-Don't despair! The first time you use it it needs to build some indexes and it can take more than a few seconds (around six in my configuration).
+Don't despair! The first time you use it it needs to build some indexes and it can take more than a few seconds.
 
 It just works!
 
@@ -128,30 +128,59 @@ simply run::
 
 What's New
 ----------
+
+v2.0:
++ SublimeCodeIntel's openkomodo codeintel engine updated. The new codeintel is
+  faster and more reliable.
+
++ Binary files for Linux, Windows and Mac OS X updated.
+
++ Shortcuts for jump to definition have changed.
+  For Linux:
+    super+click = Jump to definition
+    ctrl+super+alt+Up = Jump to definition
+    ctrl+super+alt+Left = Go back
+
+  For Mac OS X:
+    alt+click = Jump to definition
+    ctrl+super+alt+Up = Jump to definition
+    ctrl+super+alt+Left = Go back
+
+  For Mac OS X:
+    alt+click = Jump to definition
+    ctrl+super+alt+Up = Jump to definition
+    ctrl+super+alt+Left = Go back
+
+- PHP bugs fixed.
+
+- Stability improved (Should no longer use 100% CPU.)
+
+
 v1.3 (20-12-2011):
 
-* This build should fix many of the problems seen in Linux systems.
++ This build should fix many of the problems seen in Linux systems.
 
-* Libraries for Linux rebuilt with libpcre statically (libpcre bundled for Linux builds).
+- Libraries for Linux rebuilt with libpcre statically (libpcre bundled for Linux builds).
 
-* ``calltip()`` is now thread safe (which caused some strange behavior in Linux where Sublime Text 2 ended up being unresponsive).
+- ``calltip()`` is now thread safe (which caused some strange behavior in Linux
+  where Sublime Text 2 ended up being unresponsive).
 
 
 v1.2 (18-12-2011):
 
-* JavaScript support improved (it's now much nicer with the CPU).
++ Added palette commands to disable/enable the plugin in many ways.
 
-* CSS files support much improved (thanks to Jon's new features in autocomplete).
++ Added ``codeintel_live_disabled_languages`` and fixed ``codeintel_live`` to disable SublimeCodeIntel live autocomplete mode.
 
-* Added palette commands to disable/enable the plugin in many ways.
++ Support for new completion settings in Sublime Text 2 Build 2148.
 
-* Added ``codeintel_live_disabled_languages`` and fixed ``codeintel_live`` to disable SublimeCodeIntel live autocomplete mode.
++ JavaScript support improved (it's now much nicer with the CPU).
 
-* Smarter language detection and fallbacks.
++ CSS files support much improved (thanks to Jon's new features in autocomplete).
 
-* Improved autocomplete triggering, should now respond better.
++ Smarter language detection and fallbacks.
 
-* Support for new completion settings in Sublime Text 2 Build 2148.
++ Improved autocomplete triggering, should now respond better.
 
 
 License
