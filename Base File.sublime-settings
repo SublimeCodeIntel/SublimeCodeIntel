@@ -41,10 +41,10 @@
 
     /*
         Define filters per language to exclude paths from scanning.
-        ex: "JavaScript":["/build/"]
+        ex: "JavaScript":["/build/", "/min/"]
     */
     "codeintel_scan_exclude_dir":
     {
-        "JavaScript":["/build/"]
+        "JavaScript":["/build/", "/min/"]
     }
 }
