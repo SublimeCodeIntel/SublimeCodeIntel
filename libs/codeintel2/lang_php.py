@@ -1177,10 +1177,7 @@ class PHPBuffer(UDLBuffer, XMLParsingBufferMixin):
     cpln_stop_chars = "~`@%^&*()=+{}]|\\;:'\",.<>?/ "
 
     def __init__(self, *args, **kwargs):
-        #sublime
-        #super(PHPBuffer, self).__init__(*args, **kwargs)
-        UDLBuffer.__init__(*args, **kwargs)
-        #endsublime
+        super(PHPBuffer, self).__init__(*args, **kwargs)
 
         if isinstance(self.accessor, KoDocumentAccessor):
             # Encourage the database to pre-scan dirs relevant to completion
