@@ -60,7 +60,7 @@ body {
   color:#373737;
   background: #212121;
   font-size: 16px;
-  font-family: 'Myriad Pro', Calibri, Helvetica, Arial, sans-serif;
+  font-family: 'Open Sans', sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -311,14 +311,16 @@ Full-Width Styles
   font-size: 42px;
   font-weight: 700;
   text-shadow: #111 0px 0px 10px;
+  text-align: center;
 }
 
 #project_tagline {
   color: #fff;
-  font-size: 24px;
+  font-size: 14px;
   font-weight: 300;
   background: none;
   text-shadow: #111 0px 0px 10px;
+  text-align: center;
 }
 
 #downloads {
@@ -428,4 +430,137 @@ Small Device Styles
     font-size: 11px;
   }
 
+}
+
+/*******************************************************************************
+Stuff from Sublime Text 2 page...
+*******************************************************************************/
+
+h1 {
+  margin: 10px 0 0 0;
+  font-weight: bold;
+  -webkit-text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+  -moz-text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+  color: #fff;
+}
+.title {
+  color: #aaa;
+}
+
+.band {
+  background-color: #ccc;
+  padding-top: 50px;
+  padding-bottom: 20px;
+  box-shadow: inset 0 5px 15px rgba(0,0,0,0.15);
+}
+
+#anim_shell
+{
+  width: 816px;
+  margin: 0 auto;
+  box-shadow: 1px 1px 10px rgba(0,0,0,0.5);
+  -webkit-box-shadow: 1px 1px 10px rgba(0,0,0,0.5);
+  -moz-box-shadow: 1px 1px 10px rgba(0,0,0,0.5);
+}
+html.plat_win #anim_shell
+{
+  border-radius: 6px;
+  -webkit-border-radius: 6px;
+  -moz-border-radius: 6px;
+}
+html.plat_linux #anim_shell
+{
+  border-top-right-radius: 7px;
+  border-top-left-radius: 7px;
+  -webkit-border-top-right-radius: 7px;
+  -webkit-border-top-left-radius: 7px;
+  -moz-border-radius-topright: 7px;
+  -moz-border-radius-topleft: 7px;
+  width: 800px;
+  height: 479px;
+}
+html.plat_osx #anim_shell
+{
+  border-top-right-radius: 3px;
+  border-top-left-radius: 3px;
+  -webkit-border-top-right-radius: 3px;
+  -webkit-border-top-left-radius: 3px;
+  -moz-border-radius-topright: 3px;
+  -moz-border-radius-topleft: 3px;
+  width: 800px;
+}
+
+html.plat_osx #anim_top
+{
+  width: 800px; height: 22px; background-image: url('../images/osx_title_bar.png');
+}
+
+html.plat_osx #anim_container
+{
+  width: 800px; height: 450px; position: relative;
+}
+
+html.plat_linux #anim_top
+{
+  width: 800px; height: 29px; background-image: url('../images/linux_title_bar.png');
+}
+
+html.plat_win #anim_top
+{
+  width: 816px; height: 50px; background-image: url('../images/win_title_bar.png');
+}
+
+html.plat_win #anim_container
+{
+  width: 816px; height: 450px; position: relative;
+}
+
+html.plat_win #anim_left
+{
+  width: 8px; height: 450px; background-image: url('../images/win_left_bar.png');
+}
+
+html.plat_win #anim_right
+{
+  width: 8px; height: 450px; background-image: url('../images/win_right_bar.png');
+}
+
+html.plat_win #anim_bottom
+{
+  width: 816px; height: 8px; background-image: url('../images/win_bottom_bar.png');
+}
+
+div.anim_caption
+{
+  width: 800px;
+  text-align: left;
+  margin: 7px auto 0;
+  height: 62px;
+  font-size: 15px;
+}
+
+div.anim_caption .controls
+{
+  float: right;
+  width: 100px;
+  background-color: rgba(255,255,255,0.3);
+  border-radius: 2px;
+  text-align: center;
+  margin-left: 10px;
+  height: 23px;
+}
+
+a.skip
+{
+  text-decoration: none;
+  position: relative;
+  top: -1px;
+}
+
+html.plat_osx a.skip { top: 1px }
+
+a.skip:hover
+{
+  color: rgba(20, 20, 20, 0.6);
 }
