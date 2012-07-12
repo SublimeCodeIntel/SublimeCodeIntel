@@ -1,0 +1,39 @@
+--- openkomodo/src/codeintel/lib/codeintel2/environment.py
++++ openkomodo/src/codeintel/lib/codeintel2/environment.py
+@@ -80,22 +80,23 @@ class Environment(object):
+     dictionary. Various parts of the codeintel system can (and do) use
+     this cache for maintain runtime calculated date.
+     """
+-    def __init__(self):
++    def __init__(self, environ=None):
+         self.cache = {}
++        self.environ = environ or dict(os.environ)
+     def __repr__(self):
+         return "<Environment>"
+ 
+     def has_envvar(self, name):
+         """Return True if the named envvar exists."""
+-        return name in os.environ
++        return name in self.environ
+     def get_envvar(self, name, default=None):
+         """Return the value of the named envvar, if it exists. Otherwise
+         return the given default, if any, or None.
+         """
+-        return os.environ.get(name, default)
++        return self.environ.get(name, default)
+     def get_all_envvars(self):
+         """Return a dictionary of all environment variables."""
+-        return dict(os.environ)
++        return dict(self.environ)
+ 
+     def has_pref(self, name):
+         """Return True if the named pref exists."""
+@@ -158,7 +159,7 @@ class SimplePrefsEnvironment(Environment):
+     setting pref to None and deleting it.
+     """
+     def __init__(self, **prefs):
+-        Environment.__init__(self)
++        Environment.__init__(self, prefs.get('env'))
+         self._prefs = prefs
+         self._pref_observer_callbacks_from_name = {}
+     

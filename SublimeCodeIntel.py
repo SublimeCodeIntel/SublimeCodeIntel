@@ -529,6 +529,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     is_dirty = view.is_dirty()
     id = view.id()
     folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
+    codeintel_config = view.settings().get('codeintel_config', {})
 
     def _codeintel_scan():
         global despair, despaired
@@ -595,6 +596,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 "codeintel_max_recursive_dir_depth": 10,
                 "codeintel_scan_files_in_project": True,
             }
+            config.update(codeintel_config.get(lang, {}))
 
             _config = {}
             try:
@@ -610,9 +612,21 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 log.error(msg)
                 codeintel_log.error(msg)
             config.update(_config.get(lang, {}))
+
             for conf in ['pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths']:
                 v = [p.strip() for p in config.get(conf, []) + folders if p.strip()]
                 config[conf] = os.pathsep.join(set(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join(project_base_dir, p)) if project_base_dir else p for p in v if p.strip()))
+
+            # Setup environment variables
+            env = config.get('env', {})
+            _environ = dict(os.environ)
+            for k, v in env.items():
+                _old = None
+                while '$' in v and v != _old:
+                    _old = v
+                    v = os.path.expandvars(v)
+                _environ[k] = v
+            config['env'] = _environ
 
             env = SimplePrefsEnvironment(**config)
             env._valid = valid
