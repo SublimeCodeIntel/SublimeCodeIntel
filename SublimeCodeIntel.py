@@ -109,7 +109,7 @@ logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # WARNING/INFO
 for lang in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
              'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
              'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
-    logging.getLogger("codeintel." + lang).setLevel(logging.WARNING)  # WARNING/DEBUG
+    logging.getLogger("codeintel." + lang).setLevel(logging.DEBUG)  # WARNING/DEBUG
 log.setLevel(logging.ERROR)  # ERROR
 
 cpln_fillup_chars = {
