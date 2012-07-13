@@ -276,18 +276,13 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
             #TODO: For the sentinel to work, we need to send a prefix to the completions... but no show_completions() currently available
             #pos = sentinel[id] if sentinel[id] is not None else view.sel()[0].end()
 
-            def autocomplete_name(name, type):
-                if type == 'function':
-                    return "{0}($0)".format(name)
-                return name
-
             def _trigger(cplns, calltips):
                 if cplns is not None or calltips is not None:
                     codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
                 if cplns:
                     # Show autocompletions:
                     _completions = sorted(
-                        [('%s  (%s)' % (name, type), autocomplete_name(name, type)) for type, name in cplns],
+                        [('%s  (%s)' % (name, type), name + ('(${1})' if type == 'function' else '')) for type, name in cplns],
                         cmp=lambda a, b: a[1] < b[1] if a[1].startswith('_') and b[1].startswith('_') else False if a[1].startswith('_') else True if b[1].startswith('_') else a[1] < b[1]
                     )
                     if _completions:
