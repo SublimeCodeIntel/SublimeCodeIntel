@@ -262,7 +262,7 @@ def guess_lang(view=None, path=None):
     return lang
 
 
-def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs={}):
+def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs={}, fill_attribs=False):
     def _autocomplete_callback(view, path, lang):
         id = view.id()
         content = view.substr(sublime.Region(0, view.size()))
@@ -294,12 +294,12 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                             'auto_complete_commit_on_tab': True,
                         })
                 elif calltips is not None:
-                    # Trigger a tooltip
-                    calltip(view, 'tip', calltips[0])
+                    prototype, doc = calltips[0].split("\n")
+                    calltip(view, 'tip', "{0}: {1}".format(prototype, doc))
 
-                    if content[sel.a - 1] == '(' and content[sel.a] == ')':
-                        rex = re.compile("\(([^\[\(\)]*)")
-                        m = rex.search(calltips[0])
+                    if fill_attribs and content[sel.a - 1] == '(' and content[sel.a] == ')':
+                        rex = re.compile("\((.*)\)")
+                        m = rex.search(prototype)
 
                         if m is None:
                             return
@@ -858,9 +858,11 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             #     live = live and sentinel[id] is not None
 
             if live:
-                if not hasattr(view, 'command_history') or (view.command_history(0)[0] == 'insert' and view.command_history(0)[1]['characters'] != ',') or (view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)') or (text == '(' and view.command_history(0)[0] == 'commit_completion'):
+                if not hasattr(view, 'command_history') or view.command_history(0)[0] == 'insert':
                     autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path, lang])
                 else:
+                    if view.command_history(0)[0] == 'commit_completion':
+                        autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path, lang], fill_attribs=True)
                     view.run_command('hide_auto_complete')
             else:
                 def _scan_callback(view, path):
@@ -902,7 +904,7 @@ class CodeIntelAutoComplete(sublime_plugin.TextCommand):
         path = view.file_name()
         lang = guess_lang(view, path)
         if lang:
-            autocomplete(view, 0, 0, True, args=[path, lang])
+            autocomplete(view, 0, 0, True, args=[path, lang], fill_attribs=True)
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
