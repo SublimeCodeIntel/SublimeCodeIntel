@@ -67,8 +67,9 @@ from codeintel2.udl import XMLParsingBufferMixin, UDLBuffer
 import langinfo
 
 if _xpcom_:
-    from xpcom import components
+    from xpcom import components, COMException
     from xpcom.client import WeakReference
+    from xpcom.server import UnwrapObject
 
 
 
@@ -129,14 +130,17 @@ class Manager(threading.Thread, Queue):
         self._is_citadel_from_lang = {} # registered langs that are Citadel-based
         self._is_cpln_from_lang = {} # registered langs for which completion is supported
         self._hook_handlers_from_lang = defaultdict(list)
-        self.lidb = langinfo.get_default_database()
-        self._register_modules(extra_module_dirs)
 
         self.env = env or DefaultEnvironment() 
+        # The database must be enabled before registering modules.
         self.db = Database(self, base_dir=db_base_dir,
                            catalog_dirs=db_catalog_dirs,
                            event_reporter=db_event_reporter,
                            import_everything_langs=db_import_everything_langs)
+
+        self.lidb = langinfo.get_default_database()
+        self._register_modules(extra_module_dirs)
+
         self.idxr = indexer.Indexer(self, on_scan_complete)
 
     def upgrade(self):
@@ -224,7 +228,8 @@ class Manager(threading.Thread, Queue):
 
     def set_lang_info(self, lang, silvercity_lexer=None, buf_class=None,
                       import_handler_class=None, cile_driver_class=None,
-                      is_cpln_lang=False, langintel_class=None):
+                      is_cpln_lang=False, langintel_class=None,
+                      import_everything=False):
         """Called by register() functions in language support modules."""
         if silvercity_lexer:
             self.silvercity_lexer_from_lang[lang] = silvercity_lexer
@@ -240,6 +245,8 @@ class Manager(threading.Thread, Queue):
                                        is_cpln_lang=is_cpln_lang)
         if is_cpln_lang:
             self._is_cpln_from_lang[lang] = True
+        if import_everything:
+            self.db.import_everything_langs.add(lang)
 
     def add_hook_handler(self, hook_handler):
         """Add a handler for various codeintel hooks.
@@ -269,6 +276,10 @@ class Manager(threading.Thread, Queue):
     # Proxy the batch update API onto our Citadel instance.
     def batch_update(self, join=True, updater=None):
         return self.citadel.batch_update(join=join, updater=updater)
+
+    def report_message(self, msg, details=None, notification_name="codeintel-message"):
+        """Reports a unique codeintel message."""
+        log.info("%s: %s: %r", notification_name, msg, details)
 
     def is_multilang(self, lang):
         """Return True iff this is a multi-lang language.
@@ -334,7 +345,13 @@ class Manager(threading.Thread, Queue):
         try:
             buf_class = self.buf_class_from_lang[lang]
         except KeyError:
-            buf = ImplicitBuffer(lang, self, accessor, env, path, encoding)
+            # No langintel is defined for this class, check if the koILanguage
+            # defined is a UDL koILanguage.
+            from koUDLLanguageBase import KoUDLLanguage
+            if isinstance(UnwrapObject(doc.languageObj), KoUDLLanguage):
+                return UDLBuffer(self, accessor, env, path, encoding, lang=lang)
+            # Not a UDL language - use the implicit buffer then.
+            return ImplicitBuffer(lang, self, accessor, env, path, encoding)
         else:
             buf = buf_class(self, accessor, env, path, encoding)
         return buf
@@ -442,6 +459,7 @@ class Manager(threading.Thread, Queue):
                     pass
             finally:
                 self._curr_eval_sess = None
+        self.db.report_event(None)
     
     def _handle_eval_sess_error(self, eval_sess):
         exc_info = sys.exc_info()
@@ -462,21 +480,31 @@ class Manager(threading.Thread, Queue):
         # session.
         if is_reeval and self._curr_eval_sess is not eval_sess:
             return
-        
-        # We only allow *one* eval session at a time.
-        # - Drop a possible accumulated eval session.
-        if len(self.queue):
-            self.queue.clear()
-        # - Abort the current eval session.
-        if not is_reeval and self._curr_eval_sess is not None:
-            self._curr_eval_sess.ctlr.abort()
+
+        replace = True
+        if hasattr(eval_sess, "ctlr") and eval_sess.ctlr and eval_sess.ctlr.keep_existing:
+            # Allow multiple eval sessions; currently used for variable
+            # highlighting (bug 80095), may pick up additional uses.  Note that
+            # these sessions can still get wiped out by a single replace=False
+            # caller.
+            replace = False
+
+        if replace:
+            # We only allow *one* eval session at a time.
+            # - Drop a possible accumulated eval session.
+            if len(self.queue):
+                self.queue.clear()
+            ## - Abort the current eval session.
+            if not is_reeval and self._curr_eval_sess is not None:
+                self._curr_eval_sess.ctlr.abort()
 
         # Lazily start the eval thread.
         if not self.isAlive():
             self.start()
 
         Queue._put(self, (eval_sess, is_reeval))
-        assert len(self.queue) == 1
+        if replace:
+            assert len(self.queue) == 1
 
     def _get(self):
         eval_sess, is_reeval = Queue._get(self)

@@ -226,6 +226,15 @@ class RubyTreeEvaluator(TreeEvaluatorHelper):
         elif trg_type == "object-methods":
             if _looks_like_constant_re.match(self.expr):
                 allowed_cplns = _CPLN_ALL_BUT_METHODS|_CPLN_METHODS_ALL_FOR_MODULE
+                # bug 94237: Are we doing codeintel on a constant class/module or
+                # on a constant variable?  Assume class/module, but allow
+                # for code like XYZ = [3]; XYZ.<|>
+                tokens = self._tokenize_citdl_expr(self.expr)
+                if tokens:
+                    var_hits = self._hits_from_first_part(tokens[0], None)
+                    if var_hits and self._hit_helper.is_variable(var_hits[0]):
+                        # Correct the kind of completions we'll do
+                        allowed_cplns = _CPLN_METHODS_INST
             else:
                 allowed_cplns = _CPLN_METHODS_INST
         elif self._get_current_names:

@@ -1,41 +1,35 @@
 /**
- * This module provides utilities for dealing with query strings. It
- * provides the following methods:
+ * This module provides utilities for dealing with query strings.
  */
 var querystring = {};
 
 /**
- * Deserialize a query string to an object. Optionally override the default
- * separator and assignment characters.
+ * Deserialize a query string to an object.
  * @param str
- * @param sep='&amp;'
- * @param eq='='
+ * @param sep
+ * @param eq
  */
 querystring.parse = function(str, sep, eq) {}
 
 /**
- * Serialize an object to a query string. Optionally override the default
- * separator and assignment characters.
+ * Serialize an object to a query string.
  * @param obj
- * @param sep='&amp;'
- * @param eq='='
+ * @param sep
+ * @param eq
  */
 querystring.stringify = function(obj, sep, eq) {}
 
 /**
  * The unescape function used by querystring.parse, provided so that it
  * could be overridden if necessary.
- * @param str
  */
-querystring.unescape = function(str) {}
+querystring.unescape = function() {}
 
 /**
  * The escape function used by querystring.stringify, provided so that it
  * could be overridden if necessary.
- * @param str
  */
-querystring.escape = function(str) {}
-
+querystring.escape = function() {}
 
 exports = querystring;
 

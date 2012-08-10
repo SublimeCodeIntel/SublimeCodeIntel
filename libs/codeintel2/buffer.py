@@ -110,12 +110,14 @@ class Buffer(object):
     # name.
     _style_name_from_style_num_from_lang = {}
 
-    def __init__(self, mgr, accessor, env=None, path=None, encoding=None):
+    def __init__(self, mgr, accessor, env=None, path=None, encoding=None, lang=None):
         self.mgr = mgr
         self.accessor = accessor # an Accessor instance
         self._env = env
         self.path = path
         self.encoding = encoding
+        if lang is not None:
+            self.lang = lang
 
         self.implicit_completion_skip_styles = dict(
             (s, True) for s in self.comment_styles() + self.string_styles())
@@ -212,13 +214,13 @@ class Buffer(object):
         
         Rules for implementation:
         - Must call ctlr.start(buf, trg) at start.
-        - Should call ctrl.set_desc(desc) near the start to provide a
+        - Should call ctlr.set_desc(desc) near the start to provide a
           short description of the evaluation. 
         - Should log eval errors via ctlr.error(msg, args...).
         - Should log other events via ctlr.{debug|info|warn}.
         - Should respond to ctlr.abort() in a timely manner.
         - If successful, must report results via one of
-          ctrl.set_cplns() or ctrl.set_calltips().
+          ctlr.set_cplns() or ctlr.set_calltips().
         - Must call ctlr.done(some_reason_string) when done.
 
         Tips for implementation:
@@ -590,19 +592,22 @@ div.code .tags        { color: red; }
         if self.lang not in self._style_name_from_style_num_from_lang:
             name_from_num \
                 = self._style_name_from_style_num_from_lang[self.lang] = {}
-            if self.sce_prefixes is None:
-                raise CodeIntelError("'sce_prefixes' not set on class %s: cannot "
-                                     "determine style constant names"
-                                     % self.__class__.__name__)
+            sce_prefixes = self.sce_prefixes
+            if sce_prefixes is None:
+                # Try and guess the prefix then.
+                log.warn("Guessing sce_prefix as 'SCE_%s_' - if that's not "
+                         "correct then define 'sce_prefixes' on your buffer"
+                         "class", self.lang.upper())
+                sce_prefixes = ["SCE_%s_" % (self.lang.upper())]
             for attr in dir(ScintillaConstants):
-                for sce_prefix in self.sce_prefixes:
+                for sce_prefix in sce_prefixes:
                     if attr.startswith(sce_prefix):
                         name_from_num[getattr(ScintillaConstants, attr)] = attr
         else:
             name_from_num \
                 = self._style_name_from_style_num_from_lang[self.lang]
-        const_name = self._style_name_from_style_num_from_lang[self.lang][style_num]
-        style_names.append(const_name)
+        const_name = self._style_name_from_style_num_from_lang[self.lang].get(style_num, "Unknown style")
+        style_names.append("%d - %s" % (style_num, const_name))
         
         # Get a style group from styles.py.
         if self.lang in styles.StateMap:

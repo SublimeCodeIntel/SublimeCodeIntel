@@ -369,6 +369,9 @@ class JSDoc:
         self.baseclasses.append(value)
 
     # Same as base
+    def _handle_augments(self, value):
+        self._handle_base(value)
+    # Same as base
     def _handle_extends(self, value):
         self._handle_base(value)
 
@@ -418,12 +421,15 @@ class JSDoc:
             doc = " ".join(sp[1:3])
         cp = JSDocParameter(paramname, paramtype, doc)
         self.params.append(cp)
+    # Same as param.
+    def _handle_argument(self, value):
+        return self._handle_param(value)
 
     def _handle_tags(self, value):
         self.tags = value
 
     def _handle_type(self, value):
-        self.type = self._getTypeField(value)
+        self.type = self._getTypeFieldFromString(value)[0]
 
     def _handle_return(self, value):
         returntype, doc = self._getTypeFieldFromString(value)
@@ -639,6 +645,10 @@ def _test():
 
     short_type_comment_with_tab = """/**\t@type String */"""
     jd = JSDoc(short_type_comment_with_tab)
+    assert(jd.type == "String")
+
+    short_type_command_with_fluff = """/** @type {String} Fluff */"""
+    jd = JSDoc(short_type_command_with_fluff)
     assert(jd.type == "String")
 
 # Main function

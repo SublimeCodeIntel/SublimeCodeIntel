@@ -43,6 +43,9 @@ import string
 import sys
 import re
 import textwrap
+import logging
+
+log = logging.getLogger("tcl_parser")
 
 from SilverCity import ScintillaConstants
 from codeintel2 import tcl_lexer
@@ -424,6 +427,9 @@ class Parser:
                         break
                 elif text in (";", "["):
                     cmdStart = True
+                elif text == "\\":
+                    # Skip the next token, whatever it is - bug 74850
+                    tok = self.tokenizer.get_next_token()
             else:
                 cmdStart = False
             # Sanity check to make sure we haven't gone too far.

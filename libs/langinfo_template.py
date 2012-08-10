@@ -55,6 +55,7 @@ class EJSLangInfo(LangInfo):
 class DjangoTemplateLangInfo(LangInfo):
     name = "Django Template"
     conforms_to_bases = ["Text"]
+    exts = [".django.html"]
     section_regexes = [
         ("import", re.compile(r'\{\%[ \t]+(load\b.*?)\%\}')),
         ("class", re.compile(r'\{\%[ \t]+(block\b.*?)\%\}')),
@@ -69,6 +70,10 @@ class DjangoHTMLTemplateLangInfo(DjangoTemplateLangInfo):
             ('{{', re.compile(r'\{\{.*?\}\}')),
         ],
     }
+
+class TwigTemplateLangInfo(DjangoTemplateLangInfo):
+    name = "Twig"
+    exts = [".twig"]
 
 class DjangoXHTMLTemplateLangInfo(DjangoTemplateLangInfo):
     name = "Django XHTML Template"

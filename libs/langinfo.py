@@ -235,6 +235,17 @@ class TextLangInfo(LangInfo):
     filename_patterns = ["README", "COPYING", "LICENSE", "MANIFEST"]
 
 
+def _generateFallbackKoLangInfo(langinfo_db, koLangInst):
+    """Generate a LangInfo instance from the koILanguage instance."""
+    class FallbackKoLangInfo(LangInfo):
+        conforms_to_bases = ["Text"]
+        default_encoding = "utf-8"
+        def __init__(self, db, koLang):
+            LangInfo.__init__(self, db)
+            self.name = koLang.name
+            if koLang.defaultExtension:
+                self.exts = [koLang.defaultExtension]
+    return FallbackKoLangInfo(langinfo_db, koLangInst)
 
 #---- the Database
 
@@ -269,7 +280,7 @@ class Database(object):
             raise LangInfoError("no info on %r lang" % lang)
         return self._langinfo_from_norm_lang[norm_lang]
 
-    def langinfo_from_komodo_lang(self, komodo_lang):
+    def langinfo_from_komodo_lang(self, komodo_lang, tryFallback=True):
         """Return a langinfo for the given Komodo language name.
         
         There are some minor differences in Komodo language names and
@@ -283,6 +294,28 @@ class Database(object):
             return self._li_from_norm_komodo_lang[norm_komodo_lang]
         elif norm_komodo_lang in self._langinfo_from_norm_lang:
             return self._langinfo_from_norm_lang[norm_komodo_lang]
+        elif tryFallback:
+            # If a koILanguage exists for this lang, then create a fallback
+            # langinfo for it - this occurs when a user has defined an add-on or
+            # language, but they haven't made a langinfo.py for it.
+            try:
+                from xpcom import components
+            except ImportError:
+                pass # no xpcom
+            else:
+                langSvc = components.classes["@activestate.com/koLanguageRegistryService;1"] \
+                            .getService(components.interfaces.koILanguageRegistryService)
+                # Note: When the language does not exist, we get a fallback of
+                #       koILang.Text
+                koLang = langSvc.getLanguage(komodo_lang)
+                if koLang is not None and koLang.name in (komodo_lang, norm_komodo_lang):
+                    # Someone's defined a koILanguage for this lang - create
+                    # dummy langinfo for it.
+                    log.warn("no LangInfo class found for %r, creating a fallback for it",
+                             komodo_lang)
+                    self._langinfo_from_norm_lang[norm_komodo_lang] = _generateFallbackKoLangInfo(self, koLang)
+                    self._build_tables()
+                    return self.langinfo_from_komodo_lang(komodo_lang, tryFallback=False)
         raise LangInfoError("no info on %r komodo lang" % komodo_lang)
 
     def langinfo_from_emacs_mode(self, emacs_mode):

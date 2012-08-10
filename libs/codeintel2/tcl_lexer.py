@@ -89,7 +89,7 @@ class TclLexerClassifier:
 
 #---- global data
 
-op_re = re.compile(r'(.*?)([\\\{\}\[\]])(.*)')
+op_re = re.compile(r'([\\\{\}\[\]])')
 
 class TclLexer(shared_lexer.Lexer):
     def __init__(self, code):
@@ -112,33 +112,9 @@ class TclLexer(shared_lexer.Lexer):
             return
         tval = tok['text']
         if tok['style'] == ScintillaConstants.SCE_TCL_OPERATOR and len(tval) > 1:
-            # In Tcl rely on white-space to separate arg things except for braces and brackets
-            col = tok['start_column']
-            tval_accum = ""
-            new_tokens = []
-            while True:
-                m = op_re.match(tval)
-                if m:
-                    before, op, after = m.groups()
-                    if op == '\\':
-                        if len(after) > 0:
-                            tval_accum += before + op + after[0]
-                            tval = after[1:]
-                        else:
-                            new_tokens.append(tval_accum + before + op)
-                            break
-                    else:
-                        tval_accum += before
-                        if len(tval_accum) > 0:
-                            new_tokens.append(tval_accum)
-                        new_tokens.append(op)
-                        tval = after
-                else:           
-                    tval_accum += tval
-                    if len(tval_accum) > 0:
-                        new_tokens.append(tval_accum)
-                    break
-            if len(new_tokens) == 1:           
+            # In Tcl rely on white-space to separate operators except for braces, brackets, and backslashes
+            new_tokens = [x for x in op_re.split(tval) if x] # drop empties
+            if len(new_tokens) == 1:
                 self.q.append(tok)
             else:
                 col = tok['start_column']

@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <codeintel version="2.0">
-  <file lang="Node.js" mtime="1306788389" path="node_globals.cix">
+  <file lang="Node.js" mtime="1331923921" path="node_globals.cix">
     <scope doc="These object are available in all modules. Some of these objects aren't actually in the global scope but in the module scope - this will be noted." ilk="blob" lang="Node.js" name="*">
       <variable citdl="require()" doc="Used to print to stdout and stderr. See the stdio section." name="console" required_library_name="console"/>
       <variable citdl="require()" doc="The process object. See the process object section." name="process" required_library_name="process"/>
       <scope doc="To require modules. See the Modules section. require isn't actually a global but rather local to each module." ilk="function" name="require" signature="require(str)">
         <variable citdl="String" doc="The name of the module to import" ilk="argument" name="str"/>
         <scope doc="Use the internal require() machinery to look up the location of a module, but rather than loading the module, just return the resolved filename." ilk="function" name="resolve" signature="resolve()"/>
-        <variable citdl="Array" doc="An array of search paths for require(). This array can be modified to add custom paths, but this is deprecated." name="paths"/>
+        <variable citdl="Object" doc="Modules are cached in this object when they are required. By deleting a key value from this object, the next require will reload the module. " name="cache"/>
       </scope>
       <variable attributes="__local__" citdl="require()" name="timers" required_library_name="timers"/>
       <variable citdl="timers.setTimeout" name="setTimeout"/>
@@ -20,6 +20,8 @@
         <scope ilk="namespace" name="exports"/>
       </scope>
       <variable citdl="module.exports" name="exports"/>
+      <variable attributes="__local__" citdl="require()" name="buffer" required_library_name="buffer"/>
+      <variable citdl="buffer.Buffer" name="Buffer"/>
       <variable citdl="*" name="global"/>
       <variable name="Infinity"/>
       <variable name="NaN"/>

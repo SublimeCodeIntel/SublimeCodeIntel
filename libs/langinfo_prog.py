@@ -102,6 +102,10 @@ class PHPLangInfo(LangInfo):
     #      and the XML prolog encoding check.
 
     keywords = set([
+            # new to php 5.4
+            "insteadof", "trait",
+            # new to php 5.3
+            "e_deprecated", "e_user_deprecated", "php_maxpathlen",
             # existed in php4
             "bool", "boolean", "catch", "define", "double", "false", "float",
             "int", "integer", "null", "object", "parent", "real",

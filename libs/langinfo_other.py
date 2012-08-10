@@ -112,6 +112,11 @@ class APDLLangInfo(LangInfo):
     conforms_to_bases = ["Text"]
     exts = [".mac"]
 
+class IniLangInfo(LangInfo):
+    name = "Ini"
+    conforms_to_bases = ["Text"]
+    exts = [".ini"]
+
 class POVRayLangInfo(LangInfo):
     """The "Persistence of Vision Raytracer"
     http://www.povray.org

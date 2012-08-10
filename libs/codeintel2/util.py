@@ -47,6 +47,7 @@ import logging
 import types
 from pprint import pprint, pformat
 import time
+import codecs
 
 from codeintel2.common import CodeIntelError
 
@@ -247,6 +248,12 @@ def parsePyFuncDoc(doc, fallbackCallSig=None, scope="?", funcname="?"):
         return ([], [])
     
     limit = LINE_LIMIT
+    if not isinstance(doc, unicode):
+        # try to convert from utf8 to unicode; if we fail, too bad.
+        try:
+            doc = codecs.utf_8_decode(doc)[0]
+        except UnicodeDecodeError:
+            pass
     doclines = doc.splitlines(0)
     index = 0
     siglines = []
@@ -300,14 +307,22 @@ def parsePyFuncDoc(doc, fallbackCallSig=None, scope="?", funcname="?"):
             index = len(doclines)
     if not siglines and fallbackCallSig:
         siglines = fallbackCallSig
-    
+
     # Parse out the description block.
     if desclines:
         # Use what we have already. Just need to wrap it.
         desclines = textwrap.wrap(' '.join(desclines), LINE_WIDTH)
     else:
-        limit -= len(siglines)
-        desclines = parseDocSummary(doclines[index:], limit=limit)
+        doclines = doclines[index:]
+        # strip leading empty lines
+        while len(doclines) > 0 and not doclines[0].rstrip():
+            del doclines[0]
+        try:
+            skip_first_line = (doclines[0][0] not in (" \t"))
+        except IndexError:
+            skip_first_line = False # no lines, or first line is empty
+        desclines = dedent("\n".join(doclines), skip_first_line=skip_first_line)
+        desclines = desclines.splitlines(0)
 
     ## debug logging
     #f = open("parsePyFuncDoc.log", "a")
@@ -687,27 +702,6 @@ def make_short_name_dict(names, length=3):
         values.sort(CompareNPunctLast)
     return outdict
 
-#----  cachedmethod from http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/325205
-
-def cachedmethod(function):
-    return types.MethodType(Memoize(function), None)
-
-class Memoize:
-    def __init__(self,function):
-        self._cache = {}
-        self._callable = function
-            
-    def __call__(self, *args, **kwds):
-        cache = self._cache
-        key = self._getKey(*args,**kwds)
-        try: return cache[key]
-        except KeyError:
-            cachedValue = cache[key] = self._callable(*args,**kwds)
-            return cachedValue
-    
-    def _getKey(self,*args,**kwds):
-        return kwds and (args, set(kwds)) or args    
-
 def makePerformantLogger(logger):
     """Replaces the info() and debug() methods with dummy methods.
 
@@ -719,6 +713,69 @@ def makePerformantLogger(logger):
         logger.info = _log_ignore
         if not logger.isEnabledFor(logging.DEBUG):
             logger.debug = _log_ignore
+
+def getMemoryUsage(obj):
+    """ Calculate the memory used by the given object
+    @param obj {object} The object to determine the memory usage of
+    @returns {int} The number of bytes the object is known to use
+    @note This may not accurately report memory usage for classes
+    """
+    
+    seen = set()
+
+    _ET = [] # need to be an object so we can modify it from within the getter
+    def ET():
+        """Get the ciElementTree module (with caching)
+        This is so we can delay importing it until necessary.
+        @return The module object, or False if it cannot be imported
+        """
+        if not len(_ET):
+            try:
+                import ciElementTree
+                _ET.append(ciElementTree)
+            except ImportError:
+                _ET.append(False)
+        return _ET[0]
+
+    def calc(obj):
+        if id(obj) in seen:
+            # already saw this object; don't double-count
+            return 0
+        try:
+            size = sys.getsizeof(obj, 0)
+            seen.add(id(obj))
+        except:
+            # failed to get the size of the object. (this happens sometimes with
+            # PyXPCOM objects)
+            size = 0
+        try:
+            if isinstance(obj, dict):
+                # also account for things in the dict
+                # note that we can't use obj.items() since that creates a
+                # temporary tuple, and its id may get re-used (causing us to
+                # under-count)
+                size += sum(getMemoryUsage(o) for o in obj.keys() + obj.values())
+            elif isinstance(obj, (list, tuple, set, frozenset)):
+                # these have children and support the iterator protocol
+                size += sum(getMemoryUsage(o) for o in obj)
+            elif isinstance(obj, (str, unicode, float, int)) or obj is None:
+                # these things are known to have no interesting children
+                pass
+            elif ET() and ET().iselement(obj):
+                # try to handle ciELement elements
+                size += sum(getMemoryUsage(o) for o in obj.items())
+                size += sum(getMemoryUsage(o) for o in obj)
+                size += getMemoryUsage(obj.tag)
+                size += getMemoryUsage(obj.attrib)
+            else:
+                # we don't know how to deal with this type of object
+                pass
+        except:
+            # we had problems looking at the object's properties
+            pass
+        return size
+
+    return calc(obj)
 
 
 #---- mainline self-test

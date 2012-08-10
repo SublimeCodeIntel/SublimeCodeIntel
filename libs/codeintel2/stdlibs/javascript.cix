@@ -369,47 +369,47 @@
         <scope doc="Return a lowercase version of the string." ilk="function" name="toLowerCase" returns="String" signature="toLowerCase() -&gt; String" />
         <scope doc="Return an uppercase version of the string." ilk="function" name="toUpperCase" returns="String" signature="toUpperCase() -&gt; String" />
       </scope>
-      <scope ilk="class" line="82" lineend="284" name="XMLHttpRequest">
-        <variable attributes="readonly" citdl="Channel" line="95" name="channel" />
-        <variable attributes="readonly" citdl="DOMDocument" line="103" name="responseXML" />
-        <variable attributes="readonly" citdl="String" line="110" name="responseText" />
-        <variable attributes="readonly" citdl="unsigned long" line="116" name="status" />
-        <variable attributes="readonly" citdl="String" line="122" name="statusText" />
-        <scope doc="If the request has been sent already, this method will&#xA;abort the request." ilk="function" line="128" lineend="128" name="abort" signature="abort()" />
-        <scope doc="Returns all of the response headers as a string for HTTP&#xA;requests.&#xA;&#xA;Note that this will return all the headers from the *current*&#xA;part of a multipart request, not from the original channel." ilk="function" line="140" lineend="140" name="getAllResponseHeaders" returns="string" signature="getAllResponseHeaders()" />
-        <scope attributes="noscript" doc="Native (non-script) method to initialize a request. Note that&#xA;the request is not sent until the &lt;code&gt;send&lt;/code&gt; method&#xA;is invoked.&#xA;&#xA;Will abort currently active loads.&#xA;&#xA;After the initial response, all event listeners will be cleared.&#xA;Call open() before setting new event listeners." ilk="function" line="177" lineend="177" name="openRequest" signature="openRequest(method, url, async, user, password)">
+      <scope ilk="class" name="XMLHttpRequest">
+        <variable attributes="readonly" citdl="Channel" name="channel" />
+        <variable attributes="readonly" citdl="DOMDocument" name="responseXML" />
+        <variable attributes="readonly" citdl="String" name="responseText" />
+        <variable attributes="readonly" citdl="unsigned long" name="status" />
+        <variable attributes="readonly" citdl="String" name="statusText" />
+        <scope doc="If the request has been sent already, this method will&#xA;abort the request." ilk="function" name="abort" signature="abort()" />
+        <scope doc="Returns all of the response headers as a string for HTTP&#xA;requests.&#xA;&#xA;Note that this will return all the headers from the *current*&#xA;part of a multipart request, not from the original channel." ilk="function" name="getAllResponseHeaders" returns="string" signature="getAllResponseHeaders()" />
+        <scope attributes="noscript" doc="Native (non-script) method to initialize a request. Note that&#xA;the request is not sent until the &lt;code&gt;send&lt;/code&gt; method&#xA;is invoked.&#xA;&#xA;Will abort currently active loads.&#xA;&#xA;After the initial response, all event listeners will be cleared.&#xA;Call open() before setting new event listeners." ilk="function" name="openRequest" signature="openRequest(method, url, async, user, password)">
           <variable citdl="String" ilk="argument" name="method" />
           <variable citdl="String" ilk="argument" name="url" />
           <variable citdl="boolean" ilk="argument" name="async" />
           <variable citdl="String" ilk="argument" name="user" />
           <variable citdl="String" ilk="argument" name="password" />
         </scope>
-        <scope doc="Meant to be a script-only method for initializing a request.&#xA;The parameters are similar to the ones detailed in the&#xA;description of &lt;code&gt;openRequest&lt;/code&gt;, but the last&#xA;3 are optional.&#xA;&#xA;Will abort currently active loads.&#xA;&#xA;After the initial response, all event listeners will be cleared.&#xA;Call open() before setting new event listeners." ilk="function" line="211" lineend="211" name="open" signature="open(method, url)">
+        <scope doc="Meant to be a script-only method for initializing a request.&#xA;The parameters are similar to the ones detailed in the&#xA;description of &lt;code&gt;openRequest&lt;/code&gt;, but the last&#xA;3 are optional.&#xA;&#xA;Will abort currently active loads.&#xA;&#xA;After the initial response, all event listeners will be cleared.&#xA;Call open() before setting new event listeners." ilk="function" name="open" signature="open(method, url)">
           <variable citdl="String" ilk="argument" name="method" />
           <variable citdl="String" ilk="argument" name="url" />
         </scope>
-        <scope doc="Sends the request. If the request is asynchronous, returns&#xA;immediately after sending the request. If it is synchronous&#xA;returns only after the response has been received.&#xA;&#xA;After the initial response, all event listeners will be cleared.&#xA;Call open() before setting new event listeners." ilk="function" line="236" lineend="236" name="send" signature="send(body)">
+        <scope doc="Sends the request. If the request is asynchronous, returns&#xA;immediately after sending the request. If it is synchronous&#xA;returns only after the response has been received.&#xA;&#xA;After the initial response, all event listeners will be cleared.&#xA;Call open() before setting new event listeners." ilk="function" name="send" signature="send(body)">
           <variable citdl="Variant" ilk="argument" name="body" />
         </scope>
-        <scope doc="Sets a HTTP request header for HTTP requests. You must call open&#xA;before setting the request headers." ilk="function" line="245" lineend="245" name="setRequestHeader" signature="setRequestHeader(header, value)">
+        <scope doc="Sets a HTTP request header for HTTP requests. You must call open&#xA;before setting the request headers." ilk="function" name="setRequestHeader" signature="setRequestHeader(header, value)">
           <variable citdl="String" ilk="argument" name="header" />
           <variable citdl="String" ilk="argument" name="value" />
         </scope>
-        <variable attributes="readonly" citdl="long" line="257" name="readyState" />
-        <scope doc="Override the mime type returned by the server (if any). This may&#xA;be used, for example, to force a stream to be treated and parsed&#xA;as text/xml, even if the server does not report it as such. This&#xA;must be done before the &lt;code&gt;send&lt;/code&gt; method is invoked." ilk="function" line="268" lineend="268" name="overrideMimeType" signature="overrideMimeType(mimetype)">
+        <variable attributes="readonly" citdl="long" name="readyState" />
+        <scope doc="Override the mime type returned by the server (if any). This may&#xA;be used, for example, to force a stream to be treated and parsed&#xA;as text/xml, even if the server does not report it as such. This&#xA;must be done before the &lt;code&gt;send&lt;/code&gt; method is invoked." ilk="function" name="overrideMimeType" signature="overrideMimeType(mimetype)">
           <variable citdl="String" ilk="argument" name="mimetype" />
         </scope>
-        <variable citdl="boolean" line="283" name="multipart" />
-        <variable citdl="DOMEventListener" line="309" name="onload" />
-        <variable citdl="DOMEventListener" line="322" name="onerror" />
-        <variable citdl="DOMEventListener" line="336" name="onprogress" />
-        <variable citdl="OnReadyStateChangeHandler" line="347" name="onreadystatechange" />
+        <variable citdl="boolean" name="multipart" />
+        <variable citdl="DOMEventListener" name="onload" />
+        <variable citdl="DOMEventListener" name="onerror" />
+        <variable citdl="DOMEventListener" name="onprogress" />
+        <variable citdl="OnReadyStateChangeHandler" name="onreadystatechange" />
       </scope>
-      <scope ilk="class" line="288" lineend="294" name="OnReadyStateChangeHandler">
-        <scope doc="Helper to implement the onreadystatechange callback member.&#xA;You should not need to use this." ilk="function" line="293" lineend="293" name="handleEvent" signature="handleEvent()" />
+      <scope ilk="class" name="OnReadyStateChangeHandler">
+        <scope doc="Helper to implement the onreadystatechange callback member.&#xA;You should not need to use this." ilk="function" name="handleEvent" signature="handleEvent()" />
       </scope>
       <variable citdl="Window" name="window" />
-      <scope classrefs="EventTarget" ilk="class" name="Window">
+      <scope classrefs="EventTarget NSWindowBodyFramesetInlineEventHandlers" ilk="class" name="Window">
         <variable name="content" />
         <variable doc="Returns a reference to the content element in the current&#xA;window." name="_content" />
         <variable doc="This property indicates whether the current window is closed&#xA;or not" name="closed" />
@@ -986,7 +986,78 @@
         </scope>
         <scope doc="This method is called during the handling of an event by a&#xA;capturing Node to continue the event&apos;s flow to additional&#xA;event handlers, or if none are present, to the event&apos;s&#xA;target." ilk="function" name="routeEvent" signature="routeEvent()" />
       </scope>
-      <scope doc="The EventTarget interface is implemented by all Nodes in an&#xA;implementation which supports the DOM Event Model.&#xA;Therefore, this interface can be obtained by using binding-&#xA;specific casting methods on an instance of the Node&#xA;interface." ilk="class" name="EventTarget">
+      <scope ilk="class" name="NSInlineEventHandlers">
+        <scope ilk="function" name="onabort" />
+        <scope ilk="function" name="onblur" />
+        <scope ilk="function" name="oncanplay" />
+        <scope ilk="function" name="oncanplaythrough" />
+        <scope ilk="function" name="onchange" />
+        <scope ilk="function" name="onclick" />
+        <scope ilk="function" name="oncontextmenu" />
+        <scope ilk="function" name="oncuechange" />
+        <scope ilk="function" name="ondblclick" />
+        <scope ilk="function" name="ondrag" />
+        <scope ilk="function" name="ondragend" />
+        <scope ilk="function" name="ondragenter" />
+        <scope ilk="function" name="ondragleave" />
+        <scope ilk="function" name="ondragover" />
+        <scope ilk="function" name="ondragstart" />
+        <scope ilk="function" name="ondrop" />
+        <scope ilk="function" name="ondurationchange" />
+        <scope ilk="function" name="onemptied" />
+        <scope ilk="function" name="onended" />
+        <scope ilk="function" name="onerror" />
+        <scope ilk="function" name="onfocus" />
+        <scope ilk="function" name="oninput" />
+        <scope ilk="function" name="oninvalid" />
+        <scope ilk="function" name="onkeydown" />
+        <scope ilk="function" name="onkeypress" />
+        <scope ilk="function" name="onkeyup" />
+        <scope ilk="function" name="onload" />
+        <scope ilk="function" name="onloadeddata" />
+        <scope ilk="function" name="onloadedmetadata" />
+        <scope ilk="function" name="onloadstart" />
+        <scope ilk="function" name="onmousedown" />
+        <scope ilk="function" name="onmousemove" />
+        <scope ilk="function" name="onmouseout" />
+        <scope ilk="function" name="onmouseover" />
+        <scope ilk="function" name="onmouseup" />
+        <scope ilk="function" name="onmousewheel" />
+        <scope ilk="function" name="onpause" />
+        <scope ilk="function" name="onplay" />
+        <scope ilk="function" name="onplaying" />
+        <scope ilk="function" name="onprogress" />
+        <scope ilk="function" name="onratechange" />
+        <scope ilk="function" name="onreset" />
+        <scope ilk="function" name="onscroll" />
+        <scope ilk="function" name="onseeked" />
+        <scope ilk="function" name="onseeking" />
+        <scope ilk="function" name="onselect" />
+        <scope ilk="function" name="onshow" />
+        <scope ilk="function" name="onstalled" />
+        <scope ilk="function" name="onsubmit" />
+        <scope ilk="function" name="onsuspend" />
+        <scope ilk="function" name="ontimeupdate" />
+        <scope ilk="function" name="onvolumechange" />
+        <scope ilk="function" name="onwaiting" />
+      </scope>
+      <scope classrefs="NSInlineEventHandlers" ilk="class" name="NSWindowBodyFramesetInlineEventHandlers">
+        <scope ilk="function" name="onafterprint" />
+        <scope ilk="function" name="onbeforeprint" />
+        <scope ilk="function" name="onbeforeunload" />
+        <scope ilk="function" name="onhashchange" />
+        <scope ilk="function" name="onmessage" />
+        <scope ilk="function" name="onoffline" />
+        <scope ilk="function" name="ononline" />
+        <scope ilk="function" name="onpagehide" />
+        <scope ilk="function" name="onpageshow" />
+        <scope ilk="function" name="onpopstate" />
+        <scope ilk="function" name="onresize" />
+        <scope ilk="function" name="onscroll" />
+        <scope ilk="function" name="onstorage" />
+        <scope ilk="function" name="onunload" />
+      </scope>
+      <scope classrefs="NSInlineEventHandlers" doc="The EventTarget interface is implemented by all Nodes in an&#xA;implementation which supports the DOM Event Model.&#xA;Therefore, this interface can be obtained by using binding-&#xA;specific casting methods on an instance of the Node&#xA;interface." ilk="class" name="EventTarget">
         <scope doc="This method allows the registration of event listeners on&#xA;the event target. If an EventListener is added to an&#xA;EventTarget while it is processing an event, it will not be&#xA;triggered by the current actions but may be triggered during&#xA;a later stage of event flow, such as the bubbling phase." ilk="function" name="addEventListener" signature="addEventListener(type, listener, useCapture)">
           <variable citdl="DOMString" ilk="argument" name="type" />
           <variable citdl="EventListener" ilk="argument" name="listener" />
@@ -1024,7 +1095,7 @@
         <variable citdl="DOMString" doc="Returns the URI of the page that linked to this page. The&#xA;value is an empty string if the user navigated to the page&#xA;directly (not through a link, but, for example, via a&#xA;bookmark)." name="referrer" />
         <variable citdl="DOMString" doc="The domain name of the server that served the document, or&#xA;null if the server cannot be identified by a domain name." name="domain" />
         <variable citdl="DOMString" doc="The absolute URI of the document." name="URL" />
-        <variable citdl="HTMLElement" doc="The element that contains the content for the document. In&#xA;documents with BODY contents, returns the BODY element." name="body" />
+        <variable citdl="HTMLBodyElement" doc="The element that contains the content for the document. In&#xA;documents with BODY contents, returns the BODY element." name="body" />
         <variable citdl="HTMLCollection" doc="A collection of all the IMG elements in a document. The&#xA;behavior is limited to IMG elements for backwards&#xA;compatibility." name="images" />
         <variable citdl="HTMLCollection" doc="A collection of all the OBJECT elements that include applets&#xA;and APPLET ( deprecated ) elements in a document." name="applets" />
         <variable citdl="HTMLCollection" doc="A collection of all AREA elements and anchor ( A ) elements&#xA;in a document with a value for the href attribute." name="links" />
@@ -1089,7 +1160,7 @@
         <variable citdl="DOMString" doc="Designed for use with one or more target media. See the&#xA;media attribute definition in HTML 4.01." name="media" />
         <variable citdl="DOMString" doc="The content type of the style sheet language. See the type&#xA;attribute definition in HTML 4.01." name="type" />
       </scope>
-      <scope classrefs="HTMLElement" doc="The HTML document body. This element is always present in&#xA;the DOM API, even if the tags are not present in the source&#xA;document." ilk="class" name="HTMLBodyElement">
+      <scope classrefs="HTMLElement NSWindowBodyFramesetInlineEventHandlers" doc="The HTML document body. This element is always present in&#xA;the DOM API, even if the tags are not present in the source&#xA;document." ilk="class" name="HTMLBodyElement">
         <variable citdl="DOMString" doc="Color of active links (after mouse-button down, but before&#xA;mouse-button up). See the alink attribute definition in HTML&#xA;4.01." name="aLink" />
         <variable citdl="DOMString" doc="URI of the background texture tile image. See the background&#xA;attribute definition in HTML 4.01." name="background" />
         <variable citdl="DOMString" doc="Document background color. See the bgcolor attribute&#xA;definition in HTML 4.01." name="bgColor" />
@@ -1498,7 +1569,8 @@
         <variable citdl="CSSStyleDeclaration" doc="The style attribute." name="style" />
       </scope>
       <scope classrefs="Node" doc="DocumentFragment is a &quot;lightweight&quot; or &quot;minimal&quot; Document&#xA;object. It is very common to want to be able to extract a&#xA;portion of a document&apos;s tree or to create a new fragment of&#xA;a document." ilk="class" name="DocumentFragment" />
-      <scope classrefs="Node" doc="The Document interface represents the entire HTML or XML&#xA;document. Conceptually, it is the root of the document tree,&#xA;and provides the primary access to the document&apos;s data." ilk="class" name="Document">
+      <scope classrefs="Node NSInlineEventHandlers" doc="The Document interface represents the entire HTML or XML&#xA;document. Conceptually, it is the root of the document tree,&#xA;and provides the primary access to the document&apos;s data." ilk="class" name="Document">
+        <scope ilk="function" name="onreadystatechange" />
         <variable citdl="DocumentType" doc="The Document Type Declaration (see DocumentType ) associated&#xA;with this document. For HTML documents as well as XML&#xA;documents without a document type declaration this returns&#xA;null." name="doctype" />
         <variable citdl="DOMImplementation" doc="The DOMImplementation object that handles this document. A&#xA;DOM application may use objects from multiple&#xA;implementations." name="implementation" />
         <variable citdl="Element" doc="This is a convenience attribute that allows direct access to&#xA;the child node that is the root element of the document. For&#xA;HTML documents, this is the element with the tagName &quot;HTML&quot;." name="documentElement" />

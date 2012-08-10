@@ -304,6 +304,8 @@ class Database(object):
     # version number should be used for small upgrades to the database.
     #
     # db change log:
+    # - 2.0.24: (JS ordering of arguments, bug 94267)
+    # - 2.0.23: (JS added __file_local__, bug 90823)
     # - 2.0.22: (Node.js core API documentation parser changes)
     # - 2.0.21: (PHP namespace top-level-name performance tweaks)
     # - 2.0.20: (PHP namespace class inheritance scanning)
@@ -350,7 +352,7 @@ class Database(object):
     # - 2.0.2: added scan_error to res_index in LangZone and MultiLangZone,
     #   add "lang" file to lang zones for reverse safe_lang -> lang lookup
     # - 2.0.1: s/VERSION.txt/VERSION/, made PHP a MultiLangZone
-    VERSION = "2.0.22"
+    VERSION = "2.0.24"
 
     LEN_PREFIX = 3 # Length of prefix in 'toplevelprefix_index' indeces.
 
@@ -400,10 +402,10 @@ class Database(object):
         self.event_reporter = event_reporter
 
         if import_everything_langs is None:
-            self.import_everything_langs = set(["JavaScript", "PHP"])
+            self.import_everything_langs = set()
         else:
+            assert isinstance(import_everything_langs, set)
             self.import_everything_langs = import_everything_langs
-        assert isinstance(self.import_everything_langs, set)
 
         self.corruptions = [] # list of noted errors during db operation
 
@@ -596,6 +598,8 @@ class Database(object):
         "2.0.19": (VERSION, _upgrade_wipe_db_langs, ["PHP"]),
         "2.0.20": (VERSION, _upgrade_wipe_db_langs, ["PHP"]),
         "2.0.21": (VERSION, _upgrade_wipe_db_langs, ["Node.js"]),
+        "2.0.22": (VERSION, _upgrade_wipe_db_langs, ["JavaScript", "Node.js"]),
+        "2.0.23": (VERSION, _upgrade_wipe_db_langs, ["JavaScript", "Node.js"]),
     }
 
     def report_event(self, desc):
@@ -609,6 +613,7 @@ class Database(object):
         Guidelines:
         - report an event before doing a *long* action (e.g. importing a
           stdlib CIX file)
+        - report None when that long action is completed
         """
         log.info("event: %s", desc)
         if self.event_reporter:
@@ -630,12 +635,18 @@ class Database(object):
             lang_zone.save()
 
     def cull_mem(self):
-        #XXX Not yet being called. The plan is that a bookkeeper thread
-        #    should periodically call this.
-        if self._catalogs_zone:
-            self._catalogs_zone.cull_mem()
-        for lang_zone in self._lang_zone_from_lang.values():
-            lang_zone.cull_mem()
+        """Cull memory usage as necessary"""
+        # this is currently called via the indexer (see _iteration)
+        for zone in self.get_all_zones():
+            try:
+                zone.cull_mem()
+            except:
+                log.exception("Failed to cull memory for zone %r", zone)
+        try:
+            import gc
+            gc.collect()
+        except:
+            pass
 
     _non_lang_db_dirs = ["catalogs", "stdlibs", "projs"]
     def _gen_langs_in_db(self):
@@ -943,6 +954,17 @@ class Database(object):
     def get_proj_lib(self, proj, lang):
         return self.get_proj_zone(proj).get_lib(lang)
 
+    def get_all_zones(self):
+        """ Get all LangZones for debugging """
+        if self._catalogs_zone:
+            yield self._catalogs_zone
+        if self._stdlibs_zone:
+            yield self._stdlibs_zone
+        for zone in self._lang_zone_from_lang.values()[:]:
+            yield zone
+        for zone in self._proj_zone_from_proj_path.values()[:]:
+            yield zone
+
     def load_blob(self, dbsubpath):
         """Load the blob and all persisted blob cache keys from disk."""
         log.debug("fs-read: load blob `%s'", dbsubpath[len(self.base_dir)+1:])
@@ -975,6 +997,10 @@ class Database(object):
             fin = open(path, 'rb')
             try:
                 return pickle.load(fin)
+            except:
+                if default is not None:
+                    return default
+                raise
             finally:
                 fin.close()
         elif default is not None:
