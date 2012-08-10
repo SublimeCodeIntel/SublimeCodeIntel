@@ -309,7 +309,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                         i = 1
                         for p in params:
                             p = p.strip()
-                            if p.find('=') != -1:
+                            if p.find('=') != -1 or p.find('<list>') != -1:
                                 continue
                             if p.find(' ') != -1:
                                 p = p.split(' ')[1]
@@ -586,6 +586,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             for catalog in mgr.db.get_catalogs_zone().avail_catalogs():
                 if catalog['lang'] == lang:
                     catalogs.append(catalog['name'])
+
             config = {
                 "codeintel_selected_catalogs": catalogs,
                 "codeintel_max_recursive_dir_depth": 10,
