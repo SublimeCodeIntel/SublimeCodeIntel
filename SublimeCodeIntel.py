@@ -310,7 +310,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                         i = 1
                         for p in params:
                             p = p.strip()
-                            if p.find('=') != -1:
+                            if p.find('=') != -1 or p.find('<list>') != -1:
                                 continue
                             if p.find(' ') != -1:
                                 p = p.split(' ')[1]
@@ -590,6 +590,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             for catalog in mgr.db.get_catalogs_zone().avail_catalogs():
                 if catalog['lang'] == lang:
                     catalogs.append(catalog['name'])
+
             config = {
                 "codeintel_selected_catalogs": catalogs,
                 "codeintel_max_recursive_dir_depth": 10,
@@ -858,7 +859,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             #     live = live and sentinel[id] is not None
 
             if live:
-                if not hasattr(view, 'command_history') or (view.command_history(0)[0] == 'insert' and view.command_history(0)[1]['characters'] != ',') or (view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)') or (text == '(' and view.command_history(0)[0] == 'commit_completion'):
+                if not hasattr(view, 'command_history') or (view.command_history(0)[0] == 'insert' and view.command_history(0)[1]['characters'] != ',') or (view.command_history(1)[0] == 'insert' and view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)') or (text == '(' and view.command_history(0)[0] == 'commit_completion'):
                     autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path, lang])
                 else:
                     view.run_command('hide_auto_complete')
