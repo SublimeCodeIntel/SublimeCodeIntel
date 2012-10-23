@@ -885,7 +885,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             #     live = live and sentinel[id] is not None
 
             if live:
-                if not hasattr(view, 'command_history') or (view.command_history(0)[0] == 'insert' and view.command_history(0)[1]['characters'] != ',') or (view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)') or (text == '(' and view.command_history(0)[0] == 'commit_completion'):
+                if not hasattr(view, 'command_history') or (view.command_history(0)[0] == 'insert' and view.command_history(0)[1]['characters'] != ',') or (view.command_history(1)[0] == 'insert' and view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)') or (text == '(' and view.command_history(0)[0] == 'commit_completion'):
                     autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path, lang])
                 else:
                     view.run_command('hide_auto_complete')
