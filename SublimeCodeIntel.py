@@ -67,10 +67,18 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
         }
     }
 """
-import os, sys, stat, time, datetime, collections, re
-import sublime_plugin, sublime
+import os
+import re
+import sys
+import stat
+import time
+import datetime
+import collections
+import sublime
+import sublime_plugin
 import threading
 import logging
+
 from cStringIO import StringIO
 
 CODEINTEL_HOME_DIR = os.path.expanduser(os.path.join('~', '.codeintel'))
@@ -94,56 +102,57 @@ QUEUE = {}  # views waiting to be processed by codeintel
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
-codeintel_hdlr = NullHandler()
-codeintel_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
-stderr_hdlr = logging.StreamHandler(sys.stderr)
-stderr_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
-codeintel_log = logging.getLogger("codeintel")
-condeintel_log_filename = ''
-condeintel_log_file = None
-log = logging.getLogger("SublimeCodeIntel")
-codeintel_log.handlers = [codeintel_hdlr]
-log.handlers = [stderr_hdlr]
-codeintel_log.setLevel(logging.INFO)  # INFO
-logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # WARNING/INFO
-for lang in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
-             'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
-             'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
-    logging.getLogger("codeintel." + lang).setLevel(logging.WARNING)  # WARNING/DEBUG
-log.setLevel(logging.ERROR)  # ERROR
+        codeintel_hdlr = NullHandler()
+        codeintel_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
+        stderr_hdlr = logging.StreamHandler(sys.stderr)
+        stderr_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
+        codeintel_log = logging.getLogger("codeintel")
+        condeintel_log_filename = ''
+        condeintel_log_file = None
+        log = logging.getLogger("SublimeCodeIntel")
+        codeintel_log.handlers = [codeintel_hdlr]
+        log.handlers = [stderr_hdlr]
+        codeintel_log.setLevel(logging.INFO)  # INFO
+        logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # WARNING/INFO
 
-cpln_fillup_chars = {
-    'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ ",
-    'Python': "~`!@#$%^&()-=+{}[]|\\;:'\",.<>?/ ",
-    'PHP': "~`%^&*()-+{}[]|;'\",.< ",
-    'Perl': "~`!@#$%^&*(=+}[]|\\;'\",.<>?/ ",
-    'CSS': " '\";},/",
-    'JavaScript': "~`!#%^&*()-=+{}[]|\\;:'\",.<>?/",
-}
-cpln_stop_chars = {
-    'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ '\".",
-    'Python': "~`!@#$%^&*()-=+{}[]|\\;:'\",.<>?/ ",
-    'PHP': "~`@%^&*()=+{}]|\\;:'\",.<>?/ ",
-    'Perl': "-~`!@#$%^&*()=+{}[]|\\;:'\",.<>?/ ",
-    'CSS': " ('\";{},.>/",
-    'JavaScript': "~`!@#%^&*()-=+{}[]|\\;:'\",.<>?/ ",
-}
+        for lang in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
+                    'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
+                    'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
+            logging.getLogger("codeintel." + lang).setLevel(logging.WARNING)  # WARNING/DEBUG
+            log.setLevel(logging.ERROR)  # ERROR
 
-old_pos = None
-despair = 0
-despaired = False
+        cpln_fillup_chars = {
+            'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ ",
+            'Python': "~`!@#$%^&()-=+{}[]|\\;:'\",.<>?/ ",
+            'PHP': "~`%^&*()-+{}[]|;'\",.< ",
+            'Perl': "~`!@#$%^&*(=+}[]|\\;'\",.<>?/ ",
+            'CSS': " '\";},/",
+            'JavaScript': "~`!#%^&*()-=+{}[]|\\;:'\",.<>?/",
+        }
 
-completions = {}
-languages = {}
-sentinel = {}
+        cpln_stop_chars = {
+            'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ '\".",
+            'Python': "~`!@#$%^&*()-=+{}[]|\\;:'\",.<>?/ ",
+            'PHP': "~`@%^&*()=+{}]|\\;:'\",.<>?/ ",
+            'Perl': "-~`!@#$%^&*()=+{}[]|\\;:'\",.<>?/ ",
+            'CSS': " ('\";{},.>/",
+            'JavaScript': "~`!@#%^&*()-=+{}[]|\\;:'\",.<>?/ ",
+        }
 
-status_msg = {}
-status_lineno = {}
-status_lock = threading.Lock()
+        old_pos = None
+        despair = 0
+        despaired = False
 
-HISTORY_SIZE = 64
-jump_history_by_window = {}  # map of window id -> collections.deque([], HISTORY_SIZE)
+        completions = {}
+        languages = {}
+        sentinel = {}
 
+        status_msg = {}
+        status_lineno = {}
+        status_lock = threading.Lock()
+
+        HISTORY_SIZE = 64
+        jump_history_by_window = {}  # map of window id -> collections.deque([], HISTORY_SIZE)
 
 def pos2bytes(content, pos):
     return len(content[:pos].encode('utf-8'))
@@ -151,21 +160,22 @@ def pos2bytes(content, pos):
 
 def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=None):
     if timeout is None:
-        timeout = {'error': 3000, 'warning': 5000, 'info': 10000, 'event': 10000, 'tip': 15000}.get(type, 3000)
+        timeout = {'error': 3000, 'warning': 5000, 'info': 10000,
+                    'event': 10000, 'tip': 15000}.get(type, 3000)
 
     if msg is None:
         msg, type = type, 'debug'
-    msg = msg.strip()
+        msg = msg.strip()
 
-    status_lock.acquire()
-    try:
-        status_msg.setdefault(id, [None, None, 0])
-        if msg == status_msg[id][1]:
-            return
-        status_msg[id][2] += 1
-        order = status_msg[id][2]
-    finally:
-        status_lock.release()
+        status_lock.acquire()
+        try:
+            status_msg.setdefault(id, [None, None, 0])
+            if msg == status_msg[id][1]:
+                return
+            status_msg[id][2] += 1
+            order = status_msg[id][2]
+        finally:
+            status_lock.release()
 
     def _calltip_set():
         lineno = view.line(view.sel()[0])
@@ -198,10 +208,10 @@ def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=
         finally:
             status_lock.release()
 
-    sublime.set_timeout(_calltip_set, delay or 0)
+        sublime.set_timeout(_calltip_set, delay or 0)
 
-    if msg:
-        sublime.set_timeout(_calltip_erase, timeout)
+        if msg:
+            sublime.set_timeout(_calltip_erase, timeout)
 
 
 def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
@@ -273,8 +283,9 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
         except IndexError:
             next = ''
         if pos and content and content[view.line(sel).begin():pos].strip() and not next.isalnum() and next != '_':
-            #TODO: For the sentinel to work, we need to send a prefix to the completions... but no show_completions() currently available
-            #pos = sentinel[id] if sentinel[id] is not None else view.sel()[0].end()
+            # TODO: For the sentinel to work, we need to send a prefix to the completions... 
+            # but no show_completions() currently available.
+            # pos = sentinel[id] if sentinel[id] is not None else view.sel()[0].end()
 
             def _trigger(cplns, calltips):
                 if cplns is not None or calltips is not None:
