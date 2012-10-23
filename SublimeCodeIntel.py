@@ -67,10 +67,18 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
         }
     }
 """
-import os, sys, stat, time, datetime, collections, re
-import sublime_plugin, sublime
+import os
+import re
+import sys
+import stat
+import time
+import datetime
+import collections
+import sublime
+import sublime_plugin
 import threading
 import logging
+
 from cStringIO import StringIO
 
 CODEINTEL_HOME_DIR = os.path.expanduser(os.path.join('~', '.codeintel'))
@@ -94,6 +102,7 @@ QUEUE = {}  # views waiting to be processed by codeintel
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
+
 codeintel_hdlr = NullHandler()
 codeintel_hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
 stderr_hdlr = logging.StreamHandler(sys.stderr)
@@ -106,6 +115,7 @@ codeintel_log.handlers = [codeintel_hdlr]
 log.handlers = [stderr_hdlr]
 codeintel_log.setLevel(logging.INFO)  # INFO
 logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # WARNING/INFO
+
 for lang in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
              'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
              'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
@@ -120,6 +130,7 @@ cpln_fillup_chars = {
     'CSS': " '\";},/",
     'JavaScript': "~`!#%^&*()-=+{}[]|\\;:'\",.<>?/",
 }
+
 cpln_stop_chars = {
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ '\".",
     'Python': "~`!@#$%^&*()-=+{}[]|\\;:'\",.<>?/ ",
@@ -151,7 +162,8 @@ def pos2bytes(content, pos):
 
 def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=None):
     if timeout is None:
-        timeout = {'error': 3000, 'warning': 5000, 'info': 10000, 'event': 10000, 'tip': 15000}.get(type, 3000)
+        timeout = {'error': 3000, 'warning': 5000, 'info': 10000,
+                    'event': 10000, 'tip': 15000}.get(type, 3000)
 
     if msg is None:
         msg, type = type, 'debug'
@@ -273,8 +285,9 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
         except IndexError:
             next = ''
         if pos and content and content[view.line(sel).begin():pos].strip() and not next.isalnum() and next != '_':
-            #TODO: For the sentinel to work, we need to send a prefix to the completions... but no show_completions() currently available
-            #pos = sentinel[id] if sentinel[id] is not None else view.sel()[0].end()
+            # TODO: For the sentinel to work, we need to send a prefix to the completions...
+            # but no show_completions() currently available.
+            # pos = sentinel[id] if sentinel[id] is not None else view.sel()[0].end()
 
             def _trigger(cplns, calltips):
                 if cplns is not None or calltips is not None:
