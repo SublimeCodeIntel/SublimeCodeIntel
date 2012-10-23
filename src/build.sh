@@ -125,3 +125,4 @@ echo "Done!" || \
 echo "Build Failed!$ERR"
 
 strip ../libs/_local_arch/*.so > /dev/null 2>&1
+strip -S ../libs/_local_arch/*.so > /dev/null 2>&1
