@@ -37,11 +37,11 @@ The "Packages" packages directory is located at:
 
 * OS X::
 
-    ~/Library/Application Support/Sublime Text 2/Packages/
+    ~/Library/Application\ Support/Sublime\ Text\ 2/Packages/
 
 * Linux::
 
-    ~/.Sublime Text 2/Packages/
+    ~/.Sublime\ Text\ 2/Packages/
 
 * Windows::
 
