@@ -59,6 +59,8 @@ Don't despair! The first time you use it it needs to build some indexes and it c
 
 It just works!
 
+If you find the behaviour somewhat unexpected or the autocomplete incomplete, please reset the plugin from sublimetext command palette before trying anything else.
+
 
 Configuring
 -----------
@@ -124,6 +126,7 @@ In your terminal, go to your ``Packages/SublimeCodeIntel/src`` folder, then
 simply run::
 
     $ ./build.sh
+
 
 
 What's New
