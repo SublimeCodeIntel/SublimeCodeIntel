@@ -1484,7 +1484,10 @@ class Parser:
                                                    lineNo=self.tokenizer.curr_line_no())
                         self.moduleInfo.doStartNS(ns)
                         popNS = 1
-                elif tval == 'sub':
+                elif tval in ['sub', 'func', 'method']:
+                    if tval in ['func', 'method']:
+                        tval = 'sub'
+
                     self.start_process_sub_definition(False); # Is outer sub
                 elif tval in ['BEGIN', 'END', 'AUTOLOAD']:
                     self.skip_anon_sub_contents()
@@ -1643,7 +1646,9 @@ class Parser:
                         self.process_import(fqModule, origLineNo)
                 elif tval == 'use':
                     self.process_use(1)
-                elif tval == 'sub':
+                elif  tval in ['sub', 'func', 'method']:
+                    if tval in ['func', 'method']:
+                        tval = 'sub'
                     # Nested subs in Perl aren't really nested --
                     # They're kind of like named closures -- accessible
                     # by name from an outer context, but they can bind
