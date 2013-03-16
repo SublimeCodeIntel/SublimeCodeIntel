@@ -191,7 +191,7 @@ def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=
                     (logger or log.info)(msg)
                 else:
                     view.erase_status(id)
-                status_msg[id][0] = [type, msg, order]
+                status_msg[id] = [type, msg, order]
                 if 'warning' not in id and msg:
                     status_lineno[id] = lineno
                 elif id in status_lineno:
@@ -266,9 +266,9 @@ def guess_lang(view=None, path=None):
 
     if not lang and _lang and _lang not in ('Console',):
         if mgr:
-            logger(view, 'info', "Invalid language: %s. Available: %s" % (_lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs()))))
+            logger(view, 'info', "Invalid language: %s. Available: %s" % (_lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs()))), 5000)
         else:
-            logger(view, 'info', "Invalid language: %s" % _lang)
+            logger(view, 'info', "Invalid language: %s" % _lang, 5000)
 
     languages[id][_k_] = lang
     return lang
