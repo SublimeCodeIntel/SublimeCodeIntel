@@ -83,7 +83,7 @@ fi
 (echo "Building Sgmlop..." && \
 	unzip sgmlop-1.1.1-20040207.zip > /dev/null && \
 	cd sgmlop-1.1.1-20040207 && \
-	cat ../sgmlop*.patch | patch -sup1 --binary && \
+	cat ../sgmlop-1.1.1-20040207.patch/*.patch | patch -sup1 --binary && \
 	$PYTHON setup.py build > "$LOGDIR/Sgmlop.log" 2>&1 && \
 cd "$CURRENT_PATH"
 ) && \
