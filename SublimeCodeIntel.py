@@ -242,7 +242,9 @@ def guess_lang(view=None, path=None):
     _codeintel_syntax_map = dict((k.lower(), v) for k, v in view.settings().get('codeintel_syntax_map', {}).items())
     _lang = lang = syntax and _codeintel_syntax_map.get(syntax.lower(), syntax)
 
-    mgr = codeintel_manager()
+    folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
+    folders_id = str(hash(frozenset(folders)))
+    mgr = codeintel_manager(folders_id)
 
     if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
         lang = None
@@ -347,11 +349,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
 
 _ci_envs_ = {}
 _ci_next_scan_ = {}
-_ci_mgr_ = None
-_ci_db_base_dir_ = None
-_ci_db_catalog_dirs_ = []
-_ci_db_import_everything_langs = None
-_ci_extra_module_dirs_ = None
+_ci_mgr_ = {}
 
 _ci_next_savedb_ = 0
 _ci_next_cullmem_ = 0
@@ -480,18 +478,19 @@ def codeintel_callbacks(force=False):
             callback(view, *args, **kwargs)
         sublime.set_timeout(_callback, 0)
     # saving and culling cached parts of the database:
-    mgr = codeintel_manager()
-    now = time.time()
-    if now >= _ci_next_savedb_ or force:
-        if _ci_next_savedb_:
-            log.debug('Saving database')
-            mgr.db.save()  # Save every 6 seconds
-        _ci_next_savedb_ = now + 6
-    if now >= _ci_next_cullmem_ or force:
-        if _ci_next_cullmem_:
-            log.debug('Culling memory')
-            mgr.db.cull_mem()  # Every 30 seconds
-        _ci_next_cullmem_ = now + 30
+    for folders_id in _ci_mgr_.keys():
+        mgr = codeintel_manager(folders_id)
+        now = time.time()
+        if now >= _ci_next_savedb_ or force:
+            if _ci_next_savedb_:
+                log.debug('Saving database')
+                mgr.db.save()  # Save every 6 seconds
+            _ci_next_savedb_ = now + 6
+        if now >= _ci_next_cullmem_ or force:
+            if _ci_next_cullmem_:
+                log.debug('Culling memory')
+                mgr.db.cull_mem()  # Every 30 seconds
+            _ci_next_cullmem_ = now + 30
 queue_dispatcher = codeintel_callbacks
 
 
@@ -502,19 +501,18 @@ def codeintel_cleanup(id):
         del _ci_next_scan_[id]
 
 
-def codeintel_manager():
+def codeintel_manager(folders_id):
     global _ci_mgr_, condeintel_log_filename, condeintel_log_file
-    if _ci_mgr_:
-        mgr = _ci_mgr_
-    else:
+    mgr = _ci_mgr_.get(folders_id)
+    if mgr is None:
         for thread in threading.enumerate():
             if thread.name == "CodeIntel Manager":
                 thread.finalize()  # this finalizes the index, citadel and the manager and waits them to end (join)
         mgr = Manager(
-            extra_module_dirs=_ci_extra_module_dirs_,
-            db_base_dir=_ci_db_base_dir_,
-            db_catalog_dirs=_ci_db_catalog_dirs_,
-            db_import_everything_langs=_ci_db_import_everything_langs,
+            extra_module_dirs=None,
+            db_base_dir=os.path.expanduser(os.path.join('~', '.codeintel', 'databases', folders_id)),
+            db_catalog_dirs=[],
+            db_import_everything_langs=None,
         )
         mgr.upgrade()
         mgr.initialize()
@@ -526,7 +524,7 @@ def codeintel_manager():
         msg = "Starting logging SublimeCodeIntel rev %s (%s) on %s" % (get_revision()[:12], os.stat(__file__)[stat.ST_MTIME], datetime.datetime.now().ctime())
         print >>condeintel_log_file, "%s\n%s" % (msg, "=" * len(msg))
 
-        _ci_mgr_ = mgr
+        _ci_mgr_[folders_id] = mgr
     return mgr
 
 
@@ -542,6 +540,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     is_dirty = view.is_dirty()
     id = view.id()
     folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
+    folders_id = str(hash(frozenset(folders)))
     codeintel_config = view.settings().get('codeintel_config', {})
 
     def _codeintel_scan():
@@ -551,7 +550,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         catalogs = []
         now = time.time()
 
-        mgr = codeintel_manager()
+        mgr = codeintel_manager(folders_id)
         mgr.db.event_reporter = lambda m: logger(view, 'event', m)
 
         try:
@@ -574,18 +573,21 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                     config_default_file = None
                 project_dir = None
                 project_base_dir = None
-                if path:
-                    # Try to find a suitable project directory (or best guess):
-                    for folder in ['.codeintel', '.git', '.hg', '.svn', 'trunk']:
-                        project_dir = find_folder(path, folder)
-                        if project_dir:
-                            if folder == '.codeintel':
-                                if project_dir == CODEINTEL_HOME_DIR or os.path.exists(os.path.join(project_dir, 'db')):
-                                    continue
-                            if folder.startswith('.'):
-                                project_base_dir = os.path.abspath(os.path.join(project_dir, '..'))
-                            else:
-                                project_base_dir = project_dir
+                for folder_path in folders + [path]:
+                    if folder_path:
+                        # Try to find a suitable project directory (or best guess):
+                        for folder in ['.codeintel', '.git', '.hg', '.svn', 'trunk']:
+                            project_dir = find_folder(folder_path, folder)
+                            if project_dir:
+                                if folder == '.codeintel':
+                                    if project_dir == CODEINTEL_HOME_DIR or os.path.exists(os.path.join(project_dir, 'databases')):
+                                        continue
+                                if folder.startswith('.'):
+                                    project_base_dir = os.path.abspath(os.path.join(project_dir, '..'))
+                                else:
+                                    project_base_dir = project_dir
+                                break
+                        if project_base_dir:
                             break
                 if not (project_dir and os.path.exists(project_dir)):
                     project_dir = None
@@ -629,6 +631,9 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             for conf in ['pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths']:
                 v = [p.strip() for p in config.get(conf, []) + folders if p.strip()]
                 config[conf] = os.pathsep.join(set(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join(project_base_dir, p)) if project_base_dir else p for p in v if p.strip()))
+            for conf, p in config.items():
+                if isinstance(p, basestring) and p.startswith('~'):
+                    config[conf] = os.path.expanduser(p)
 
             # Setup environment variables
             env = config.get('env', {})
