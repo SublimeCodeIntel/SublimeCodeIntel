@@ -793,14 +793,17 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
 
 
 def find_folder(start_at, look_for):
+    root = os.path.realpath('/')
     start_at = os.path.abspath(start_at)
     if not os.path.isdir(start_at):
         start_at = os.path.dirname(start_at)
+    if start_at == root:
+        return None
     while True:
         if look_for in os.listdir(start_at):
             return os.path.join(start_at, look_for)
         continue_at = os.path.abspath(os.path.join(start_at, '..'))
-        if continue_at == start_at:
+        if continue_at == start_at or continue_at == root:
             return None
         start_at = continue_at
 
