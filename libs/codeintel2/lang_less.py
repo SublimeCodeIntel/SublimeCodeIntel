@@ -21,7 +21,7 @@ if _xpcom_:
 #---- globals
 
 log = logging.getLogger("codeintel.less")
-#log.setLevel(logging.DEBUG)
+# log.setLevel(logging.DEBUG)
 
 
 #---- language support
@@ -30,18 +30,39 @@ class LessLexer(CSSLexer):
     # This must be defined as "Less" in order to get autocompletion working.
     lang = "Less"
 
+    def __init__(self):
+        CSSLexer.__init__(self)
+        self._properties['lexer.css.less.language'] = '1'
+
+
 class SCSSLexer(CSSLexer):
-    # This must be defined as "Less" in order to get autocompletion working.
+    # This must be defined as "SCSS" in order to get autocompletion working.
     lang = "SCSS"
 
+    def __init__(self):
+        CSSLexer.__init__(self)
+        self._properties['lexer.css.scss.language'] = '1'
+
+
+class SassLexer(CSSLexer):
+    # This must be defined as "Sass" in order to get autocompletion working.
+    lang = "Sass"
+
+    def __init__(self):
+        CSSLexer.__init__(self)
+        # self._properties.setProperty('lexer.css.sass.language', '1')
+        self._properties['lexer.css.sass.language'] = '1'
+
 DebugStatus = False
+
 
 def _OrdPunctLastOnSecondItem(value):
     return OrdPunctLast(value[1])
 
+
 class _NestedCSSLangIntel(CSSLangIntel):
     def _trg_from_pos(self, buf, pos, implicit=True, DEBUG=False, ac=None, styleClassifier=None):
-        #DEBUG = True # not using 'logging' system, because want to be fast
+        # DEBUG = True # not using 'logging' system, because want to be fast
         if DEBUG:
             print "\n----- %s _trg_from_pos(pos=%r, implicit=%r) -----"\
                   % (self.lang, pos, implicit)
@@ -64,7 +85,7 @@ class _NestedCSSLangIntel(CSSLangIntel):
                 print "  _trg_from_pos:: last_pos: %s" % last_pos
                 print "  last_char: %r" % last_char
                 print "  last_style: %s" % last_style
-    
+
             # The easy ones are triggering after any of '#.[: '.
             # For speed, let's get the common ' ' out of the way. The only
             # trigger on space is 'complete-property-values'.
@@ -72,7 +93,8 @@ class _NestedCSSLangIntel(CSSLangIntel):
             if styleClassifier.is_default(last_style):
                 if DEBUG:
                     print "  _trg_from_pos:: Default style: %d, ch: %r" % (last_style, last_char)
-                # Move backwards resolving ambiguity, default on "property-values"
+                # Move backwards resolving ambiguity, default on "property-
+                # values"
                 min_pos = max(0, pos - 200)
                 while last_pos > min_pos:
                     last_pos, last_char, last_style = ac.getPrevPosCharStyle()
@@ -82,7 +104,7 @@ class _NestedCSSLangIntel(CSSLangIntel):
                         return Trigger("CSS", TRG_FORM_CPLN, "property-values",
                                        pos, implicit, extra={"ac": ac})
                     elif styleClassifier.is_tag(last_style, ac):
-                        # Now we need to move further back to see which 
+                        # Now we need to move further back to see which
                         # region we're in.
                         if DEBUG:
                             print " _trg_from_pos: space => tag-names"
@@ -90,12 +112,13 @@ class _NestedCSSLangIntel(CSSLangIntel):
                     elif styleClassifier.is_identifier(last_style, ac):
                         if DEBUG:
                             print " _trg_from_pos: space => property-names"
-                        return Trigger(self.lang, TRG_FORM_CPLN, "tag-or-property-names",
-                               pos, implicit, extra={"ac": ac})
+                        return Trigger(
+                            self.lang, TRG_FORM_CPLN, "tag-or-property-names",
+                            pos, implicit, extra={"ac": ac})
                 if DEBUG:
                     print " _trg_from_pos: couldn't resolve space, settling on property-names"
                 return Trigger("CSS", TRG_FORM_CPLN, "property-values",
-                                   pos, implicit, extra={"ac": ac})
+                               pos, implicit, extra={"ac": ac})
 
             elif styleClassifier.is_operator(last_style, ac):
                 # anchors
@@ -107,7 +130,8 @@ class _NestedCSSLangIntel(CSSLangIntel):
 
                 elif last_char == ':':
                     try:
-                        p, ch, style = ac.getPrevPosCharStyle(ignore_styles=styleClassifier.ignore_styles)
+                        p, ch, style = ac.getPrevPosCharStyle(
+                            ignore_styles=styleClassifier.ignore_styles)
                         if DEBUG:
                             print "  _trg_from_pos:: Looking at p: %d, ch: %r, style: %d" % (p, ch, style)
                     except IndexError:
@@ -116,17 +140,19 @@ class _NestedCSSLangIntel(CSSLangIntel):
                         print "  _trg_from_pos:: style: %r" % (style)
                     if style is None or \
                        not styleClassifier.is_identifier(style, ac):
-                    #if style is None or \
+                    # if style is None or \
                     #   not styleClassifier.is_css_style(style) or \
                     #   styleClassifier.is_class(style, ac):
                         # complete for pseudo-class-names
-                        return Trigger("CSS", TRG_FORM_CPLN, "pseudo-class-names",
-                                       pos, implicit, extra={"ac": ac})
+                        return Trigger(
+                            "CSS", TRG_FORM_CPLN, "pseudo-class-names",
+                            pos, implicit, extra={"ac": ac})
                     else:
-                    #if styleClassifier.is_identifier(style, ac):
+                    # if styleClassifier.is_identifier(style, ac):
                         # calltip for property-values
-                        return Trigger("CSS", TRG_FORM_CALLTIP, "property-values",
-                                       pos, implicit, extra={"ac": ac})
+                        return Trigger(
+                            "CSS", TRG_FORM_CALLTIP, "property-values",
+                            pos, implicit, extra={"ac": ac})
 
                 # class-names
                 elif last_char == '.':
@@ -135,7 +161,7 @@ class _NestedCSSLangIntel(CSSLangIntel):
 
                 # at-rule
                 elif last_char == '@':
-                    #p, ch, style = ac.getPrevPosCharStyle(ignore_styles=styleClassifier.comment_styles)
+                    # p, ch, style = ac.getPrevPosCharStyle(ignore_styles=styleClassifier.comment_styles)
                     # XXX - Should check not beyond first rule set
                     #     - Should check not within a rule block.
                     return Trigger("CSS", TRG_FORM_CPLN, "at-rule",
@@ -168,7 +194,7 @@ class _NestedCSSLangIntel(CSSLangIntel):
                 if DEBUG:
                     print "  _trg_from_pos:: IDENTIFIER style"
                 # property-names
-                #print "here", accessor.text_range(0, pos)
+                # print "here", accessor.text_range(0, pos)
                 # We trigger on identifier names with any length >= 1 char
                 pos = last_pos
                 while pos >= 0:
@@ -180,7 +206,8 @@ class _NestedCSSLangIntel(CSSLangIntel):
                 return self._get_property_name_trigger_check_context(ac, styleClassifier, pos + 1, implicit)
 
             elif styleClassifier.is_value(last_style, ac):
-                p, ch, style = ac.getPrevPosCharStyle(ignore_styles=styleClassifier.comment_styles)
+                p, ch, style = ac.getPrevPosCharStyle(
+                    ignore_styles=styleClassifier.comment_styles)
                 if DEBUG:
                     print "  _trg_from_pos:: VALUE style"
                     print "  _trg_from_pos::   p: %s" % p
@@ -200,7 +227,7 @@ class _NestedCSSLangIntel(CSSLangIntel):
                     if ch == ":":
                         # Last style must be an identifier then!
                         pp, pch, pstyle = ac.getPrevPosCharStyle(
-                                ignore_styles=styleClassifier.ignore_styles)
+                            ignore_styles=styleClassifier.ignore_styles)
                         if DEBUG:
                             print "pp: %d, pch: %r, pstyle: %d" % (pp, pch,
                                                                    pstyle)
@@ -226,7 +253,7 @@ class _NestedCSSLangIntel(CSSLangIntel):
                 print "  _trg_from_pos:: Unexpected style: %d, ch: %r" % (last_style, last_char)
 
             # XXX "at-property-names" - Might be used later
-            #elif last_style == SCE_CSS_DIRECTIVE:
+            # elif last_style == SCE_CSS_DIRECTIVE:
             #    # property-names
             #    # We trigger on identifier names with length == 3
             #    #print "here", accessor.text_range(0, pos)
@@ -257,11 +284,12 @@ class _NestedCSSLangIntel(CSSLangIntel):
             # We're at the start, so return tags only
             return Trigger("CSS", TRG_FORM_CPLN, "tag-names",
                            pos, implicit, extra={"ac": ac})
-        
+
         # States:
         #
         last_pos, last_ch, last_style = ac.getCurrentPosCharStyle()
-        #print "_get_property_name_trigger_check_context: last_pos:%d, last_ch:%c, last_style:%d" % (last_pos, last_ch, last_style)
+        # print "_get_property_name_trigger_check_context: last_pos:%d,
+        # last_ch:%c, last_style:%d" % (last_pos, last_ch, last_style)
         cpln_type = None
         p = last_pos
         while p > min_pos:
@@ -270,9 +298,10 @@ class _NestedCSSLangIntel(CSSLangIntel):
             except IndexError:
                 p, ch, style = last_pos, last_ch, last_style
             if ch == '\n' and styleClassifier.is_default(style):
-                # Main heuristic: if the tag starts on col 1, assume we're at the top-level
+                # Main heuristic: if the tag starts on col 1, assume we're at
+                # the top-level
                 if (styleClassifier.is_tag(last_style)
-                    or styleClassifier.is_operator(last_style)):
+                        or styleClassifier.is_operator(last_style)):
                     cpln_type = "tag-names"
                     break
                 elif styleClassifier.is_default(last_style):
@@ -293,7 +322,7 @@ class _NestedCSSLangIntel(CSSLangIntel):
         if cpln_type == "tag-or-property-names":
             lang = self.lang
         else:
-            lang = "CSS" # Use the parent class.
+            lang = "CSS"  # Use the parent class.
         return Trigger(lang, TRG_FORM_CPLN, cpln_type,
                        pos, implicit, extra={"ac": ac})
 
@@ -303,11 +332,12 @@ class _NestedCSSLangIntel(CSSLangIntel):
             ctlr = UnwrapObject(ctlr)
         # Handle ambiguous property-names here
         DEBUG = DebugStatus
-        #DEBUG = True
+        # DEBUG = True
         if DEBUG:
             print "Less: _async_eval_at_trg: trg: %s(%r)" % (trg, trg)
         if trg.id != (self.lang, TRG_FORM_CPLN, "tag-or-property-names"):
-            CSSLangIntel._async_eval_at_trg(self, buf, trg, ctlr, styleClassifier)
+            CSSLangIntel._async_eval_at_trg(
+                self, buf, trg, ctlr, styleClassifier)
             return
         if DEBUG:
             print "\n----- async_eval_at_trg(trg=%r) -----"\
@@ -316,7 +346,7 @@ class _NestedCSSLangIntel(CSSLangIntel):
         # Setup the AccessorCache
         extra = trg.extra
         ac = None
-        #print "Extra: %r" % (extra)
+        # print "Extra: %r" % (extra)
         if isinstance(extra, dict):
             extra = extra.get("extra", None)
             if isinstance(extra, dict):
@@ -332,12 +362,12 @@ class _NestedCSSLangIntel(CSSLangIntel):
         ctlr.start(buf, trg)
         pos = trg.pos
         try:
-            cplns1 = [ ("property", v + ": ") for v in self.CSS_PROPERTY_NAMES ]
-            cplns2 = [ ("element", v) for v in self.CSS_HTML_TAG_NAMES ]
+            cplns1 = [("property", v + ": ") for v in self.CSS_PROPERTY_NAMES]
+            cplns2 = [("element", v) for v in self.CSS_HTML_TAG_NAMES]
             cplns = sorted(cplns1 + cplns2, key=_OrdPunctLastOnSecondItem)
             # Note: we add the colon as well - see bug 89913.
             ctlr.set_cplns(cplns)
-            #print "  _async_eval_at_trg:: cplns:", cplns
+            # print "  _async_eval_at_trg:: cplns:", cplns
             ctlr.done("success")
             trg.retriggerOnCompletion = True
         except IndexError:
@@ -346,20 +376,94 @@ class _NestedCSSLangIntel(CSSLangIntel):
                 print "  _async_eval_at_trg:: ** Out of range error **"
             ctlr.done("success")
 
+
+class _NestedSassLangIntel(_NestedCSSLangIntel):
+    """ The difference here is that we don't want to put up triggers in
+    the leading whitespace of a line.
+    """
+    def _trg_from_pos(self, buf, pos, implicit=True, DEBUG=False, ac=None, styleClassifier=None):
+        # DEBUG = True # not using 'logging' system, because want to be fast
+        if DEBUG:
+            print "\n----- %s _trg_from_pos(pos=%r, implicit=%r) -----"\
+                  % (self.lang, pos, implicit)
+        try:
+            if pos == 0:
+                return None
+
+            if ac is None:
+                ac = AccessorCache(buf.accessor, pos, fetchsize=50)
+            else:
+                ac.resetToPosition(pos)
+            # Ensure this variable is initialized as False, it is used by UDL
+            # for checking if the css style is inside of a html tag, example:
+            #   <p style="mycss: value;" />
+            # When it's found that it is such a case, this value is set True
+            ac.is_html_style_attribute = False
+
+            last_pos, last_char, last_style = ac.getPrevPosCharStyle()
+            if DEBUG:
+                print "  _trg_from_pos:: last_pos: %s" % last_pos
+                print "  last_char: %r" % last_char
+                print "  last_style: %s" % last_style
+
+            # All we want to know with sass is if we're in the white-space on
+            # of after the start of a line.  If yes, don't trigger, because
+            # the user might want to just type more spaces.
+
+            if styleClassifier.is_default(last_style):
+                if DEBUG:
+                    print "  _trg_from_pos:: Default style: %d, ch: %r" % (last_style, last_char)
+                if last_char == '\n':
+                    # SASS: we don't want to put up a box until we start typing
+                    # something.
+                    if DEBUG:
+                        print "Found \\n at current pos, don't trigger."
+                    return None
+                min_pos = max(0, pos - 200)
+                while last_pos > min_pos:
+                    last_pos, last_char, last_style = ac.getPrevPosCharStyle()
+                    if styleClassifier.is_default(last_style):
+                        if last_char == '\n':
+                            return None
+                    else:
+                        break
+            # Fallback and do SCSS/Less/CSS triggering.
+            # TODO: Support ":color blue" colon-first notation.
+            # TODO: After ",\n", offer tag-names if the above line starts with a tab.
+            #      Otherwise, indent the same level, and then offer tag-names.
+            return _NestedCSSLangIntel._trg_from_pos(self, buf, pos, implicit=implicit, DEBUG=DEBUG, ac=None, styleClassifier=styleClassifier)
+        except IndexError:
+            pass
+
+
 class LessLangIntel(_NestedCSSLangIntel):
     # This must be defined as "Less" in order to get autocompletion working.
     lang = "Less"
 
+
 class SCSSLangIntel(_NestedCSSLangIntel):
     lang = "SCSS"
+
+
+class SassLangIntel(_NestedSassLangIntel):
+    lang = "Sass"
+
 
 class LessBuffer(CSSBuffer):
     lang = "Less"
 
+
 class SCSSBuffer(CSSBuffer):
     lang = "SCSS"
 
+
+class SassBuffer(CSSBuffer):
+    lang = "Sass"
+    cpln_fillup_chars = CSSBuffer.cpln_fillup_chars.replace(" ", "")
+    cpln_stop_chars = CSSBuffer.cpln_stop_chars.replace(" ", "")
+
 #---- registration
+
 
 def register(mgr):
     """Register language support with the Manager."""
@@ -373,4 +477,8 @@ def register(mgr):
                       buf_class=SCSSBuffer,
                       langintel_class=SCSSLangIntel,
                       is_cpln_lang=True)
-
+    mgr.set_lang_info("Sass",
+                      silvercity_lexer=SassLexer(),
+                      buf_class=SassBuffer,
+                      langintel_class=SassLangIntel,
+                      is_cpln_lang=True)

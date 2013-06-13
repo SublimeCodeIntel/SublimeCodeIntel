@@ -424,6 +424,13 @@ StateMap = {
     },
     'Matlab': {
         'comments': ('SCE_MATLAB_COMMENT',),
+        'strings': ('SCE_MATLAB_STRING',
+                    'SCE_MATLAB_DOUBLEQUOTESTRING'),
+        'operators': ('SCE_MATLAB_OPERATOR',),
+        'keywords': ('SCE_MATLAB_KEYWORD',),
+        'commands': ('SCE_MATLAB_COMMAND',),
+        'identifiers': ('SCE_MATLAB_IDENTIFIER',),
+        'numbers': ('SCE_MATLAB_NUMBER',),
     },
     'Bullant': {
         'comments': ('SCE_C_COMMENTLINE', 'SCE_C_COMMENT'),
@@ -481,10 +488,44 @@ StateMap = {
         'stdout': ('SCE_RB_STDOUT',),
         'stderr' : ('SCE_RB_STDERR',),
     },
+    'CoffeeScript': {
+        'default': ('SCE_COFFEESCRIPT_DEFAULT',),
+        'comments': ('SCE_COFFEESCRIPT_COMMENT',
+                     'SCE_COFFEESCRIPT_COMMENTLINE',
+                     'SCE_COFFEESCRIPT_COMMENTDOC',
+                     'SCE_COFFEESCRIPT_COMMENTLINEDOC',
+                     'SCE_COFFEESCRIPT_COMMENTDOCKEYWORD',
+                     'SCE_COFFEESCRIPT_COMMENTDOCKEYWORDERROR',
+                     'SCE_COFFEESCRIPT_COMMENTBLOCK',
+                     'SCE_COFFEESCRIPT_VERBOSE_REGEX_COMMENT',
+                     ),
+        'numbers': ('SCE_COFFEESCRIPT_NUMBER',),
+        'strings': ('SCE_COFFEESCRIPT_STRING',
+                    'SCE_COFFEESCRIPT_CHARACTER',
+                    'SCE_COFFEESCRIPT_STRINGRAW',
+                    'SCE_COFFEESCRIPT_HASHQUOTEDSTRING',
+                    ),
+        'keywords': ('SCE_COFFEESCRIPT_WORD',),
+        'keywords2': ('SCE_COFFEESCRIPT_WORD2',),
+        'operators': ('SCE_COFFEESCRIPT_OPERATOR',),
+        'identifiers': ('SCE_COFFEESCRIPT_IDENTIFIER',),
+        'stringeol': ('SCE_COFFEESCRIPT_STRINGEOL',),
+        'preprocessor': ('SCE_COFFEESCRIPT_PREPROCESSOR',),
+        # these are specific to this lexer
+        'UUIDs': ('SCE_COFFEESCRIPT_UUID',),
+        'verbatim': ('SCE_COFFEESCRIPT_VERBATIM',
+                     'SCE_COFFEESCRIPT_TRIPLEVERBATIM'),
+        'regex': ('SCE_COFFEESCRIPT_REGEX',
+                  'SCE_COFFEESCRIPT_VERBOSE_REGEX'),
+        'commentdockeyword': ('SCE_COFFEESCRIPT_COMMENTDOCKEYWORD',),
+        'commentdockeyworderror': ('SCE_COFFEESCRIPT_COMMENTDOCKEYWORDERROR',),
+        'globalclass': ('SCE_COFFEESCRIPT_GLOBALCLASS',),
+        'stringeol' : ('SCE_COFFEESCRIPT_STRINGEOL',),
+    }
 }
 
 #Derivatives (Shared lexers)
-StateMap['CoffeeScript'] = StateMap['JavaScript'] = StateMap['C++'].copy()
+StateMap['JavaScript'] = StateMap['C++'].copy()
 StateMap['Node.js'] = StateMap['JavaScript'].copy()
 StateMap['JSON'] = StateMap['C++'].copy()
 StateMap['Java'] = StateMap['C++'].copy()
@@ -495,7 +536,10 @@ StateMap['VBScript'] = StateMap['VisualBasic'].copy()
 StateMap['Fortran'] = StateMap['Fortran 77'].copy()
 StateMap['Python3'] = StateMap['Python'].copy()
 StateMap['SCSS'] = StateMap['CSS'].copy()
+StateMap['Sass'] = StateMap['SCSS'].copy()
 StateMap['Less'] = StateMap['CSS'].copy()
+StateMap['Less']['mixins'] = ('SCE_CSS_MIXIN',)
+StateMap['Octave'] = StateMap['Matlab'].copy()
 
 SharedStates = {
     'bracebad' : ('STYLE_BRACEBAD',),
@@ -523,7 +567,16 @@ for languageName in StateMap:
     addSharedStyles(StateMap[languageName])
 
 def addNewUDLLanguage(languageName):
-    if languageName not in StateMap:
-        StateMap[languageName] = StateMap['UDL'].copy()
-        addSharedStyles(StateMap[languageName])
+    if languageName in StateMap:
+        import logging
+        log = logging.getLogger("language styles")
+        log.warn("addNewUDLLanguage: overwriting statemap for lang %s",
+                 languageName)
+        # Make sure the state-map inherits from UDL
+        tmp = StateMap['UDL'].copy()
+        tmp.update(StateMap[languageName])
+        StateMap[languageName] = tmp
+    else:
+        StateMap[languageName] = StateMap['UDL']
+    addSharedStyles(StateMap[languageName])
 

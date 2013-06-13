@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 #
 # Contributors:
@@ -45,7 +45,7 @@
         from perlcile import scan_purelang
         content = open("foo.pl", "r").read()
         scan_purelang(content, "foo.pl")
-    
+
     Command-line Usage:
         perlcile.py [<options>...] [<Perl file>]
 
@@ -71,7 +71,7 @@
     Code Intelligence XML format. See:
         http://specs.activestate.com/Komodo_3.0/func/code_intelligence.html
         http://specs.tl.activestate.com/kd/kd-0100.html
-    
+
     The command-line interface will return non-zero iff the scan failed.
 """
 
@@ -98,7 +98,7 @@ from codeintel2 import parser_cix
 
 _version_ = (0, 1, 0)
 log = logging.getLogger("perlcile")
-#log.setLevel(logging.DEBUG)
+# log.setLevel(logging.DEBUG)
 
 _gClockIt = 0   # if true then we are gathering timing data
 _gClock = None  # if gathering timing data this is set to time retrieval fn
@@ -120,6 +120,7 @@ def scan_purelang(buf):
     tree = parser.produce_CIX()
     return tree
 
+
 def scan_multilang(tokens, module_elem):
     """Build the Perl module CIX element tree.
 
@@ -130,15 +131,16 @@ def scan_multilang(tokens, module_elem):
 
     This should return a list of the CSL tokens in the token stream.
     """
-        
+
     tokenizer = perl_lexer.PerlMultiLangLexer(tokens)
     # "PerlHTML" is about all we need for whichever Perl-based
     # template language is being used.  This could just as easily be a
     # boolean that indicates whether we're processing a pure language
     # or a multi-lang one.
-    
-    parser = perl_parser.Parser(tokenizer, lang="PerlHTML", provide_full_docs=gProvideFullDocs)
-    parser.moduleName = "" #Unknown
+
+    parser = perl_parser.Parser(
+        tokenizer, lang="PerlHTML", provide_full_docs=gProvideFullDocs)
+    parser.moduleName = ""  # Unknown
     parser.parse()
     parse_tree = parser.produce_CIX_NoHeader(module_elem)
     csl_tokens = tokenizer.get_csl_tokens()
@@ -146,13 +148,14 @@ def scan_multilang(tokens, module_elem):
 
 #---- mainline
 
+
 def main(argv):
     logging.basicConfig()
     # Parse options.
     try:
         opts, args = getopt.getopt(argv[1:], "Vvhf:cL:",
-            ["version", "verbose", "help", "filename=", "md5=", "mtime=",
-             "clock", "language="])
+                                   ["version", "verbose", "help", "filename=", "md5=", "mtime=",
+                                    "clock", "language="])
     except getopt.GetoptError, ex:
         log.error(str(ex))
         log.error("Try `perlcile --help'.")
@@ -228,7 +231,8 @@ def main(argv):
                 sys.stdout.write("scanning '%s'..." % filename)
                 global _gStartTime
                 _gStartTime = _gClock()
-            data = scan(content, filename, md5sum=md5sum, mtime=mtime, lang=lang)
+            data = scan(
+                content, filename, md5sum=md5sum, mtime=mtime, lang=lang)
             if _gClockIt:
                 sys.stdout.write(" %.3fs\n" % (_gClock()-_gStartTime))
             elif data:
@@ -241,5 +245,3 @@ def main(argv):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
-
-

@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """XML support for CodeIntel"""
@@ -51,7 +51,8 @@ from codeintel2.citadel import CitadelBuffer, CitadelEvaluator
 from codeintel2.langintel import LangIntel
 from codeintel2.udl import UDLBuffer, UDLLexer, XMLParsingBufferMixin
 
-import koXMLTreeService, koXMLDatasetInfo
+import koXMLTreeService
+import koXMLDatasetInfo
 from koXMLDatasetInfo import getService
 
 from SilverCity.ScintillaConstants import (SCE_UDL_M_STAGO, SCE_UDL_M_DEFAULT,
@@ -82,14 +83,10 @@ from SilverCity.ScintillaConstants import (SCE_UDL_M_STAGO, SCE_UDL_M_DEFAULT,
 
 
 if _xpcom_:
-    from xpcom import components, _xpcom
-    from xpcom.server import WrapObject, UnwrapObject
-    from xpcom._xpcom import PROXY_SYNC, PROXY_ALWAYS, PROXY_ASYNC
-
+    from xpcom.server import UnwrapObject
 
 
 #---- globals
-
 lang = "XML"
 log = logging.getLogger("codeintel.xml")
 
@@ -109,7 +106,7 @@ udl_styles = {
     STYLE_ATTR_NAME: SCE_UDL_M_ATTRNAME,
     STYLE_TAG_SPACE: SCE_UDL_M_TAGSPACE,
     STYLE_STRING: (SCE_UDL_M_STRING,),
-    STYLE_PI_OPEN : SCE_UDL_M_PI,
+    STYLE_PI_OPEN: SCE_UDL_M_PI,
 }
 # XXX FIXME for Lex_XML
 pure_styles = {
@@ -123,8 +120,8 @@ pure_styles = {
                    SCE_XML_START_TAG_ATTR_APOS_OPEN,
                    SCE_XML_START_TAG_ATTR_APOS_CONTENT,
                    SCE_XML_START_TAG_ATTR_QUOT_CONTENT,
-                  ),
-    STYLE_PI_OPEN : SCE_XML_PI_OPEN,
+                   ),
+    STYLE_PI_OPEN: SCE_XML_PI_OPEN,
 }
 common_namespace_cplns = [('namespace', x) for x in (
     'atom="http://purl.org/atom/ns#"',
@@ -148,26 +145,28 @@ trg_chars = tuple('<: "\'/!')
 class XMLLexer(UDLLexer):
     lang = lang
 
+
 class XMLLangIntel(LangIntel):
     lang = lang
+
     def trg_from_pos(self, buf, pos, implicit=True, DEBUG=False):
         """XML trigger types:
-    
+
         xml-complete-tags-and-namespaces    <|
-        xml-complete-ns-tags                <x:|  
+        xml-complete-ns-tags                <x:|
         xml-complete-tag-attrs              <x:foo |
         xml-complete-ns-tag-attrs           <x:foo y:|
         xml-complete-attr-enum-values       <x:foo y:bar="|
         xml-complete-end-tag                <x ...>...</|
         xml-complete-well-known-ns          <x xmlns:|
         xml-gt-bang                         <!|
-        
+
         Not yet implemented:
             xml-complete-well-known-ns-value    <x xmlns:x="|
             xml-complete-prolog                 <?xml |
             xml-complete-doctype                <!DOCTYPE |
         """
-        #XXX Eventually we'll use UDL for pure XML too, so won't need
+        # XXX Eventually we'll use UDL for pure XML too, so won't need
         #    this check.
         if isinstance(buf, UDLBuffer):
             styles = udl_styles
@@ -177,7 +176,7 @@ class XMLLangIntel(LangIntel):
         if DEBUG:
             print "\n----- UDL %s trg_from_pos(pos=%r, implicit=%r) -----"\
                   % (self.lang, pos, implicit)
-    
+
         if pos == 0:
             return None
         accessor = buf.accessor
@@ -190,19 +189,19 @@ class XMLLangIntel(LangIntel):
             print "  last_char: %r" % last_char
             print "  last_style: %r %s" \
                   % (last_style, buf.style_names_from_style_num(last_style))
-            #for i in xrange(pos):
-                #print "style at pos %d (%c) : %d" % (i,
+            # for i in xrange(pos):
+                # print "style at pos %d (%c) : %d" % (i,
                 #   accessor.char_at_pos(i), accessor.style_at_pos(i))
-    
+
         if last_char == '<' and \
            last_style in styles[STYLE_DEFAULT] or last_style == styles[STYLE_START_TAG]:
             return Trigger(self.lang, TRG_FORM_CPLN, "tags-and-namespaces",
                            pos, implicit)
-    
+
         elif last_char == '/' and last_style == styles[STYLE_END_TAG]:
             return Trigger(self.lang, TRG_FORM_CPLN, "end-tag",
                            pos, implicit)
-    
+
         elif last_char == ':':
             # x:|`` **** xml-complete-ns-tags
             # **** list valid tags in given namespace
@@ -222,16 +221,16 @@ class XMLLangIntel(LangIntel):
                 else:
                     return Trigger(self.lang, TRG_FORM_CPLN,
                                    "ns-tags-attrs", pos, implicit)
-    
+
         elif last_char == "!" and pos >= 2:
             last_last_char = accessor.char_at_pos(pos-2)
             last_last_style = accessor.style_at_pos(pos-2)
             if last_last_char == '<' and last_last_style in styles[STYLE_DEFAULT]:
                 return Trigger(self.lang, TRG_FORM_CPLN, "gt-bang",
                                pos, implicit)
-    
+
         elif last_char in (' ', '\t', '\n') \
-             and last_style == styles[STYLE_TAG_SPACE]:
+                and last_style == styles[STYLE_TAG_SPACE]:
             # See bug 65200 for reason for this check.
             have_trg = False
             while last_pos > 0:
@@ -267,10 +266,9 @@ class XMLLangIntel(LangIntel):
                                pos, implicit)
             else:
                 return None
-                
-    
+
         elif last_char in ('\'', '"') and last_style in styles[STYLE_STRING] \
-             and pos >= 5:
+                and pos >= 5:
             # Look back to determine if we're in an <<xmlns:pfx = >> situation
             prev_style = accessor.style_at_pos(pos - 2)
             if prev_style == last_style:
@@ -281,9 +279,8 @@ class XMLLangIntel(LangIntel):
                                pos, implicit)
         return None
 
-
     def preceding_trg_from_pos(self, buf, pos, curr_pos, DEBUG=False):
-        #XXX Eventually we'll use UDL for pure HTML too, so won't need
+        # XXX Eventually we'll use UDL for pure HTML too, so won't need
         #    this check.
         if isinstance(buf, UDLBuffer):
             styles = udl_styles
@@ -291,18 +288,18 @@ class XMLLangIntel(LangIntel):
             styles = pure_styles
 
         accessor = buf.accessor
-        #print "pos:", pos, ", curr_pos:", curr_pos
-        for char, style in accessor.gen_char_and_style_back(pos-1, max(-1,pos-50)):
-            #print "Style: %d char %s"% (style, char)
+        # print "pos:", pos, ", curr_pos:", curr_pos
+        for char, style in accessor.gen_char_and_style_back(pos-1, max(-1, pos-50)):
+            # print "Style: %d char %s"% (style, char)
             if char == ":" and style in (styles[STYLE_TAG_NAME], styles[STYLE_ATTR_NAME]) or \
-               char in ["<","!"] and style in styles[STYLE_DEFAULT] or style == styles[STYLE_START_TAG] or \
+               char in ["<", "!"] and style in styles[STYLE_DEFAULT] or style == styles[STYLE_START_TAG] or \
                char in (' ', '\t', '\n') and style == styles[STYLE_TAG_SPACE] or \
                char in ('\'', '"') and style in styles[STYLE_STRING] or \
                char == '/' and style == styles[STYLE_END_TAG]:
                 return self.trg_from_pos(buf, pos, implicit=False, DEBUG=DEBUG)
             pos -= 1
         return None
-    
+
     def async_eval_at_trg(self, buf, trg, ctlr):
         if _xpcom_:
             if hasattr(trg, "_comobj_"):
@@ -342,17 +339,18 @@ class XMLLangIntel(LangIntel):
         elif type == "attr-enum-values":
             cplns = self.cpln_start_attribute_value(buf, trg)
         else:
-            ctlr.error("unknown UDL-based XML completion: %r" % (id,))
+            ctlr.error(
+                "lang_xml.py: async_eval_at_trg:\n    Internal error: Unknown UDL-based XML completion type: %r" % (type,))
             ctlr.done("error")
             return
         if cplns:
             ctlr.set_cplns(cplns)
         ctlr.done("success")
 
-
     def get_valid_tagnames(self, buf, pos, withPrefix=False):
         node = buf.xml_node_at_pos(pos)
-        #print "get_valid_tagnames NODE %s:%s xmlns[%s] %r"%(buf.xml_tree.prefix(node),node.localName,node.ns,node.tag)
+        # print "get_valid_tagnames NODE %s:%s xmlns[%s]
+        # %r"%(buf.xml_tree.prefix(node),node.localName,node.ns,node.tag)
         handlerclass = buf.xml_tree_handler(node)
         tagnames = handlerclass.tagnames(buf.xml_tree, node)
         if not tagnames:
@@ -364,15 +362,17 @@ class XMLLangIntel(LangIntel):
             if prefix:
                 return ["%s:%s" % (prefix, name) for name in tagnames]
         return tagnames
-    
+
     def get_valid_attributes(self, buf, pos):
         """get_valid_attributes
         get the current tag, and return the attributes that are allowed in that
         element
         """
         node = buf.xml_node_at_pos(pos)
-        if node is None: return None
-        #print "get_valid_attributes NODE %s:%s xmlns[%s] %r"%(tree.prefix(node),node.localName,node.ns,node.tag)
+        if node is None:
+            return None
+        # print "get_valid_attributes NODE %s:%s xmlns[%s]
+        # %r"%(tree.prefix(node),node.localName,node.ns,node.tag)
         already_supplied = node.attrib.keys()
         handlerclass = buf.xml_tree_handler(node)
         attrs = handlerclass.attrs(buf.xml_tree, node)
@@ -381,22 +381,22 @@ class XMLLangIntel(LangIntel):
         attrs = [name for name in attrs if name not in already_supplied]
         attrs.sort()
         return attrs
-    
+
     def get_valid_attribute_values(self, attr, buf, pos):
         """get_valid_attribute_values
         get the current attribute, and return the values that are allowed in that
         attribute
         """
         node = buf.xml_node_at_pos(pos)
-        if node is None: return None
+        if node is None:
+            return None
         handlerclass = buf.xml_tree_handler(node)
         values = handlerclass.values(attr, buf.xml_tree, node)
         if not values:
             return None
         values.sort()
         return values
-    
-    
+
     def cpln_start_tag(self, buf, trg, withPrefix=True):
         lastpos = trg.pos
         if withPrefix:
@@ -407,40 +407,43 @@ class XMLLangIntel(LangIntel):
         if not tagnames:
             return []
         return [('element', tag) for tag in tagnames]
-    
+
     def cpln_end_tag(self, buf, trg):
         node = buf.xml_node_at_pos(trg.pos)
-        if node is None: return None
+        if node is None:
+            return None
         tagName = buf.xml_tree.tagname(node)
         if not tagName:
             return []
-        return [('element',tagName+">")]    
-    
+        return [('element', tagName+">")]
+
     def cpln_start_attribute_value(self, buf, trg):
         accessor = buf.accessor
-        attrName = accessor.text_range(*accessor.contiguous_style_range_from_pos(trg.pos-3))
+        attrName = accessor.text_range(
+            *accessor.contiguous_style_range_from_pos(trg.pos-3))
         if not attrName:
             log.warn("no attribute name in cpln_start_attribute_value")
             return []
-    
+
         values = self.get_valid_attribute_values(attrName, buf, trg.pos)
         if not values:
             return []
-    
+
         return [('attribute_value', value) for value in values]
-    
+
     def cpln_start_attrribute(self, buf, trg):
         accessor = buf.accessor
         attrs = self.get_valid_attributes(buf, trg.pos)
         if not attrs:
             return []
-        attrName = accessor.text_range(*accessor.contiguous_style_range_from_pos(trg.pos-1))
+        attrName = accessor.text_range(
+            *accessor.contiguous_style_range_from_pos(trg.pos-1))
         if attrName:
             attrName = attrName.strip()
         if attrName:
             return [('attribute', attr+"=") for attr in attrs if attr.startswith(attrName)]
         return [('attribute', attr+"=") for attr in attrs]
-    
+
 
 class XMLBuffer(UDLBuffer, XMLParsingBufferMixin):
     lang = lang
@@ -453,9 +456,7 @@ class XMLBuffer(UDLBuffer, XMLParsingBufferMixin):
     cpln_stop_chars = "'\" (;},~`!@%^&*()-=+{}]|\\;,.<>?/"
 
 
-
 #---- registration
-
 def register(mgr):
     """Register language support with the Manager."""
     mgr.set_lang_info(lang,
@@ -465,4 +466,3 @@ def register(mgr):
                       import_handler_class=None,
                       cile_driver_class=None,
                       is_cpln_lang=True)
-

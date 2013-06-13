@@ -2,26 +2,26 @@
 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -33,7 +33,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """ Utility class used for the parsing of Javascript comments.
@@ -223,9 +223,11 @@ class JSDocParameter:
         self.paramname = paramname
         self.paramtype = paramtype
         self.doc = doc
+
     def __repr__(self):
         return "JSDocParameter: %r (%r) - %r" % (self.paramname, self.paramtype,
                                                  self.doc)
+
 
 class JSDoc:
     A_CLASS = 0x01
@@ -241,7 +243,7 @@ class JSDoc:
         self.strip_html_tags = strip_html_tags
         if comment:
             # Full comment initially given
-            #print "JSDoc comment: %r" % (comment)
+            # print "JSDoc comment: %r" % (comment)
             self.parse(comment)
 
     def __repr__(self):
@@ -303,7 +305,7 @@ class JSDoc:
         #  'Array[](Number[])'
         # YUI Example:
         #   * @param {<a href="http://www.w3.org/TR/2000/WD-DOM-Level-1-20000929/level-one-
-        #   * html.html#ID-22445964">HTMLDivElement</a>} p_oElement Object specifying the 
+        #   * html.html#ID-22445964">HTMLDivElement</a>} p_oElement Object specifying the
         #   * <code>&#60;div&#62;</code> element of the context menu.
         if not value:
             return value
@@ -372,6 +374,7 @@ class JSDoc:
     def _handle_augments(self, value):
         self._handle_base(value)
     # Same as base
+
     def _handle_extends(self, value):
         self._handle_base(value)
 
@@ -422,6 +425,7 @@ class JSDoc:
         cp = JSDocParameter(paramname, paramtype, doc)
         self.params.append(cp)
     # Same as param.
+
     def _handle_argument(self, value):
         return self._handle_param(value)
 
@@ -436,6 +440,7 @@ class JSDoc:
         if returntype:
             self.returns = JSDocParameter(None, returntype, doc)
     # Same as return
+
     def _handle_returns(self, value):
         return self._handle_return(value)
 
@@ -456,7 +461,7 @@ class JSDoc:
         tagElements = []
         for line in lines:
             line = line.strip()
-            #print "line: %r" % (line)
+            # print "line: %r" % (line)
             if not isJSDoc:
                 # Note: "*//**" style comes from the ciler using two comments
                 # See bug: http://bugs.activestate.com/show_bug.cgi?id=68727
@@ -481,15 +486,15 @@ class JSDoc:
                 doc.append("")
             elif len(line) > 2 and line[:2] in ("* ", "*\t"):
                 sp = line.split(None, 1)
-                #print sp
+                # print sp
                 if len(sp) > 1:
                     if sp[1][0] == '@':
                         # It's a javadoc field
-                        #print sp
+                        # print sp
                         docfield = sp[1][1:]
                         sp = docfield.split(None, 1)
-                        #print sp
-                        #print "Tag: %r" % (sp[0])
+                        # print sp
+                        # print "Tag: %r" % (sp[0])
                         if sp[0] == "description":
                             if len(sp) > 1:
                                 doc.append(sp[1])
@@ -497,13 +502,13 @@ class JSDoc:
                         else:
                             tagElements.append(sp)
                             in_doc = False
-                    elif tagElements and doc and not in_doc: # This is a continued param field
+                    elif tagElements and doc and not in_doc:  # This is a continued param field
                         tagData = tagElements[-1]
                         if len(tagData) == 1:
                             tagData.append(sp[1])
                         else:
                             tagData[1] += "\n%s" % (sp[1])
-                    else: # This is still the main doc string
+                    else:  # This is still the main doc string
                         doc.append(sp[1])
                         in_doc = True
             elif len(line) > 2:
@@ -568,12 +573,14 @@ def _test():
     assert(jd.params[0].doc == "the object to modify")
     assert(jd.params[1].paramname == "superclass")
     assert(jd.params[1].paramtype == "function")
-    assert(jd.params[1].doc == "the object to inherit.\nSecond line of param superclass doc.")
+    assert(jd.params[
+           1].doc == "the object to inherit.\nSecond line of param superclass doc.")
     assert(jd.tags == "these,are,my,tags")
-    #print jd
+    # print jd
 
     # Test specific internal functions of the class
-    paramtype, doc = jd._getTypeFieldFromString("el {HTMLElement} the element to animate")
+    paramtype, doc = jd._getTypeFieldFromString(
+        "el {HTMLElement} the element to animate")
     assert(paramtype == "HTMLElement")
     assert(doc == "el  the element to animate")
     paramtype = jd._getTypeField("Array[](Number[])")
@@ -582,21 +589,22 @@ def _test():
     assert(paramtype == "Number")
 
     jd._reset()
-    jd._handle_param("{string}  sSource    The source of the the message (opt)")
-    assert(len(jd.params) == 1 and \
-           jd.params[0].paramname == "sSource" and \
+    jd._handle_param(
+        "{string}  sSource    The source of the the message (opt)")
+    assert(len(jd.params) == 1 and
+           jd.params[0].paramname == "sSource" and
            jd.params[0].paramtype == "string")
 
     jd._reset()
     jd._handle_param("oParent {Node} this node's parent node")
-    assert(len(jd.params) == 1 and \
-           jd.params[0].paramname == "oParent" and \
+    assert(len(jd.params) == 1 and
+           jd.params[0].paramname == "oParent" and
            jd.params[0].paramtype == "Node")
 
     jd._reset()
     jd._handle_returns("{array} Array of result objects")
-    assert(jd.returns and \
-           not jd.returns.paramname and \
+    assert(jd.returns and
+           not jd.returns.paramname and
            jd.returns.paramtype == "array")
 
     jd._reset()
@@ -652,6 +660,8 @@ def _test():
     assert(jd.type == "String")
 
 # Main function
+
+
 def main():
     _test()
 

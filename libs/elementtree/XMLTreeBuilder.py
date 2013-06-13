@@ -1,6 +1,6 @@
 #
 # ElementTree
-# $Id: XMLTreeBuilder.py 2305 2005-03-01 17:43:09Z fredrik $
+# $Id$
 #
 # an XML tree builder
 #
@@ -59,12 +59,14 @@ import ElementTree
 #
 # @see elementtree.ElementTree
 
+
 class TreeBuilder(ElementTree.XMLTreeBuilder):
     pass
 
 ##
 # (experimental) An alternate builder that supports manipulation of
 # new elements.
+
 
 class FancyTreeBuilder(TreeBuilder):
 

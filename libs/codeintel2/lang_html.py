@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """HTML support for CodeIntel"""
@@ -54,16 +54,12 @@ if _xpcom_:
     from xpcom.server import UnwrapObject
 
 
-
 #---- globals
-
 lang = "HTML"
 log = logging.getLogger("codeintel.html")
 
 
-
 #---- language support
-
 class HTMLLexer(UDLLexer):
     lang = lang
 
@@ -73,15 +69,17 @@ class HTMLLangIntel(XMLLangIntel):
 
     def get_valid_tagnames(self, buf, pos, withPrefix=False):
         node = buf.xml_node_at_pos(pos)
-        #print "get_valid_tagnames NODE %s:%s xmlns[%s] %r"%(buf.xml_tree.prefix(node),node.localName,node.ns,node.tag)
+        # print "get_valid_tagnames NODE %s:%s xmlns[%s]
+        # %r"%(buf.xml_tree.prefix(node),node.localName,node.ns,node.tag)
         handlerclass = buf.xml_tree_handler(node)
         tagnames = None
-        if node is not None: # or not tree.parent(node):
+        if node is not None:  # or not tree.parent(node):
             tagnames = set(handlerclass.tagnames(buf.xml_tree, node))
             while node is not None and node.localName in html_optional_close_tags:
                 node = buf.xml_tree.parent(node)
                 if node is not None:
-                    tagnames = tagnames.union(handlerclass.tagnames(buf.xml_tree, node))
+                    tagnames = tagnames.union(
+                        handlerclass.tagnames(buf.xml_tree, node))
         if not tagnames and hasattr(handlerclass, "dataset"):
             tagnames = handlerclass.dataset.all_element_types()
         if not tagnames:
@@ -93,14 +91,15 @@ class HTMLLangIntel(XMLLangIntel):
             if prefix:
                 return ["%s:%s" % (prefix, name) for name in tagnames]
         return tagnames
-    
+
     def cpln_end_tag(self, buf, trg):
         node = buf.xml_node_at_pos(trg.pos)
-        if node is None: return None
+        if node is None:
+            return None
         tagName = buf.xml_tree.tagname(node)
         if not tagName:
             return []
-    
+
         # here on, we're only working with HTML documents
         line, col = buf.accessor.line_and_col_at_pos(trg.pos)
         names = [tagName]
@@ -113,7 +112,8 @@ class HTMLLangIntel(XMLLangIntel):
             if not node.end:
                 names.append(buf.xml_tree.tagname(node))
                 continue
-        return [('element',tagName+">") for tagName in names]
+        return [('element', tagName+">") for tagName in names]
+
 
 class HTMLBuffer(UDLBuffer, XMLParsingBufferMixin):
     lang = lang
@@ -133,16 +133,12 @@ class HTMLBuffer(UDLBuffer, XMLParsingBufferMixin):
     cpln_stop_chars = "'\" ;,~`@#%^&*()=+{}]|\\,.<>?/"
 
 
-
 class HTMLCILEDriver(UDLCILEDriver):
     lang = lang
     csl_lang = "JavaScript"
 
 
-
-
 #---- registration
-
 def register(mgr):
     """Register language support with the Manager."""
     mgr.set_lang_info(lang,
@@ -151,4 +147,3 @@ def register(mgr):
                       langintel_class=HTMLLangIntel,
                       cile_driver_class=HTMLCILEDriver,
                       is_cpln_lang=True)
-

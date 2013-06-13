@@ -1,26 +1,26 @@
 #!python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 import sys
@@ -49,15 +49,11 @@ import weakref
 from codeintel2.common import *
 
 
-
 #---- globals
-
 log = logging.getLogger("codeintel.db")
 
 
-
 #---- Database zone and lib implementations
-
 class ProjectZone(object):
     """Manage a 'db/projs/<proj-hash>/...' area of the database.
 
@@ -92,7 +88,7 @@ class ProjectZone(object):
         self.proj = proj
 
         self.name = basename(proj.path)
-        self.base_dir = join(self.db.base_dir, "db", "projs", 
+        self.base_dir = join(self.db.base_dir, "db", "projs",
                              md5(proj.path).hexdigest())
         self._proj_lib_from_lang = weakref.WeakValueDictionary()
         self._idx_lock = threading.RLock()
@@ -118,19 +114,20 @@ class ProjectZone(object):
             return self._dirs_from_basename
         finally:
             self._idx_lock.release()
+
     def set_dirs_from_basename(self, value):
         self._idx_lock.acquire()
         try:
             old_value = self.dirs_from_basename
             self._dirs_from_basename = value
             if old_value != value:
-                #PERF: can this be smarter? Would have to be on
+                # PERF: can this be smarter? Would have to be on
                 #      .update() for that.
                 self._is_idx_dirty = True
         finally:
             self._idx_lock.release()
     dirs_from_basename = property(get_dirs_from_basename,
-        set_dirs_from_basename, None, "index of basenames in project")
+                                  set_dirs_from_basename, None, "index of basenames in project")
 
     def _mk_dbdir(self):
         log.debug("fs-write: mkdir '%s'", self.base_dir)
@@ -149,7 +146,7 @@ class ProjectZone(object):
                 if not exists(self.base_dir):
                     self._mk_dbdir()
                 self.db.save_pickle(join(self.base_dir, "dirs_from_basename"),
-                    self._dirs_from_basename)
+                                    self._dirs_from_basename)
                 self._is_idx_dirty = False
         finally:
             self._idx_lock.release()
@@ -162,7 +159,7 @@ class ProjectZone(object):
         """
         if nice:
             XXX
-        #XXX Update this to handle includes, excludes,
+        # XXX Update this to handle includes, excludes,
         #    static-project-entries. I.e. move this logic to the
         #    project where it can handle this stuff.
         dirs_from_basename = {}
@@ -172,10 +169,10 @@ class ProjectZone(object):
         self.dirs_from_basename = dirs_from_basename
 
     def _likely_filename_from_lang_and_blobname(self, lang, blobname):
-        #XXX Need to canonicalize filename.
-        #XXX Shouldn't be hardcoding this stuff here. Defer out to the
+        # XXX Need to canonicalize filename.
+        # XXX Shouldn't be hardcoding this stuff here. Defer out to the
         #    lang_*.py modules.
-        #XXX Do we have to worry about multi-level imports here? E.g.,
+        # XXX Do we have to worry about multi-level imports here? E.g.,
         #       Python:  os.path
         #       Perl:    LWP::UserAgent
         #       Ruby:    yaml/context
@@ -204,14 +201,14 @@ class ProjectZone(object):
         except KeyError:
             return None
         else:
-            #XXX This may be a perf issue because of a possibly large
+            # XXX This may be a perf issue because of a possibly large
             #    number of created LangDirsLib's -- which was unexpected
             #    when the LangDirsLibs caching was designed on LangZone.
             #    The cache size may need to be increased or some other
             #    scheme considered.
             return self.db.get_lang_lib(lang, "proj '%s' lib" % self.name,
                                         dirs,
-                                        sublang=lang) # for PHP
+                                        sublang=lang)  # for PHP
 
     def get_lib(self, lang):
         proj_lib = self._proj_lib_from_lang.get(lang)
@@ -220,15 +217,19 @@ class ProjectZone(object):
             self._proj_lib_from_lang[lang] = proj_lib
         return proj_lib
 
+
 class ProjectLib(object):
     # Light lang-specific wrapper around a ProjectZone (akin to
     # CatalogLig).
     def __init__(self, proj_zone, lang):
         self.proj_zone = proj_zone
         self.lang = lang
+
     def __repr__(self):
         return "<proj '%s' %s lib>" % (self.proj_zone.name, self.lang)
+
     def has_blob(self, blobname):
         return self.proj_zone.has_blob(self.lang, blobname)
+
     def get_blob(self, blobname):
         return self.proj_zone.get_blob(self.lang, blobname)

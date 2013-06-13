@@ -6,6 +6,7 @@ from _SilverCity import find_lexer_module_by_id, PropertySet, WordList
 from ScintillaConstants import SCLEX_CSS
 import LanguageInfo
 
+
 class _CSSLexerTemplate(Lexer.Lexer):
     def __init__(self, properties):
         self._properties = properties
@@ -19,43 +20,48 @@ class _CSSLexerTemplate(Lexer.Lexer):
             WordList(Keywords.css_browser_specific_properties),
             WordList(Keywords.css_browser_specific_pseudo_classes),
             WordList(Keywords.css_browser_specific_pseudo_elements),
-                               ]
+        ]
+
 
 class CSSLexer(_CSSLexerTemplate):
-    def __init__(self, properties = PropertySet()):
+    def __init__(self, properties=PropertySet()):
         _CSSLexerTemplate.__init__(self, properties)
-            
+
+
 class SCSSLexer(_CSSLexerTemplate):
-    def __init__(self, properties = PropertySet()):
+    def __init__(self, properties=PropertySet()):
         _CSSLexerTemplate.__init__(self, properties)
         properties['lexer.css.scss.language'] = '1'
 
+
 class LessLexer(_CSSLexerTemplate):
-    def __init__(self, properties = PropertySet()):
+    def __init__(self, properties=PropertySet()):
         _CSSLexerTemplate.__init__(self, properties)
         properties['lexer.css.less.language'] = '1'
+
 
 class CSSHandler(DispatchHandler):
     def __init__(self):
         DispatchHandler.__init__(self, 'SCE_CSS')
 
+
 class CSSHTMLGenerator(HTMLGenerator.SimpleHTMLGenerator, CSSHandler):
     name = 'css'
     description = 'Cascading Style Sheets'
-    
+
     def __init__(self):
         CSSHandler.__init__(self)
         HTMLGenerator.SimpleHTMLGenerator.__init__(self, 'SCE_CSS')
-            
-    def generate_html(self, file, buffer, lexer = CSSLexer()):
+
+    def generate_html(self, file, buffer, lexer=CSSLexer()):
         self._file = file
         lexer.tokenize_by_style(buffer, self.event_handler)
 
 css_language_info = LanguageInfo.LanguageInfo(
-                'css',
-                 ['css'],
-                 ['.*?css.*?'],
-                 [CSSHTMLGenerator]
-            ) 
+    'css',
+    ['css'],
+    ['.*?css.*?'],
+    [CSSHTMLGenerator]
+)
 
 LanguageInfo.register_language(css_language_info)

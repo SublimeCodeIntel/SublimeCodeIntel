@@ -84,9 +84,14 @@ from cStringIO import StringIO
 CODEINTEL_HOME_DIR = os.path.expanduser(os.path.join('~', '.codeintel'))
 __file__ = os.path.normpath(os.path.abspath(__file__))
 __path__ = os.path.dirname(__file__)
+
 libs_path = os.path.join(__path__, 'libs')
 if libs_path not in sys.path:
     sys.path.insert(0, libs_path)
+
+arch_path = os.path.join(__path__, 'arch')
+if arch_path not in sys.path:
+    sys.path.insert(0, arch_path)
 
 from codeintel2.common import *
 from codeintel2.manager import Manager
@@ -114,12 +119,12 @@ log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [codeintel_hdlr]
 log.handlers = [stderr_hdlr]
 codeintel_log.setLevel(logging.INFO)  # INFO
-logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # WARNING/INFO
+logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # WARNING
 
-for lang in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
+for logger in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
              'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
              'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
-    logging.getLogger("codeintel." + lang).setLevel(logging.DEBUG)  # WARNING/DEBUG
+    logging.getLogger("codeintel." + logger).setLevel(logging.INFO)  # WARNING
 log.setLevel(logging.ERROR)  # ERROR
 
 cpln_fillup_chars = {
@@ -308,7 +313,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                             'next_completion_if_showing': False,
                             'auto_complete_commit_on_tab': True,
                         })
-                elif calltips is not None:
+                elif calltips is not None and False:
                     # Trigger a tooltip
                     calltip(view, 'tip', calltips[0])
 
@@ -502,6 +507,7 @@ def codeintel_cleanup(id):
 
 
 def codeintel_manager(folders_id):
+    folders_id = None
     global _ci_mgr_, condeintel_log_filename, condeintel_log_file
     mgr = _ci_mgr_.get(folders_id)
     if mgr is None:
@@ -510,7 +516,7 @@ def codeintel_manager(folders_id):
                 thread.finalize()  # this finalizes the index, citadel and the manager and waits them to end (join)
         mgr = Manager(
             extra_module_dirs=None,
-            db_base_dir=os.path.expanduser(os.path.join('~', '.codeintel', 'databases', folders_id)),
+            db_base_dir=None,  # os.path.expanduser(os.path.join('~', '.codeintel', 'databases', folders_id)),
             db_catalog_dirs=[],
             db_import_everything_langs=None,
         )
@@ -577,7 +583,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                     if folder_path:
                         # Try to find a suitable project directory (or best guess):
                         for folder in ['.codeintel', '.git', '.hg', '.svn', 'trunk']:
-                            project_dir = find_folder(folder_path, folder)
+                            project_dir = find_back(folder_path, folder)
                             if project_dir:
                                 if folder == '.codeintel':
                                     if project_dir == CODEINTEL_HOME_DIR or os.path.exists(os.path.join(project_dir, 'databases')):
@@ -792,7 +798,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
     codeintel_scan(view, path, content, lang, _codeintel, pos, forms)
 
 
-def find_folder(start_at, look_for):
+def find_back(start_at, look_for):
     root = os.path.realpath('/')
     start_at = os.path.abspath(start_at)
     if not os.path.isdir(start_at):

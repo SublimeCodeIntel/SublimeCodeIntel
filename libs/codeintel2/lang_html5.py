@@ -17,7 +17,7 @@ if _xpcom_:
 
 lang = "HTML5"
 log = logging.getLogger("codeintel.html5")
-#log.setLevel(logging.DEBUG)
+# log.setLevel(logging.DEBUG)
 
 
 #---- language support
@@ -26,23 +26,28 @@ class HTML5Lexer(HTMLLexer):
     # This must be defined as "HTML" in order to get autocompletion working.
     lang = "HTML"
 
+
 class HTML5LangIntel(HTMLLangIntel):
     lang = lang
+
 
 class HTML5Buffer(HTMLBuffer):
     lang = lang
 
     # Override the xml_default_dataset_info in order to change the DTD catalog
     # that gets used for HTML completions. The namespace is set through the
-    # Komodo prefs system (defaultHTML5Decl and defaultHTML5DeclSystemIdentifier).
+    # Komodo prefs system (defaultHTML5Decl and
+    # defaultHTML5DeclSystemIdentifier).
     def xml_default_dataset_info(self, node=None):
         if self._xml_default_dataset_info is None:
             import koXMLDatasetInfo
             datasetSvc = koXMLDatasetInfo.getService()
-            self._xml_default_dataset_info = (datasetSvc.getDefaultPublicId(lang, self.env),
-                                              None,
-                                              datasetSvc.getDefaultNamespace(lang, self.env))
+            self._xml_default_dataset_info = (
+                datasetSvc.getDefaultPublicId(lang, self.env),
+                None,
+                datasetSvc.getDefaultNamespace(lang, self.env))
         return self._xml_default_dataset_info
+
 
 class HTML5CILEDriver(HTMLCILEDriver):
     lang = lang
@@ -58,4 +63,3 @@ def register(mgr):
                       langintel_class=HTML5LangIntel,
                       cile_driver_class=HTML5CILEDriver,
                       is_cpln_lang=True)
-

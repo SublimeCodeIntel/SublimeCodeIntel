@@ -8,15 +8,15 @@ by external modules. Implementing a hook is done by adding a
 
     ---- codeintel_foo.py ----
     # My codeintel 'foo' hook.
-    
+
     from codeintel2.hooks import HookHandler
-    
+
     class FooHookHandler(HookHandler):
         name = "foo"
         langs = ["Python"]  # only hook into handling for Python code
 
         # Add implementation of one or more hooks (see below)...
-    
+
     def register(mgr):
         # This will be called by the Manager on startup.
         mgr.add_hook_handler(FooHookHandler(mgr))
@@ -38,7 +38,7 @@ class HookHandler(object):
     #   langs = ["HTML", "XML"]
     #   langs = ["*"]   # Means operate on all languages. Use sparingly!
     langs = None
-    
+
     def __init__(self, mgr):
         self.mgr = mgr
 
@@ -61,5 +61,3 @@ class HookHandler(object):
     # controller file.
     def post_db_load_blob(self, blob):
         pass
-
-

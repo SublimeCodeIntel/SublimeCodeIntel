@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 #
 # Contributors:
@@ -45,7 +45,7 @@
         from tclcile import scan_purelang
         content = open("foo.tcl", "r").read()
         scan_purelang(content, "foo.tcl")
-    
+
     Command-line Usage:
         tclcile.py [<options>...] [<Tcl files>...]
 
@@ -70,7 +70,7 @@
     This is a Language Engine for the Code Intelligence (codeintel) system.
     Code Intelligence XML format. See:
         http://specs.tl.activestate.com/kd/kd-0100.html
-    
+
     The command-line interface will return non-zero iff the scan failed.
 """
 
@@ -103,7 +103,7 @@ class TclCILEError(CILEError):
 
 _version_ = (0, 1, 0)
 log = logging.getLogger("tclcile")
-#log.setLevel(logging.DEBUG)
+# log.setLevel(logging.DEBUG)
 
 _gClockIt = 0   # if true then we are gathering timing data
 _gClock = None  # if gathering timing data this is set to time retrieval fn
@@ -115,7 +115,7 @@ def scan_purelang(content, filename):
     tokenizer = tcl_lexer.TclLexer(content)
     parser = tcl_parser.Parser(tokenizer, "Tcl")
     parse_tree = parser.parse()
-    #XXX Change last arg from "Tcl" to "tclcile"?
+    # XXX Change last arg from "Tcl" to "tclcile"?
     tree = parser_cix.produce_elementTree_cix(parse_tree, filename, "Tcl",
                                               "Tcl")
     return tree
@@ -132,7 +132,7 @@ def scan_multilang(tokens, module_elem):
     This should return a list of the CSL tokens in the token stream.
     """
     tokenizer = tcl_lexer.TclMultiLangLexer(tokens)
-    parser = tcl_parser.Parser(tokenizer, "AOL")  #TODO: What is AOL here?
+    parser = tcl_parser.Parser(tokenizer, "AOL")  # TODO: What is AOL here?
     parse_tree = parser.parse()
     parser_cix.produce_elementTree_contents_cix(parse_tree, module_elem)
     csl_tokens = tokenizer.get_csl_tokens()
@@ -146,8 +146,8 @@ def main(argv):
     # Parse options.
     try:
         opts, args = getopt.getopt(argv[1:], "Vvhf:cL:",
-            ["version", "verbose", "help", "filename=", "md5=", "mtime=",
-             "clock", "language="])
+                                   ["version", "verbose", "help", "filename=", "md5=", "mtime=",
+                                    "clock", "language="])
     except getopt.GetoptError, ex:
         log.error(str(ex))
         log.error("Try `tclcile --help'.")
@@ -231,7 +231,7 @@ def main(argv):
     except KeyboardInterrupt:
         log.debug("user abort")
         return 1
-    if 0: #except Exception, ex:
+    if 0:  # except Exception, ex:
         log.error(str(ex))
         if log.isEnabledFor(logging.DEBUG):
             print
@@ -241,4 +241,3 @@ def main(argv):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
-

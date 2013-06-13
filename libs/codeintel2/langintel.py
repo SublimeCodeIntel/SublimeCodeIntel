@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """Base LangIntel class definition
@@ -70,10 +70,9 @@ if _xpcom_:
 log = logging.getLogger("codeintel.langintel")
 
 
-
 class LangIntel(object):
     """Smarts about content of a given language.
-    
+
     Typically the Buffer implementations defer to a language's LangIntel
     class for handling stuff specific to that language content. This is
     how multi-language buffers are handled.
@@ -81,17 +80,19 @@ class LangIntel(object):
     # All "leaf" LangIntel subclasses must set the `lang` attribute.
     lang = None
     # Used by `preceding_trg_from_pos` for 3-char triggering for some langs.
-    _last_trg_type = None 
+    _last_trg_type = None
 
     def __init__(self, mgr):
         self.mgr = mgr
 
     _langinfo_cache = None
+
     @property
     def langinfo(self):
         if self._langinfo_cache is None:
             try:
-                self._langinfo_cache = self.mgr.lidb.langinfo_from_komodo_lang(self.lang)
+                self._langinfo_cache = self.mgr.lidb.langinfo_from_komodo_lang(
+                    self.lang)
             except langinfo.LangInfoError, ex:
                 self._langinfo_cache = None
                 log.exception("error getting langinfo for '%s'", self.lang)
@@ -103,7 +104,7 @@ class LangIntel(object):
     cb_group_global_vars = True
 
     def cb_blob_detail_from_elem_and_buf(self, elem, buf):
-        if elem.get("lang") != buf.lang: # multi-lang doc
+        if elem.get("lang") != buf.lang:  # multi-lang doc
             return "%s Code in %s" % (elem.get("lang"), buf.path)
         else:
             dir, base = os.path.split(buf.path)
@@ -120,7 +121,8 @@ class LangIntel(object):
         if alias:
             if symbol:
                 name = "%s (%s.%s)" % (alias, module, symbol)
-                detail = "from %(module)s import %(symbol)s as %(alias)s" % locals()
+                detail = "from %(module)s import %(symbol)s as %(alias)s" % locals(
+                )
             else:
                 name = "%s (%s)" % (alias, module)
                 detail = "import %(module)s as %(alias)s" % locals()
@@ -144,7 +146,7 @@ class LangIntel(object):
             img += "-private"
         elif "protected" in attrs:
             img += "-protected"
-        #TODO: Add 'detail'. C.f. cb.py::getDescForSymbol().
+        # TODO: Add 'detail'. C.f. cb.py::getDescForSymbol().
         return {"name": elem.get("name"),
                 "img": img}
 
@@ -155,7 +157,7 @@ class LangIntel(object):
             return sig
         else:
             return elem.get("name")+"(...)"
-    
+
     def cb_class_detail_from_elem(self, elem):
         classrefs = elem.get("classrefs")
         if classrefs:
@@ -176,7 +178,7 @@ class LangIntel(object):
 
     def cb_data_from_elem_and_buf(self, elem, buf):
         """Return a dict of info for a code browser row for this element.
-        
+
         - Should define "name" key.
         - Can define "detail" key. This is the string displayed when
           hovering over the image in the code browser.
@@ -195,7 +197,7 @@ class LangIntel(object):
         """
         if elem.tag == "import":
             data = {"img": "import"}
-            data.update( self.cb_import_data_from_elem(elem) )
+            data.update(self.cb_import_data_from_elem(elem))
             return data
 
         elif elem.tag == "variable":
@@ -223,7 +225,7 @@ class LangIntel(object):
                     detail = self.cb_namespace_detail_from_elem(elem)
                 elif ilk == "trait":
                     detail = self.cb_trait_detail_from_elem(elem)
-                else: # what else could it be?
+                else:  # what else could it be?
                     log.warn("don't know how to get cb detail for '%s' elem",
                              ilk)
                     detail = elem.get("name")
@@ -239,16 +241,20 @@ class ImplicitLangIntel(LangIntel):
     def __init__(self, lang, mgr):
         self.lang = lang
         LangIntel.__init__(self, mgr)
+
     def trg_from_pos(self, buf, pos, implicit=True):
         return None
+
     def preceding_trg_from_pos(self, buf, pos, curr_pos):
         return None
+
     def async_eval_at_trg(self, buf, trg, ctlr):
         if _xpcom_:
             trg = UnwrapObject(trg)
             ctlr = UnwrapObject(ctlr)
         ctlr.start(buf, trg)
         ctlr.done("success")
+
 
 class ParenStyleCalltipIntelMixin(object):
     """A mixin class to implement `curr_calltip_arg_range' for languages
@@ -261,17 +267,19 @@ class ParenStyleCalltipIntelMixin(object):
         """Hook to allow language-specific, context-specific checking."""
         return True
 
-    _parsed_calltip_cache = (None, None) # (<last-calltip>, <last-parsed-calltip>)
+    _parsed_calltip_cache = (
+        None, None)  # (<last-calltip>, <last-parsed-calltip>)
+
     def curr_calltip_arg_range(self, buf, trg_pos, calltip, curr_pos,
                                DEBUG=False):
         """Return that range in the calltip of the "current" arg.
         I.e. what argument is currently being entered.
-        
+
             "buf" is the buffer object on which this is being done.
             "trg_pos" is the trigger position.
             "calltip" is the full calltip text.
             "curr_pos" is the current position in the buffer.
-            
+
         Returns a range: (start, end)
         Set `start == -1` to cancel the calltip, i.e. if the entered text
         has closed the call region.
@@ -304,7 +312,7 @@ class ParenStyleCalltipIntelMixin(object):
             print "buffer:\n%s" % indent(markup_text(accessor.text,
                                                      trg_pos=trg_pos,
                                                      pos=curr_pos))
-            
+
         # Start from the trigger position and walk forward to the current
         # pos: counting args and looking for termination of the calltip
         # region.
@@ -320,27 +328,34 @@ class ParenStyleCalltipIntelMixin(object):
         block_stack = []
         p = trg_pos
         for ch, style in accessor.gen_char_and_style(trg_pos, curr_pos):
-            if DEBUG: print "pos %2d: %r (%2s) --" % (p, ch, style),
+            if DEBUG:
+                print "pos %2d: %r (%2s) --" % (p, ch, style),
             if style in skip_styles:
-                if DEBUG: print "skip"
+                if DEBUG:
+                    print "skip"
             elif ch in blocks:
-                if DEBUG: print "open block"
+                if DEBUG:
+                    print "open block"
                 block_stack.append(blocks[ch])
             elif block_stack:
                 if ch == block_stack[-1]:
-                    if DEBUG: print "close block"
+                    if DEBUG:
+                        print "close block"
                     block_stack.pop()
                 elif ch in self.calltip_region_terminators:
-                    if DEBUG: print "end of call region: (-1, -1)"
+                    if DEBUG:
+                        print "end of call region: (-1, -1)"
                     return (-1, -1)
                 elif DEBUG:
                     print "ignore (in block)"
             elif ch == ',':
-                if DEBUG: print "next arg"
+                if DEBUG:
+                    print "next arg"
                 comma_count += 1
             elif ch in self.calltip_region_terminators and \
-                 self.calltip_verify_termination(accessor, ch, trg_pos, curr_pos):
-                if DEBUG: print "end of call region: (-1, -1)"
+                    self.calltip_verify_termination(accessor, ch, trg_pos, curr_pos):
+                if DEBUG:
+                    print "end of call region: (-1, -1)"
                 return (-1, -1)
             elif DEBUG:
                 print "ignore"
@@ -354,7 +369,8 @@ class ParenStyleCalltipIntelMixin(object):
             parsed = _parse_calltip(calltip, DEBUG)
             self._parsed_calltip_cache = (calltip, parsed)
         if parsed is None:
-            if DEBUG: print "couldn't parse any calltip: (0, 0)"
+            if DEBUG:
+                print "couldn't parse any calltip: (0, 0)"
             return (0, 0)
         signature, name, args = parsed
         if DEBUG:
@@ -362,12 +378,14 @@ class ParenStyleCalltipIntelMixin(object):
                   % (indent(signature), indent(name), indent(pformat(args)))
 
         if not args:
-            if DEBUG: print "no args in signature: (0, 0)"
+            if DEBUG:
+                print "no args in signature: (0, 0)"
             return (0, 0)
         elif comma_count >= len(args):
-            #XXX ellipsis
-            if DEBUG: print "more commas than args: ellipsis?"
-            span = args[-1].span # default to last arg
+            # XXX ellipsis
+            if DEBUG:
+                print "more commas than args: ellipsis?"
+            span = args[-1].span  # default to last arg
         else:
             span = args[comma_count].span
 
@@ -376,7 +394,6 @@ class ParenStyleCalltipIntelMixin(object):
             print indent(signature)
             print "    %s%s" % (' '*span[0], '-'*(span[1]-span[0]))
         return span
-
 
 
 class ProgLangTriggerIntelMixin(object):
@@ -407,7 +424,7 @@ class ProgLangTriggerIntelMixin(object):
             preceding_trg_terminators = self.preceding_trg_terminators
         if DEBUG:
             print banner("preceding_trg_from_pos(pos=%r, curr_pos=%r)"
-                          % (pos, curr_pos))
+                         % (pos, curr_pos))
             print indent(markup_text(accessor.text, pos=curr_pos,
                                      start_pos=pos))
             print banner(None, '-')
@@ -429,7 +446,7 @@ class ProgLangTriggerIntelMixin(object):
         # where you can't rely on ';' (actually
         # `preceding_trg_terminators').
         limit = max(1, pos - 200)
-        
+
         # First stage. We only consider autocomplete trigger (i.e.
         # trg.form==TRG_FORM_COMPLETION) if within range of the
         # curr_pos. Here "within range" means you don't have to more the
@@ -449,11 +466,11 @@ class ProgLangTriggerIntelMixin(object):
         p = pos
         if p >= first_stage_limit:
             for (prev_ch, prev_style) in accessor.gen_char_and_style_back(p-1,
-                                                          first_stage_limit-2):
+                                                                          first_stage_limit-2):
                 if (not skip_styles and prev_style != start_style
                     # EOLs in comments seem to always be style 0. Don't count
                     # them.
-                    and prev_ch not in EOL_CHARS):
+                        and prev_ch not in EOL_CHARS):
                     if DEBUG:
                         print "[stage 1] have seen a style change (%d -> %d), " \
                               "now skipping strings and comments" \
@@ -463,16 +480,20 @@ class ProgLangTriggerIntelMixin(object):
                     print "[stage 1] consider pos %2d: prev_ch=%r (%d) --"\
                           % (p, prev_ch, prev_style),
                 if prev_style in skip_styles:
-                    if DEBUG: print "comment or string, skip it"
+                    if DEBUG:
+                        print "comment or string, skip it"
                 elif self._is_terminating_char(prev_ch, prev_style,
                                                preceding_trg_terminators):
-                    if DEBUG: print "in `preceding_trg_terminators': break"
+                    if DEBUG:
+                        print "in `preceding_trg_terminators': break"
                     return None
                 elif prev_ch in self.trg_chars:
-                    if DEBUG: print "trigger char, try it"
+                    if DEBUG:
+                        print "trigger char, try it"
                     trg = buf.trg_from_pos(p, implicit=False)
                     if trg:
-                        if DEBUG: print "[stage 1] %s" % trg
+                        if DEBUG:
+                            print "[stage 1] %s" % trg
                         return trg
                     p -= 1
                     break
@@ -484,7 +505,7 @@ class ProgLangTriggerIntelMixin(object):
 
         # Second stage. We only consider calltip triggers now
         # (self.calltip_trg_chars).
-        # 
+        #
         # As well, ignore enclosed paren sections to make sure we are
         # in-range. For example, we shouldn't trigger on "bar(" here:
         #   foo(bar("skip", "this", "arg", "list"), <|>)
@@ -493,7 +514,7 @@ class ProgLangTriggerIntelMixin(object):
             if (not skip_styles and prev_style != start_style
                 # EOLs in comments seem to always be style 0. Don't count
                 # them.
-                and prev_ch not in EOL_CHARS):
+                    and prev_ch not in EOL_CHARS):
                 if DEBUG:
                     print "[stage 2] seen a style change (%d -> %d), now " \
                           "skipping strings and comments" \
@@ -504,22 +525,28 @@ class ProgLangTriggerIntelMixin(object):
                 print "[stage 2] consider pos %2d: prev_ch=%r (%d) --"\
                       % (p, prev_ch, prev_style),
             if prev_style in skip_styles:
-                if DEBUG: print "comment or string, skip it"
+                if DEBUG:
+                    print "comment or string, skip it"
             elif prev_ch == ')':
                 close_paren_count += 1
-                if DEBUG: print "close paren: count=%d" % close_paren_count
+                if DEBUG:
+                    print "close paren: count=%d" % close_paren_count
             elif close_paren_count and prev_ch == '(':
                 close_paren_count -= 1
-                if DEBUG: print "open paren: count=%d" % close_paren_count
+                if DEBUG:
+                    print "open paren: count=%d" % close_paren_count
             elif self._is_terminating_char(prev_ch, prev_style,
                                            preceding_trg_terminators):
-                if DEBUG: print "in `preceding_trg_terminators': break"
+                if DEBUG:
+                    print "in `preceding_trg_terminators': break"
                 return None
             elif prev_ch in self.calltip_trg_chars:
-                if DEBUG: print "trigger char, try it"
+                if DEBUG:
+                    print "trigger char, try it"
                 trg = buf.trg_from_pos(p, implicit=False)
                 if trg:
-                    if DEBUG: print "[stage 2] %s" % trg
+                    if DEBUG:
+                        print "[stage 2] %s" % trg
                     return trg
             elif DEBUG:
                 print "not a trigger char, skip it"
@@ -530,6 +557,7 @@ class ProgLangTriggerIntelMixin(object):
     def _is_terminating_char(self, ch, style, preceding_trg_terminators):
         terminating_style = preceding_trg_terminators.get(ch, -1)
         return terminating_style is None or terminating_style == style
+
 
 class PythonCITDLExtractorMixin(object):
     """A LangIntel mixin class for
@@ -545,14 +573,14 @@ class PythonCITDLExtractorMixin(object):
     def _citdl_expr_from_pos(self, buf, pos, implicit=False,
                              include_forwards=False, DEBUG=False, trg=None):
 
-        #PERF: Would dicts be faster for all of these?
+        # PERF: Would dicts be faster for all of these?
         WHITESPACE = tuple(" \t\n\r\v\f")
         EOL = tuple("\r\n")
         BLOCKCLOSES = tuple(")}]")
         STOPOPS = tuple("({[,&+-=!^|%/<>;:#@")
-        EXTRA_STOPOPS_PRECEDING_IDENT = BLOCKCLOSES # Might be others.
+        EXTRA_STOPOPS_PRECEDING_IDENT = BLOCKCLOSES  # Might be others.
 
-        #TODO: clean this up for LangIntel-usage
+        # TODO: clean this up for LangIntel-usage
         if implicit:
             skip_styles = buf.implicit_completion_skip_styles
         else:
@@ -560,10 +588,18 @@ class PythonCITDLExtractorMixin(object):
         string_styles = buf.string_styles()
         comment_styles = buf.comment_styles()
 
-        #XXX Add sentinel num chars?
+        # XXX Add sentinel num chars?
         citdl_expr = []
         accessor = buf.accessor
         i = pos
+
+        is_udl_buffer = False
+        from codeintel2.udl import UDLBuffer
+        if isinstance(buf, UDLBuffer):
+            # We need to check for udl transition points and not go beyond the
+            # current sub-language, bug 95946.
+            is_udl_buffer = True
+            udl_lang = buf.lang_from_pos(pos)
 
         # Move ahead to include forward chars as well
         # We stop when we go out of the expression or when the expression is
@@ -577,6 +613,11 @@ class PythonCITDLExtractorMixin(object):
                 while i < max_look_ahead:
                     ch = accessor.char_at_pos(i)
                     style = accessor.style_at_pos(i)
+                    if is_udl_buffer and buf.lang_from_style(style) != udl_lang:
+                        if DEBUG:
+                            print "UDL boundary at pos %d, changed from %r to %r" % (
+                                i, udl_lang, buf.lang_from_style(style))
+                        break
                     if ch in WHITESPACE:
                         lastch_was_whitespace = True
                     elif ch in ".)}]" or ch in STOPOPS:
@@ -603,6 +644,11 @@ class PythonCITDLExtractorMixin(object):
         while i >= 0:
             ch = accessor.char_at_pos(i)
             style = accessor.style_at_pos(i)
+            if is_udl_buffer and buf.lang_from_style(style) != udl_lang:
+                if DEBUG:
+                    print "UDL boundary at pos %d, changed from %r to %r" % (
+                        i, udl_lang, buf.lang_from_style(style))
+                break
             if ch in WHITESPACE:
                 # drop all whitespace
                 while i >= 0:
@@ -620,10 +666,10 @@ class PythonCITDLExtractorMixin(object):
                 #   def foo<|>(...
                 if i >= 0 and citdl_expr and isident(citdl_expr[-1]) \
                    and ch != '.':
-                    if DEBUG: 
+                    if DEBUG:
                         print "stop at non-dot: %r" % ch
                     break
-            elif style in string_styles: # Convert to string
+            elif style in string_styles:  # Convert to string
                 citdl_type = self.citdl_from_literal_type.get("string")
                 if DEBUG:
                     print "found string style, converting to: %s and now " \
@@ -631,19 +677,19 @@ class PythonCITDLExtractorMixin(object):
                 if citdl_type:
                     citdl_expr += reversed(citdl_type)
                 break
-            elif style in skip_styles: # drop styles to ignore
+            elif style in skip_styles:  # drop styles to ignore
                 while i >= 0 and accessor.style_at_pos(i) in skip_styles:
                     if DEBUG:
                         print "drop char of style to ignore: %r"\
                               % accessor.char_at_pos(i)
                     i -= 1
             elif ch in STOPOPS or (
-                 # This check ensures that, for example, we get "foo" instead
-                 # of "bar()foo" in the following:
-                 #      bar()
-                 #      foo<|>.
-                 citdl_expr and citdl_expr[-1] != '.'
-                 and ch in EXTRA_STOPOPS_PRECEDING_IDENT):
+                # This check ensures that, for example, we get "foo" instead
+                # of "bar()foo" in the following:
+                #      bar()
+                #      foo<|>.
+                citdl_expr and citdl_expr[-1] != '.'
+                    and ch in EXTRA_STOPOPS_PRECEDING_IDENT):
                 if DEBUG:
                     print "stop at stop-operator %d: %r" % (i, ch)
                 break
@@ -651,14 +697,14 @@ class PythonCITDLExtractorMixin(object):
                 if DEBUG:
                     print "found block at %d: %r" % (i, ch)
                 citdl_expr.append(ch)
-    
-                BLOCKS = { # map block close char to block open char
+
+                BLOCKS = {  # map block close char to block open char
                     ')': '(',
                     ']': '[',
                     '}': '{',
                 }
-                stack = [] # stack of blocks: (<block close char>, <style>)
-                stack.append( (ch, style, BLOCKS[ch], i) )
+                stack = []  # stack of blocks: (<block close char>, <style>)
+                stack.append((ch, style, BLOCKS[ch], i))
                 i -= 1
                 num_lines = 0
                 while i >= 0:
@@ -670,12 +716,13 @@ class PythonCITDLExtractorMixin(object):
                     if ch in EOL:
                         num_lines += 1
                     if num_lines >= 3:
-                        if DEBUG: print "stop search for matching brace at 3 line sentinel"
+                        if DEBUG:
+                            print "stop search for matching brace at 3 line sentinel"
                         break
                     elif ch in BLOCKS and style not in skip_styles:
-                        stack.append( (ch, style, BLOCKS[ch]) )
+                        stack.append((ch, style, BLOCKS[ch]))
                     elif ch == stack[-1][2] and style not in skip_styles:
-                        #XXX Replace the second test with the following
+                        # XXX Replace the second test with the following
                         #    when LexPython+SilverCity styling bugs are fixed
                         #    (spurious 'stderr' problem):
                         #       and style == stack[-1][1]:
@@ -688,7 +735,8 @@ class PythonCITDLExtractorMixin(object):
                                 # save the text in params, in case the completion
                                 # needs to special-case things depending on the
                                 # argument.
-                                trg.extra["_params"] = accessor.text_range(i + 1, last_frame[3])
+                                trg.extra["_params"] = accessor.text_range(
+                                    i + 1, last_frame[3])
                             i -= 1
                             break
                     i -= 1
@@ -699,7 +747,7 @@ class PythonCITDLExtractorMixin(object):
                     raise EvalError("could not find matching brace for "
                                     "'%s' at position %d"
                                     % (stack[-1][0], stack[-1][3]))
-    
+
             else:
                 if DEBUG:
                     style_names = buf.style_names_from_style_num(style)
@@ -709,8 +757,8 @@ class PythonCITDLExtractorMixin(object):
                     first_citdl_expr_style = style
                     first_citdl_expr_style_is_comment = style in comment_styles
                 elif first_citdl_expr_style != style and \
-                     (first_citdl_expr_style_is_comment or
-                      style in comment_styles):
+                    (first_citdl_expr_style_is_comment or
+                     style in comment_styles):
                     # We've moved into or out of a comment, let's leave now
                     # Fixes: http://bugs.activestate.com/show_bug.cgi?id=65672
                     break
@@ -726,12 +774,12 @@ class PythonCITDLExtractorMixin(object):
 
     def citdl_expr_from_trg(self, buf, trg):
         """Return a Python CITDL expression preceding the given trigger.
-        
+
         The expression drops newlines, whitespace, and function call
         arguments -- basically any stuff that is not used by the codeintel
         database system for determining the resultant object type of the
         expression. For example (in which <|> represents the given position):
-        
+
             GIVEN                       RETURN
             -----                       ------
             foo<|>.                     foo
@@ -799,7 +847,7 @@ class Arg(object):
 
     def __repr__(self):
         default_str = (self.default
-                       and ', default=%r'%self.default
+                       and ', default=%r' % self.default
                        or '')
         return "Arg(%r, %s, %s%s)" \
                % (self.name, self.start, self.end, default_str)
@@ -818,6 +866,7 @@ class Arg(object):
     @property
     def span(self):
         return (self.start, self.end)
+
 
 def _parse_calltip(calltip, DEBUG=False):
     r"""Parse the given calltip text as follows:
@@ -842,8 +891,8 @@ def _parse_calltip(calltip, DEBUG=False):
         return None
     name = calltip[:arg_start_pos].strip()
 
-    #XXX Should add block skipping.
-    #skip_blocks = {
+    # XXX Should add block skipping.
+    # skip_blocks = {
     #    '"': '"',
     #    "'": "'",
     #    "/*": "*/",  # JavaScript comments
@@ -858,7 +907,7 @@ def _parse_calltip(calltip, DEBUG=False):
     while p < length:
         ch = signature[p]
         if ch == ')':
-            break # end of argument region
+            break  # end of argument region
         elif state == OPERATOR:
             if ch in WHITESPACE:
                 pass
@@ -867,7 +916,7 @@ def _parse_calltip(calltip, DEBUG=False):
                 args.append(Arg())
             else:
                 state = ARGUMENT
-                continue # do this char again
+                continue  # do this char again
         elif state == ARGUMENT:
             if ch == ',':
                 state = OPERATOR
@@ -888,4 +937,3 @@ def _parse_calltip(calltip, DEBUG=False):
     else:
         args[-1].done(p)
     return (signature, name, args)
-
