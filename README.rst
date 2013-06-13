@@ -30,7 +30,7 @@ Once you install Package Control, restart ST2 and bring up the Command Palette (
 
 **With Git:** Clone the repository in your Sublime Text 2 Packages directory, located somewhere in user's "Home" directory::
 
-    git clone git://github.com/Kronuz/SublimeCodeIntel.git
+    git clone git://github.com/SublimeCodeIntel/SublimeCodeIntel.git
 
 
 The "Packages" packages directory is located at:
