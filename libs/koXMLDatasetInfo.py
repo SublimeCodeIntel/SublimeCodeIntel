@@ -386,7 +386,7 @@ if __name__ == "__main__":
     catalogs = os.path.join(basedir, "test", "stuff", "xml")
     getService().setCatalogs([os.path.join(catalogs, "testcat.xml")])
 
-    from xml.etree.cElementTree import Element
+    from cElementTree import Element
     tree = koXMLTreeService.XMLDocument()
     tree.root = tree.current = Element('')
     handlerclass = get_tree_handler(tree, tree.current)

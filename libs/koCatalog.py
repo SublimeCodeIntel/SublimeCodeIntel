@@ -44,10 +44,9 @@ from koRNGElementTree import rng
 log = logging.getLogger("koCatalog")
 # log.setLevel(logging.INFO)
 
-
 from elementtree import XMLTreeBuilder
 try:
-    import xml.etree.cElementTree as ElementTree  # effbot's C module
+    import cElementTree as ElementTree  # effbot's C module
 except ImportError:
     log.error(
         "using element tree and not cElementTree, performace will suffer")

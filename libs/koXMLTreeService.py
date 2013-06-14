@@ -36,7 +36,7 @@
 
 import time
 import re
-from xml.etree.cElementTree import TreeBuilder, XMLParser, Element
+from cElementTree import TreeBuilder, XMLParser, Element
 import logging
 log = logging.getLogger("koXMLTreeService")
 # log.setLevel(logging.INFO)
@@ -810,7 +810,7 @@ if __name__ == "__main__":
     # print tostring(tree.root)
     assert tree.current.localName == "html", "current element is incorrect"
 
-    # from xml.etree.cElementTree import Element
+    # from cElementTree import Element
     # tag = u"{urn:test}test"
     # print tag
     # e = Element(tag, {})
