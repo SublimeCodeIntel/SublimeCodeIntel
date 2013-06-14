@@ -5,7 +5,7 @@
             "name": "SublimeCodeIntel",
             "description": "Full-featured code intelligence and smart autocomplete engine",
             "author": "Kronuz",
-            "homepage": "http://github.com/Kronuz/SublimeCodeIntel",
+            "homepage": "http://github.com/SublimeCodeIntel/SublimeCodeIntel",
             "last_modified": "2011-12-20 19:01:17",
             "platforms": {
                 "*": [
