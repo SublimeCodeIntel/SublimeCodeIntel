@@ -1624,7 +1624,6 @@ class RubyCILEDriver(CILEDriver):
 
     def scan_purelang(self, buf):
         log.info("scan_purelang: path: %r lang: %s", buf.path, buf.lang)
-
         tree = rubycile.scan_purelang(buf.accessor.text, buf.path)
         blob_scope = _blob_scope_from_codeintel_tree(tree)
         rubycile.check_insert_rails_env(buf.path, blob_scope)
@@ -1644,6 +1643,7 @@ class RubyCILEDriver(CILEDriver):
                 The CSL scanner will append a CIX <scope ilk="blob">
                 element to the <file> element.
         """
+        log.info("scan_multilang: path: %r lang: %s", buf.path, buf.lang)
         tree = Element("codeintel", version="2.0")
         path = buf.path
         if sys.platform == "win32":

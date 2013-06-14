@@ -52,6 +52,7 @@ import codecs
 
 from SilverCity import ScintillaConstants
 
+import codeintel2
 from codeintel2.common import *
 from codeintel2.accessor import *
 from codeintel2.citadel import Citadel, BinaryBuffer
@@ -71,7 +72,7 @@ if _xpcom_:
 
 
 #---- global variables
-log = logging.getLogger("codeintel")
+log = logging.getLogger("codeintel.manager")
 # log.setLevel(logging.INFO)
 
 
@@ -179,15 +180,78 @@ class Manager(threading.Thread, Queue):
         dirs = [dirname(__file__)]
         if extra_module_dirs:
             dirs += extra_module_dirs
-        for dir in dirs:
-            for module_path in glob(join(dir, "codeintel_*.py")):
-                self._register_module(module_path)
-            for module_path in glob(join(dir, "lang_*.py")):
-                warnings.warn("%s: `lang_*.py' codeintel modules are deprecated, "
-                              "use `codeintel_*.py'. Support for `lang_*.py' "
-                              "will be dropped in Komodo 5.1." % module_path,
-                              CodeIntelDeprecationWarning)
-                self._register_module(module_path)
+
+        import_hook = self._ImportHook(
+            self._registered_module_canon_paths.union(dirs))
+        sys.meta_path.append(import_hook)
+
+        try:
+            for dir in dirs:
+                for module_path in glob(join(dir, "codeintel_*.py")):
+                    self._register_module(module_path)
+                for module_path in glob(join(dir, "lang_*.py")):
+                    warnings.warn("%s: `lang_*.py' codeintel modules are deprecated, "
+                                  "use `codeintel_*.py'. Support for `lang_*.py' "
+                                  "will be dropped in Komodo 5.1." % module_path,
+                                  CodeIntelDeprecationWarning)
+                    self._register_module(module_path)
+        finally:
+            sys.meta_path.remove(import_hook)
+
+    class _ImportHook(object):
+        """This is an import hook for __import__ to look for modules in the
+        extra module paths as necessary.  This is needed because a bunch of the
+        modules assume they're in the codeintel2 package.
+        """
+
+        _suffixes = None
+
+        def __init__(self, paths):
+            """Create an import hook
+            @param paths {set} The paths to scan in
+            """
+            self._paths = paths
+            self._cache = None
+
+        def find_module(self, fullname, path=None):
+            parts = fullname.split(".")
+            if len(parts) != 2 or parts[0] != "codeintel2":
+                return None
+            name = parts[-1]
+            for path in self._paths:
+                fullpath = join(path, name + ".py")
+                if not os.path.exists(fullpath):
+                    continue
+                self._cache = fullpath
+                return self
+
+        def load_module(self, fullname):
+            if fullname in sys.modules:
+                return sys.modules[fullname]
+            parts = fullname.split(".")
+            if len(parts) != 2 or parts[0] != "codeintel2":
+                raise ImportError("Did not expect to handle import for %s" %
+                                  fullname)
+            name = parts[-1]
+            if self._cache and basename(self._cache) == name + ".py":
+                fullpath = self._cache
+            else:
+                # stale cache
+                for path in self._paths:
+                    fullpath = join(path, name + ".py")
+                    if os.path.exists(fullpath):
+                        break
+                else:
+                    raise ImportError("Failed to locate %s" % fullname)
+
+            try:
+                module = imp.load_source(fullname, fullpath)
+                sys.modules[fullname] = module
+                setattr(codeintel2, name, module)
+                return module
+            except:
+                log.exception("Failed to load %s", fullpath)
+                raise
 
     def _register_module(self, module_path):
         """Register the given codeintel support module.
@@ -207,8 +271,15 @@ class Manager(threading.Thread, Queue):
 
         module_dir, module_name = os.path.split(module_path)
         module_name = splitext(module_name)[0]
-        iinfo = imp.find_module(module_name, [module_dir])
-        module = imp.load_module(module_name, *iinfo)
+        module_full_name = "codeintel2." + module_name
+        if module_full_name in sys.modules:
+            module = sys.modules[module_full_name]
+        else:
+            iinfo = imp.find_module(module_name, [module_dir])
+            module = imp.load_module(module_name, *iinfo)
+            sys.modules[module_full_name] = module
+            setattr(codeintel2, module_name, module)
+
         if hasattr(module, "register"):
             log.debug("register `%s' support module", module_path)
             try:

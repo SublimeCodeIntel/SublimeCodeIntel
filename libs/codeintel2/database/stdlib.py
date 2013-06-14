@@ -631,7 +631,9 @@ class StdLibsZone(object):
         toplevelname_index = {}  # {ilk -> toplevelname -> blobnames}
         toplevelprefix_index = {}  # {ilk -> prefix -> toplevelnames}
         for blob in tree.findall("file/scope"):
-            assert lang == blob.get("lang")
+            assert lang == blob.get("lang"), \
+                "Adding %s resource %s to %s blob" % (
+                    lang, res, blob.get("lang"))
             blobname = blob.get("name")
             dbfile = self.db.bhash_from_blob_info(cix_path, lang, blobname)
             blob_index[blobname] = dbfile

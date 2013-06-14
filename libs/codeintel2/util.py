@@ -37,6 +37,7 @@
 
 """Code Intelligence: utility functions"""
 
+import bisect
 import os
 from os.path import basename
 import sys
@@ -425,6 +426,59 @@ def markup_text(text, pos=None, trg_pos=None, start_pos=None):
         m_pos = position
     m_text += text[m_pos:]
     return m_text
+
+
+def lines_from_pos(unmarked_text, positions):
+    """Get 1-based line numbers from positions
+        @param unmarked_text {str} The text to examine
+        @param positions {dict or list of int} Positions to look up
+        @returns {dict or list of int} Matching line numbers (1-based)
+    Given some text and either a list of positions, or a dict containing
+    positions as values, return a matching data structure with positions
+    replaced with the line number of the lines the positions are on.  Positions
+    after the last line are assumed to be on a hypothetical line.
+
+    E.g.:
+        Assuming the following text with \n line endings, where each line is
+        exactly 20 characters long:
+        >>> text = '''
+        ... line            one
+        ... line            two
+        ... line          three
+        ... '''.lstrip()
+        >>> lines_from_pos(text, [5, 15, 25, 55, 999])
+        [1, 1, 2, 3, 4]
+        >>> lines_from_pos(text, {"hello": 10, "moo": 20, "not": "an int"})
+        {'moo': 1, 'hello': 1}
+    """
+    lines = unmarked_text.splitlines(True)
+    offsets = [0]
+    for line in lines:
+        offsets.append(offsets[-1] + len(line))
+    try:
+        # assume a dict
+        keys = positions.iterkeys()
+        values = {}
+    except AttributeError:
+        # assume a list/tuple
+        keys = range(len(positions))
+        values = []
+
+    for key in keys:
+        try:
+            position = positions[key] - 0
+        except TypeError:
+            continue  # not a number
+        line_no = bisect.bisect_left(offsets, position)
+        try:
+            values[key] = line_no
+        except IndexError:
+            if key == len(values):
+                values.append(line_no)
+            else:
+                raise
+
+    return values
 
 # Recipe: banner (1.0.1) in C:\trentm\tm\recipes\cookbook
 

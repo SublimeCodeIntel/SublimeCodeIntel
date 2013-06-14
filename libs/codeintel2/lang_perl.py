@@ -1404,16 +1404,13 @@ class PerlCILEDriver(CILEDriver):
 
     def scan_purelang(self, buf):
         log.info("scan_purelang: path: %r lang: %s", buf.path, buf.lang)
-
         return perlcile.scan_purelang(buf)
 
     def scan_multilang(self, buf, csl_cile_driver=None):
         """Scan the given multilang (UDL-based) buffer and return a CIX
         element tree, and shuffle any CSL tokens to the CSL CileDriver.
         """
-
         log.info("scan_multilang: path: %r lang: %s", buf.path, buf.lang)
-
         tree = Element("codeintel", version="2.0")
         path = buf.path
         if sys.platform == "win32":

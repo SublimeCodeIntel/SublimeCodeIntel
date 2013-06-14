@@ -333,6 +333,16 @@ class Trigger(object):
         else:
             return False
 
+    def to_dict(self):
+        """Serialize this trigger as a dictionary
+        This is used for out-of-process codeintel
+        """
+        return dict(lang=self.lang, form=self.form, type=self.type,
+                    pos=self.pos, implicit=self.implicit, length=self.length,
+                    extentLength=self.extentLength,
+                    retriggerOnCompletion=self.retriggerOnCompletion,
+                    **self.extra)
+
 
 class Definition(object):
     if _xpcom_:
@@ -496,8 +506,6 @@ class EvalController(object):
     or calltips. Typically for "interesting" interaction on would subclass
     this and pass an instance of that class to Buffer.async_eval_at_trg().
     """
-    if _xpcom_:
-        _com_interfaces_ = [components.interfaces.koICodeIntelEvalController]
 
     def __init__(self):
         self.complete_event = threading.Event()  # use a pool?

@@ -207,7 +207,7 @@ class PythonImportsEvaluator(Evaluator):
 
     def eval(self, mgr):
         try:
-            imp_prefix = self.trg.extra["imp_prefix"]
+            imp_prefix = tuple(self.trg.extra["imp_prefix"])
             if imp_prefix:
                 libs = self.buf.libs
                 if not imp_prefix[0]:
@@ -623,12 +623,12 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
             # - curdirlib
             # Using the dirname of this buffer isn't always right, but
             # hopefully is a good first approximation.
-            cwd = dirname(buf.path)
-            if cwd == "<Unsaved>":
-                libs = []
-            else:
-                libs = [self.mgr.db.get_lang_lib(
-                    self.lang, "curdirlib", [cwd])]
+            libs = []
+            if buf.path:
+                cwd = dirname(buf.path)
+                if cwd != "<Unsaved>":
+                    libs = [self.mgr.db.get_lang_lib(
+                        self.lang, "curdirlib", [cwd])]
 
             libs += self._buf_indep_libs_from_env(env)
             cache[buf] = libs
@@ -1182,7 +1182,6 @@ class PythonCILEDriver(CILEDriver):
 
     def scan_purelang(self, buf):
         log.info("scan_purelang: path: %r lang: %s", buf.path, buf.lang)
-
         # log.warn("TODO: python cile that uses elementtree")
         content = buf.accessor.text
         if isinstance(content, unicode):
@@ -1197,7 +1196,6 @@ class PythonCILEDriver(CILEDriver):
 
     def scan_binary(self, buf):
         log.info("scan_binary: path: %r lang: %s", buf.path, buf.lang)
-
         from codeintel2 import pybinary
         python = buf.langintel.interpreter_from_env(buf.env)
         if not python:

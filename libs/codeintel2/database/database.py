@@ -494,6 +494,8 @@ class Database(object):
                 else:
                     rmdir(self.base_dir)
 
+            self._catalogs_zone = None
+            self._stdlibs_zone = None
             self.create()
         finally:
             self.release_lock()
