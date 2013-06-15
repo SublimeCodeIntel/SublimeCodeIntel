@@ -20,7 +20,7 @@ CHANGES/FIXES
     ``ctrl+super+alt+Up`` = Jump to definition
     ``ctrl+super+alt+Left`` = Go back
 
-  For Mac OS X:
+  For Windows:
     ``alt+click`` = Jump to definition
     ``ctrl+super+alt+Up`` = Jump to definition
     ``ctrl+super+alt+Left`` = Go back

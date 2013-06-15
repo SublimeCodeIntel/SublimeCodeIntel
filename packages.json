@@ -5,13 +5,13 @@
             "name": "SublimeCodeIntel",
             "description": "Full-featured code intelligence and smart autocomplete engine",
             "author": "German M. Bravo (Kronuz)",
-            "homepage": "http://github.com/Kronuz/SublimeCodeIntel",
-            "last_modified": "2013-03-29 0:00:00",
+            "homepage": "http://github.com/SublimeCodeIntel/SublimeCodeIntel",
+            "last_modified": "2013-06-15 0:00:00",
             "platforms": {
                 "*": [
                     {
                         "version": "2.0.0",
-                        "url": "https://nodeload.github.com/Kronuz/SublimeCodeIntel/zipball/master"
+                        "url": "https://nodeload.github.com/SublimeCodeIntel/SublimeCodeIntel/zip/v2.0"
                     }
                 ]
             }
