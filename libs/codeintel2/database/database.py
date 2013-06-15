@@ -455,7 +455,7 @@ class Database(object):
                 subsystem of SublimeCodeIntel). Do NOT modify anything in here
                 unless you know what you are doing.
 
-                See http://github.com/Kronuz/SublimeCodeIntel for details.
+                See http://github.com/SublimeCodeIntel/SublimeCodeIntel for details.
             """))
             open(join(self.base_dir, "VERSION"), 'w').write(self.VERSION)
             config_file = join(self.base_dir, "config")

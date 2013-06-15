@@ -13,15 +13,12 @@ Imports autocomplete - Shows autocomplete with the available modules/symbols in 
 Function Call tooltips - Displays information in the status bar about the working function.
 Plugin should work in all three platforms (MacOS X, Windows and Linux).
 
-In the event the plugin doesn't work (under Linux more frequently), try rebuilding
-the binary files by going into the `src/` directory and running `build.sh`.
-
 
 For more information:
 ---------------------
 Please take the time to read the documentation:
 
-* Online - https://github.com/Kronuz/SublimeCodeIntel
+* Online - https://github.com/SublimeCodeIntel/SublimeCodeIntel
 
 
 IMPORTANT

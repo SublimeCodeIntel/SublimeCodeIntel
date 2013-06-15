@@ -26,11 +26,11 @@ Installing
 
 Once you install Package Control, restart ST2 and bring up the Command Palette (``Command+Shift+P`` on OS X, ``Control+Shift+P`` on Linux/Windows). Select "Package Control: Install Package", wait while Package Control fetches the latest package list, then select SublimeCodeIntel when the list appears. The advantage of using this method is that Package Control will automatically keep SublimeCodeIntel up to date with the latest version.
 
-**Without Git:** Download the latest source from `GitHub <http://github.com/Kronuz/SublimeCodeIntel>`_ and copy the whole directory into the Packages directory.
+**Without Git:** Download the latest source from `GitHub <http://github.com/SublimeCodeIntel/SublimeCodeIntel>`_ and copy the whole directory into the Packages directory.
 
 **With Git:** Clone the repository in your Sublime Text 2 Packages directory, located somewhere in user's "Home" directory::
 
-    git clone git://github.com/Kronuz/SublimeCodeIntel.git
+    git clone git://github.com/SublimeCodeIntel/SublimeCodeIntel.git
 
 
 The "Packages" packages directory is located at:
