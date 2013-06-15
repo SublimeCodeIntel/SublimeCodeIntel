@@ -32,4 +32,4 @@ CHANGES/FIXES
 
 - PHP bugs fixed.
 
-- Stability improved (Should no longer use 100% CPU.)
+- Stability improved (Should no longer use 100% CPU all the time.)
