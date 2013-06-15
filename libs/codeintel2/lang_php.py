@@ -1339,6 +1339,7 @@ class PHPCILEDriver(UDLCILEDriver):
                 The CSL scanner will append a CIX <scope ilk="blob"> element
                 to the <file> element.
         """
+        log.info("scan_multilang: path: %r lang: %s", buf.path, buf.lang)
         # Create the CIX tree.
         mtime = "XXX"
         fullpath = buf.path
