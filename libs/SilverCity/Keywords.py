@@ -45,7 +45,7 @@ perl_keywords = \
     "getpgrp getppid getpriority getprotobyname getprotobynumber getprotoent "\
     "getpwent getpwnam getpwuid getservbyname getservbyport getservent "\
     "getsockname getsockopt given glob gmtime goto grep gt hex if import "\
-    "include index "\
+    "include index func method "\
     "int ioctl join keys kill last lc lcfirst le length link listen "\
     "local localtime lock log lstat lt m map mkdir msgctl msgget msgrcv "\
     "msgsnd my ne new next no not oct open opendir or ord our pack package "\

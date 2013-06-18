@@ -279,10 +279,11 @@ sub our_generate { my $self = shift; my $file_info = shift;
        print qq(percent string\n);
     }
 
-}
+
+func test_func( $var1, $var2, $var4) {
+    return join ', ', ($var1, $var2, $var4);
 }
 """
-
 
 if __name__ == "__main__":
     shared_lexer.main(sys.argv, provide_sample_code, PerlLexer)

@@ -1867,7 +1867,10 @@ void ColourisePerlDoc(unsigned int startPos, int length, int , // initStyle
                         ch = ' ';
                     
                         // Recognise the beginning of a subroutine - enter the SUB state.
-                        if (kwdStartPos+2 == i && isMatch(styler, lengthDoc, kwdStartPos, "sub")) { 
+                        if (kwdStartPos+2 == i && (
+                            isMatch(styler, lengthDoc, kwdStartPos, "sub") || 
+                            isMatch(styler, lengthDoc, kwdStartPos, "func") || 
+                            isMatch(styler, lengthDoc, kwdStartPos, "method") ) ) {
                             for (unsigned int j = i+1;j < lengthDoc;j++) {
                                 char c = styler.SafeGetCharAt(j);
                                 if (!isspacechar(c)) {

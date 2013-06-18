@@ -410,7 +410,7 @@ class PerlLangIntel(CitadelLangIntel,
     #[[[end]]]
 
     # Match a subroutine definition. Used by trg_from_pos()
-    _sub_pat = re.compile( r"\b(?:sub|func|method)\s+(\w+(::|'))*\w+$" )
+    _sub_pat = re.compile(r"\b(?:sub|func|method)\s+(\w+(::|'))*\w+")
     # All Perl trigger points occur at one of these characters:
     #   ' ' (space)         only supported for built-in functions
     #   '(' (open paren)
@@ -605,7 +605,7 @@ class PerlLangIntel(CitadelLangIntel,
                     print "no: calltip trigger on Perl var not supported"
                 return None
             if identifier in ("if", "else", "elsif", "while", "for",
-                              "sub", "func", "method", "unless", "my", "our" ):
+                              "sub", "func", "method", "unless", "my", "our", "state"):
                 if DEBUG:
                     print "no: no trigger on anonymous sub or control structure"
                 return None
@@ -618,7 +618,7 @@ class PerlLangIntel(CitadelLangIntel,
             line = text[:end].splitlines(0)[-1]
             if DEBUG:
                 print "  trigger line: %r" % line
-            if "sub " in line or "func " in line or "method ":  # only use regex if "sub " on that line
+            if "sub " in line or "func " in line or "method " in line: # only use regex if "sub " on that line
                 if DEBUG:
                     print "  *could* be a subroutine definition"
                 if self._sub_pat.search(line):

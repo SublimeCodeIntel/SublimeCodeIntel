@@ -1,25 +1,25 @@
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
+# 
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-#
+# 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-#
+# 
 # The Original Code is Komodo code.
-#
+# 
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-#
+# 
 # Contributor(s):
 #   ActiveState Software Inc
-#
+# 
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -31,7 +31,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-#
+# 
 # ***** END LICENSE BLOCK *****
 #
 # Contributors:
@@ -51,7 +51,7 @@ import logging
 
 from ciElementTree import Element, SubElement, tostring
 from SilverCity import ScintillaConstants
-from SilverCity.ScintillaConstants import ( 
+from SilverCity.ScintillaConstants import (
     SCE_PL_DEFAULT, SCE_PL_ERROR, SCE_PL_COMMENTLINE, SCE_PL_POD,
     SCE_PL_NUMBER, SCE_PL_WORD, SCE_PL_STRING, SCE_PL_CHARACTER,
     SCE_PL_PUNCTUATION, SCE_PL_PREPROCESSOR, SCE_PL_OPERATOR,
@@ -76,8 +76,8 @@ log = logging.getLogger( "perlcile" )
 
 #----  memoize from http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/496879
 
-TIMING = False  # set to true to capture timing data from regexen
-REGEXEN = {}  # unused if TIMING is not True
+TIMING = False # set to true to capture timing data from regexen
+REGEXEN = {} # unused if TIMING is not True
 
 def memoize( function, limit = None ):
     if isinstance( function, int ):
@@ -86,26 +86,26 @@ def memoize( function, limit = None ):
 
         return memoize_wrapper
     else:
-        dict = {}
-        list = []
+    dict = {}
+    list = []
         def memoize_wrapper( *args, **kwargs ):
             key = cPickle.dumps( ( args, kwargs ) )
-            try:
+        try:
                 list.append( list.pop( list.index( key ) ) )
-            except ValueError:
+        except ValueError:
                 dict[key] = function( *args, **kwargs )
                 list.append( key )
                 if limit is not None and len( list ) > limit:
                     del dict[list.pop( 0 )]
 
-            return dict[key]
+        return dict[key]
 
-        memoize_wrapper._memoize_dict = dict
-        memoize_wrapper._memoize_list = list
-        memoize_wrapper._memoize_limit = limit
-        memoize_wrapper._memoize_origfunc = function
-        memoize_wrapper.func_name = function.func_name
-        return memoize_wrapper
+    memoize_wrapper._memoize_dict = dict
+    memoize_wrapper._memoize_list = list
+    memoize_wrapper._memoize_limit = limit
+    memoize_wrapper._memoize_origfunc = function
+    memoize_wrapper.func_name = function.func_name
+    return memoize_wrapper
 
 
 class TimingRe:
@@ -176,10 +176,10 @@ class PerlCommonClassifier:
 
     def is_pod_cb( self, tok ):
         return tok.text[0] == '=' and tok.text[1].isalnum and tok.text.find( "\n=cut", 5 ) > 0
-
+    
     def is_string_qw_cb( self, tok ):
         return re_compile( r'^qw\s*[^\w\d_]' ).match( tok.text )
-
+                                                   
 
     # Used for stripping the quotes off a string
     _quote_patterns = {SCE_PL_STRING : re.compile( '^[\'\"](.*)[\'\"]$' ),
@@ -204,7 +204,7 @@ class PerlCommonClassifier:
         elif tval.startswith( "q" ):
             return self._quote_patterns[SCE_PL_STRING_Q]
         else:
-            return self._quote_patterns[SCE_PL_DEFAULT]  # Fallback
+            return self._quote_patterns[SCE_PL_DEFAULT] # Fallback
 
 class UDLClassifier( PerlCommonClassifier, shared_parser.UDLClassifier ):
     pass
@@ -212,7 +212,7 @@ class UDLClassifier( PerlCommonClassifier, shared_parser.UDLClassifier ):
 class PerlClassifier( PerlCommonClassifier, shared_parser.CommonClassifier ):
     def get_builtin_type( self, tok, callback ):
         raise CILEError( "Unexpected call to perl_parser.get_builtin_type" )
-
+        
     def is_any_operator( self, tok ):
         return tok.style == ScintillaConstants.SCE_PL_OPERATOR
 
@@ -276,17 +276,17 @@ class PerlClassifier( PerlCommonClassifier, shared_parser.CommonClassifier ):
     def is_variable_array( self, tok, callback = None ):
         return tok.style == ScintillaConstants.SCE_PL_ARRAY and \
             len( tok.text ) > 1 and tok.text[1] != '$'
-
+        
     def is_variable_scalar( self, tok, callback = None ):
         return tok.style == ScintillaConstants.SCE_PL_SCALAR and \
             len( tok.text ) > 1 and tok.text[1] != '$'
-
+        
     # Accessors for where we'd rather work with a style than call a predicate fn
 
     @property
     def style_identifier( self ):
         return ScintillaConstants.SCE_PL_IDENTIFIER
-
+    
     @property
     def style_word( self ):
         return ScintillaConstants.SCE_PL_WORD
@@ -324,7 +324,7 @@ class ModuleInfo:
         self.tryGettingDoc_Sig_re3 = re_compile( r'^=(?:item|head)\w*\s*((?:(?!\n=).)*)(?!\n=)',
                                  re.M | re.S )
         self.printDocInfo_re4 = re_compile( r'^=(?:item|head)\w*\s*((?:(?!\n=).)*)(?!\n=)', re.S | re.M )
-
+        
         self.printDocInfo_re2 = re_compile( r'^=\w+\s+DESCRIPTION%s(.*?)(?:%s|^=)' % ( self.re_bl, self.re_bl ), re.M )
         self.printDocInfo_re6 = re_compile( r'^=\w+\s+SYNOPSIS' + self.re_bl + '(.*?)^=',
                                            re.M | re.S )
@@ -349,49 +349,49 @@ class ModuleInfo:
         self.trim_ws_re3 = re_compile( r' {2,}' )
 
         self.printFunctions_re1 = re_compile( r'(\S)\s*\n(?:\s*\n)*\s*(\S)' )
-
+    
     def doStartNS( self, ns ):
         name = ns.name
         if not self.modules.has_key( name ):
             self.modules[name] = ns
         self.currentNS = ns
-
+        
     def doEndNS( self, **attrInfo ):
         if attrInfo.has_key( 'lineNo' ):
             self.currentNS.lineend = attrInfo['lineNo']
         self.currentNS = None
-
+        
     def getNS( self, name, **attrInfo ):
         if self.modules.has_key( name ):
             return self.modules[name]
         else:
             return NamespaceInfo( name, **attrInfo )
-
+        
     def doSetArg( self, name ):
         self.currentFunction.aArg[name] = []
         self.currentFunction.argList.append( name )
-
+        
     def doSetParent( self, **attrInfo ):
         ns = attrInfo.get( 'ns' )
         if ns:
             self.currentNS.aParent.append( ns )
-
+            
     def doStartFn( self, fn ):
         self.currentFunction = fn
-
+        
     def doEndFn( self, **attrInfo ):
         if attrInfo.has_key( 'lineNo' ):
             self.currentFunction.lineend = attrInfo.get( 'lineNo' )
         self.currentNS.aFunc.append( self.currentFunction )
         self.currentFunction = None
-
+        
     def doStartVar( self, **attrInfo ):
         self.thisVar = {}
         self.thisVar['name'] = attrInfo.get( 'name' )
         for field in ['line', 'aType', 'scope']:
             if attrInfo.has_key( field ):
                 self.thisVar[field] = attrInfo[field]
-
+    
     def doEndVar( self, forceGlobal ):
         name = self.thisVar['name']
         if ( not forceGlobal ) and self.currentFunction:
@@ -402,13 +402,13 @@ class ModuleInfo:
         else:
             self.set_or_append( self.currentNS.aVar, name, self.thisVar )
         del self.thisVar
-
+        
     def set_or_append( self, obj, name, val ):
         if obj.has_key( name ):
             obj[name].append( val )
         else:
             obj[name] = [val]
-
+            
     def doSetVar( self, **args ):
         if args.has_key( 'forceGlobal' ):
             forceGlobal = args['forceGlobal']
@@ -425,14 +425,14 @@ class ModuleInfo:
             self.currentFunction.aImports.append( args2 )
         else:
             self.currentNS.aImports.append( args2 )
-
+    
     def printDocInfo( self, modInfo, funcInfo, currNode ):
         docs = modInfo.hDocs['modules']
         modName = modInfo.name
         # These REs need rebuilding each time, as their values change on each call.
         printDocInfo_re1 = re_compile( r'^=\w+\s+NAME%s%s[\s-]+(.*?)(?:%s|^=)' %
                                       ( self.re_bl, modName, self.re_bl ), re.M )
-
+            
         try:
             mainDocs = self.modules['main'].hDocs['modules'] or []
         except:
@@ -527,16 +527,16 @@ class ModuleInfo:
                             break
         if finalDoc:
             self.printDocString( finalDoc, currNode )
-
+            
     def _get_first_sentence( self, s1 ):
         s2 = self._get_first_sentence_re1.sub( '.', s1 )
         return s2
-
+    
     def printDocString( self, finalDoc, currNode ):
         finalDoc2 = self._depod( finalDoc )
         if finalDoc2:
             currNode.set( 'doc', finalDoc2 )
-
+        
     def _process_e_pod( self, src ):
         val = self.pod_escape_seq.get( src.lower() )
         if val: return val
@@ -554,10 +554,10 @@ class ModuleInfo:
             #                  &eacute;
             # Not great, but it causes no breakage.
             return '&amp;%s' % src
-
+        
     def _wrap_process_e_pod( self, m ):
         return self._process_e_pod( m.group( 1 ) )
-
+        
     def _simple_depod( self, doc ):
         # Simple inline-markup removal (doesn't handle nested inlines)
         # In Perl, do this:
@@ -566,23 +566,23 @@ class ModuleInfo:
         doc = re_sub( self._simple_depod_e_re, self._wrap_process_e_pod, doc )
 
         # And handle the inline codes-- thse nest with E codes...
-
+        
         doc = self._simple_depod_c_re.sub( r'\1', doc )
 
         # Above code replaces this:
         # doc = re_sub(r'C<{2,}\s+(.*?)\s+>{2,}', r'\1', doc)
         # doc = XmlAttrEscape(doc) -- No longer needed with ElementTree
-
+            
         # Allow the other sequences to nest, and loop until there
         # aren't any left.
-
+        
         old_doc = doc
         while self._simple_depod_ibcfsxl_re1.search( doc ):
             # Most formatting sequences wrap a single clump of code
             doc = self._simple_depod_ibcfsxl_re2.sub( r'\1', doc )
             # Handling of links - this is more complicated.
             doc = self._simple_depod_l_re.sub( r'\1', doc )
-
+    
             # We need to make sure we pull out when nothing changes.
             # XXX A log message would be useful here.
             if old_doc != doc:
@@ -604,7 +604,7 @@ class ModuleInfo:
     def _depod( self, doc ):
         # Remove embedded man directives
         doc1 = self._depod_re1.sub( '', doc )
-
+    
         # Pull out leading equal signs and the directives
         doc2 = self._depod_re2.sub( '', doc1 )
         doc3 = self._simple_depod( doc2 )
@@ -612,7 +612,7 @@ class ModuleInfo:
         doc4 = self._depod_re3.sub( ']<!>]>', doc3 )
         doc5 = self._depod_re4.sub( '?', doc4 )
         return doc5
-
+        
     def trim_ws( self, str1, truncate = False ):
         # First split into sentences
         str2 = str1.strip()
@@ -632,7 +632,7 @@ class ModuleInfo:
                 if sum > self.max_doclet_high_water_mark:
                     break
             str2 = "  ".join( keep_sentences )
-
+        
         if str2.find( "\n" ) >= 0 or len( str2 ) > self.textWrapper.width * 1.1:
             str2 = "\n".join( self.textWrapper.wrap( str2 ) )
         return str2
@@ -642,7 +642,7 @@ class ModuleInfo:
         classrefs = [info[0] for info in modInfo.aParent]
         if len( classrefs ) > 0:
             currNode.set( 'classrefs', " ".join( classrefs ) )
-
+            
     def printImports( self, modInfo, currNode ):
         # -- this will be correct only when there are deliberate conflicts
         # better to use object inheritance to choose methods dynamically.
@@ -653,7 +653,7 @@ class ModuleInfo:
             importNode = SubElement( currNode, "import" )
             for k in attrs:
                 importNode.set( k, str( _import[k] ) )
-
+            
     def printTypeInfo( self, argInfo, currNode ):
         types = {}
         for type_ in argInfo:
@@ -667,13 +667,13 @@ class ModuleInfo:
                 continue
             types[tp] = None
             currNode.set( 'citdl', tp )
-
+            
     def printVariables( self, modInfo, currNode ):
         if not hasattr( modInfo, 'aVar' ): return
         def sorter1( a, b ):
             return ( cmp( a[0]['line'], b[0]['line'] ) or
                     cmp( a[0]['name'].lower(), b[0]['name'].lower() ) )
-
+                   
         variables = modInfo.aVar.values()
         variables.sort( sorter1 )
         try:
@@ -699,7 +699,7 @@ class ModuleInfo:
             if attr_parts:
                 varNode.set( 'attributes', ' '.join( attr_parts ) )
             self.printTypeInfo( varInfo, varNode )
-
+    
     def printFunctions( self, modInfo, currNode ):
         for funcInfo in getattr( modInfo, 'aFunc', [] ):
             sig, docString = self.tryGettingDoc_Sig( modInfo, funcInfo )
@@ -714,7 +714,7 @@ class ModuleInfo:
                 ln = getattr( funcInfo, attr_name, None )
                 if ln:
                     funcNode.set( attr_name, str( ln ) )
-
+    
             attr_parts = []
             if funcInfo.isConstructor:
                 attr_parts.append( "__ctor__" )
@@ -727,7 +727,7 @@ class ModuleInfo:
                 funcNode.set( 'attributes', ' '.join( attr_parts ) )
 
             funcNode.set( 'signature', sig )
-
+            
             for argName in funcInfo.argList:
                 argInfo = funcInfo.aArg.get( argName )
                 if argInfo:
@@ -740,7 +740,7 @@ class ModuleInfo:
                     self.printDocString( docString, funcNode )
             self.printImports( funcInfo, funcNode )
             self.printVariables( funcInfo, funcNode )
-
+            
     def tryGettingDoc_Sig( self, modInfo, funcInfo ):
         if not self.provide_full_docs:
             return ( None, None )
@@ -787,7 +787,7 @@ class ModuleInfo:
                     finalDoc = self.trim_ws( self._get_first_sentence( m1.group( 2 ) ), True )
                     return ( finalSig, finalDoc )
         return ( None, None )
-
+    
 class NamespaceInfo:
     def __init__( self, name, **attrInfo ):
         self.name = name
@@ -795,8 +795,8 @@ class NamespaceInfo:
         self.aFunc = []
         self.aVar = {}
         self.aParent = []
-        self.hDocs = {'modules':[],  # hash of modules => array of docs,
-                      'subs':{}  # subs => subname => array of docs
+        self.hDocs = {'modules':[], # hash of modules => array of docs,
+                      'subs':{}     # subs => subname => array of docs
         }
         self.aImports = []
         self._isProbablyClass = False
@@ -817,7 +817,7 @@ class FunctionInfo:
         self.isConstructor = attrInfo.get( 'isConstructor', False )
         if attrInfo.has_key( 'lineNo' ):
             self.line = attrInfo.get( 'lineNo' )
-
+    
 if not os.path.altsep or os.path.altsep == os.path.sep:
     def pathSplitter( s ):
         return s.split( os.path.sep )
@@ -833,7 +833,7 @@ class Parser:
         self.block_stack = []
         self.bracket_matchers = {"[":"]", "{":"}", "(":")"}
         self.classifier = _get_classifier( lang )
-
+        
         # Use simple knowledge of Perl's syntax
         # to skip quickly through code to skip.
         self.opHash = {"(" : [0, 1],
@@ -888,8 +888,8 @@ class Parser:
 
     def _is_string( self, tok ):
         return tok.style in self.tokenizer.string_types
-
-
+        
+        
     def printHeader( self, mtime ):
         moduleName = self.moduleName
         root = Element( "codeintel", version = "2.0" )
@@ -899,11 +899,11 @@ class Parser:
             fileNode.set( 'mtime', str( mtime ) )
         root.append( fileNode )
         return ( root, fileNode )
-
+        
     def printContents( self, moduleContentsName, currNode ):
         name = os.path.splitext( os.path.basename( self.moduleName ) )[0]
         moduleNode = SubElement( currNode, 'scope', ilk = 'blob', lang = "Perl", name = name )
-
+        
         innerModules = self.moduleInfo.modules
         mainInfo = innerModules.get( 'main', None )
         if mainInfo:
@@ -911,7 +911,7 @@ class Parser:
                 self.moduleInfo.printDocInfo( mainInfo, None, moduleNode )
             self.moduleInfo.printImports( mainInfo, moduleNode )
             self.moduleInfo.printVariables( mainInfo, moduleNode )
-
+        
         def sorter1( a, b ):
             amod = innerModules.get( a )
             bmod = innerModules.get( b )
@@ -920,7 +920,7 @@ class Parser:
                 bline = getattr( bmod, 'line', None )
                 if aline and bline: return cmp( aline, bline )
             return cmp( getattr( amod, 'name', "" ), getattr( bmod, 'name', "" ) )
-
+        
         # Sub-packages need to updated their parent blob name - bug 88814.
         # I.e. when parsing "XML/Simple.pm" the blob name is "Simple", but we
         #      need it be "XML::Simple" in this case. The bestPackageName is
@@ -958,7 +958,7 @@ class Parser:
             return False
         return tok.text in ( ';', ',', '}' )
 
-
+        
     def collect_multiple_args( self, origLineNo, context, var_scope ):
         nameList = []
         while True:
@@ -988,7 +988,7 @@ class Parser:
             self.moduleInfo.doSetVar( name = varInfo[0], line = varInfo[1],
                                      scope = var_scope )
     # end collect_multiple_args
-
+    
     # Expect = shift ;
     def collect_single_arg( self, varName, origLineNo, context, var_scope ):
         tok = self.tokenizer.get_next_token()
@@ -1009,7 +1009,7 @@ class Parser:
             self.moduleInfo.doSetArg( varName )
         self.moduleInfo.doSetVar( name = varName, line = origLineNo,
                                  scope = var_scope )
-
+        
     def de_quote_string( self, tok ):
         tval = tok.text
         patterns = self.classifier.get_quote_patterns( tok, self.classifier.quote_patterns_cb )
@@ -1018,28 +1018,28 @@ class Parser:
             if m:
                 return m.group( 1 )
         return tval
-
+    
     # Called from both assignments and
 # my <var> = ... statements, where the RHS isn't 'shift' or '@_';
     def finish_var_assignment( self, identifier, origLineNo, forceGlobal, **inherited_args ):
         tok = self.tokenizer.get_next_token()
-
+    
         # Narrow down to these possibilities:
-
+    
         # 1. We're assigning a method call to a scalar
-
+    
         # $lhs = $rhs->method()->{property}->...
         #
         # Reduces to
         # $lhs = $rhs
-
+        
         # 2. We're assigning a string/int -- i.e., it's likely
         # to be a non-object value:
-
+        
         # $lhs = "acb" eq $q
         # $lhs = $r
         # $lhs = 42
-
+        
         # 3. We're assigning a constructor
         # Now we can take two forms:
         # <constructor> <subpath>
@@ -1047,7 +1047,7 @@ class Parser:
         # Note that if we don't know anything about the module, we can't say
         # anything intelligent about Package::Midd::Function -- we don't know
         # if this returns a constructor or not, although it likely doesn't.
-
+        
         rhs_StarterVal = None
         args = { 'name':identifier, 'line':origLineNo,
                 'forceGlobal':forceGlobal }
@@ -1061,11 +1061,11 @@ class Parser:
             if self.classifier.is_index_op( tok, self.find_open_indexer_re ):
                 self.skip_to_close_match()
                 tok = self.tokenizer.get_next_token()
-
+                
             # Now get the list of accessors that take us to the
             # semi-colon or close-brace.  Hop over arg lists.
             # Left looking at ->, ;, }, or leave
-
+            
             accessors = []
             while self.classifier.is_operator( tok, "->" ) or self.classifier.is_index_op( tok, self.find_open_indexer_re ):
                 if tok.text == "->":
@@ -1086,13 +1086,13 @@ class Parser:
                     self.skip_to_close_paren()
                     tok = self.tokenizer.get_next_token()
             # end while
-
+            
             if accessors or self.at_end_expression( tok ):
                 if self.at_end_expression( tok ):
                     self.tokenizer.put_back( tok )
                 fqname = ( accessors and rhs_StarterVal.join( accessors ) ) or rhs_StarterVal
             self.moduleInfo.doSetVar( **args )
-
+            
         elif self.classifier.is_number( tok ):
             # XXX: Any expressions starting with an integer that
             # don't yield an int value?
@@ -1153,7 +1153,7 @@ class Parser:
             if self.classifier.is_index_op( tok, self.find_open_indexer_re ):
                 self.tokenizer.put_back( tok )
     # end finish_var_assignment
-
+    
     def get_exported_names( self, export_keyword ):
         tok = self.tokenizer.get_next_token()
         if not self.classifier.is_operator( tok, '=' ):
@@ -1176,7 +1176,7 @@ class Parser:
                 # Don't do any more processing, as we're probably looking
                 # at an open-paren.
                 self.moduleInfo.doSetVar( name = tok.text, line = tlineNo, scope = 'my' )
-
+    
     def get_list_of_var_names( self ):
         resArray = []
         while 1:
@@ -1189,7 +1189,7 @@ class Parser:
             if not self.classifier.is_operator( tok, "," ):
                 break
         return resArray
-
+    
     def get_list_of_strings( self, tok = None ):
         if tok is None:
             tok = self.tokenizer.get_next_token()
@@ -1215,7 +1215,7 @@ class Parser:
             return []
         return resArray
     # end get_list_of_strings
-
+    
     def get_our_vars( self, context, var_scope ):
         tok = self.tokenizer.get_next_token()
         varNames = []
@@ -1234,7 +1234,7 @@ class Parser:
                 varNames = [( tval, lineNo )]
         for varInfo in varNames:
             self.moduleInfo.doSetVar( name = varInfo[0], line = varInfo[1], scope = var_scope )
-
+    
     # Look for = stringList...
     def get_parent_namespaces( self, doingIsa ):
         tok = self.tokenizer.get_next_token()
@@ -1245,13 +1245,13 @@ class Parser:
         parentNamespaces = self.get_list_of_strings()
         for parentInfo in parentNamespaces:
             self.moduleInfo.currentNS.aParent.append( parentInfo )
-
+            
         # Undocumented attribute, but it means one of the methods
         # should either invoke bless, SUPER:: ..., or a parent
         # constructor.
         self.moduleInfo.currentNS.isProbablyClass( True )
     # end get_parent_namespaces
-
+    
     # Precondition: saw ident, "->", '{'
     # Still looking at the "{"
     def _get_property_token( self ):
@@ -1264,7 +1264,7 @@ class Parser:
         else:
             finalVal = tok.text
         tok = self.tokenizer.get_next_token()
-
+        
         if not self.classifier.is_index_op( tok, re_compile( r'\}' ) ):
             # Swallow the close-brace for the property.
             finalVal = "???";
@@ -1287,7 +1287,7 @@ class Parser:
                 return retval
             else:
                 retval += "::"
-
+            
         while 1:
             tok = self.tokenizer.get_next_token()
             ttype = tok.style
@@ -1299,11 +1299,11 @@ class Parser:
             if not self.classifier.is_operator( tok, "::" ):
                 break
             retval += "::"
-
+            
         self.tokenizer.put_back( tok )
         return retval
     # end get_rest_of_subpath
-
+    
     def get_string_array( self, tok ):
         if self.classifier.is_string_qw( tok, self.classifier.is_string_qw_cb ):
             res = []
@@ -1323,7 +1323,7 @@ class Parser:
         else:
             tval = self.de_quote_string( tok )
             return [( tval, tok.start_line )]
-
+        
     def get_used_vars( self, scope ):
         tok = self.tokenizer.get_next_token()
         if self._is_string( tok ):
@@ -1336,7 +1336,7 @@ class Parser:
             self.moduleInfo.doSetVar( name = varInfo[0],
                                      line = varInfo[1],
                                      scope = scope )
-
+    
     def look_for_object_var_assignment( self, tok, isInnerSub ):
         identifier = tok.text
         if re_compile( r'^\$[^_\w]' ).match( identifier ) or identifier == '$_':
@@ -1420,7 +1420,7 @@ class Parser:
             for varName in varNames:
                 self.moduleInfo.add_imported_module( args, line = varName[1], symbol = varName[0] )
     # end process_import
-
+    
     def process_module( self, moduleName, mtime, _showWarnings = False ):
         showWarnings = _showWarnings
         self.moduleName = moduleName
@@ -1462,9 +1462,9 @@ class Parser:
                 except:
                     pass
         self.moduleInfo.doEndNS( lineNo = self.tokenizer.curr_line_no() )
-
-
-
+        
+        
+    
     def process_package_inner_contents( self, doingTopLevel ):
         currPackage = self.moduleInfo.currentNS
         popNS = 0
@@ -1510,7 +1510,7 @@ class Parser:
                         # codeintel allows variables
                         fqModule = self.get_rest_of_subpath( tval, 1 )
                         self.process_import( fqModule, origLineNo )
-
+                        
                     elif self.classifier.is_string( tok ) and not self.classifier.is_string_qw( tok, self.classifier.is_string_qw_cb ):
                         # Rewritten to work with UDL languages as well as native perl
                         self.process_import( tval, origLineNo )
@@ -1541,10 +1541,10 @@ class Parser:
                     self.look_for_var_assignment( tok )
             elif self.classifier.is_comment_structured( tok, self.classifier.is_pod_cb ):
                 self.moduleInfo.currentNS.hDocs['modules'].append( tval )
-
+            
             curr_pkg_line_no = self.tokenizer.curr_line_no()
     # end process_package_inner_contents
-
+    
     def process_sub_contents( self, isInnerSub ):
         # Get to the open brace or semicolon (outside the parens)
         braceCount = 0
@@ -1560,21 +1560,21 @@ class Parser:
                 if self.classifier.is_operator( tok, ")" ):
                     parenCount -= 1
             elif self.classifier.is_any_operator( tok ):
-                if tval == "(":
+                if tval  == "(":
                     parenCount += 1
                 elif tval == "{":
                     braceCount = 1
                     break
                 elif tval == ';':
                     return
-
+    
         # So now look for these different things:
         # '}' taking us to brace count of 0
         # my, name, =, shift;
         # my (..., ..., ...) = @_;
         # bless => mark this as a constructor
         # return => try to figure out what we're looking at
-
+    
         while True:
             tok = self.tokenizer.get_next_token()
             ttype = tok.style
@@ -1649,7 +1649,7 @@ class Parser:
                     # by name from an outer context, but they can bind
                     # the local state of the sub when defined.
                     # But we can call them anyway, so let's process them
-
+    
                     self.start_process_sub_definition( tval, True )  # Is inner
                 else:
                     self.skip_to_end_of_stmt()
@@ -1721,7 +1721,7 @@ class Parser:
                         if nestedCount <= 0:
                             break
     # end get_rest_of_subpath
-
+    
     def skip_to_close_paren( self ):
         tok = self.tokenizer.get_next_token()
         nestedCount = 1
@@ -1743,7 +1743,7 @@ class Parser:
             else:
                 tok = self.tokenizer.get_next_token()
     # end skip_to_close_paren
-
+    
     def skip_to_end_of_stmt( self ):
         nestedCount = 0
         while 1:
@@ -1775,7 +1775,7 @@ class Parser:
                     if nestedCount == 0:
                         break
     # end skip_to_end_of_stmt
-
+    
     def start_process_sub_definition( self, funcType, isInnerSub ):
         tok = self.tokenizer.get_next_token()
         # Watch out for lexer buffoonery
@@ -1844,7 +1844,7 @@ class Parser:
             else:
                 self.skipAnonSubContents()
     # end start_process_sub_definition
-
+        
 # end class Parser
 
 def pp( etree, fd ):
@@ -1912,7 +1912,7 @@ def main( sample_code, modulePath, mtime, showWarnings, provide_full_docs = True
     elementTreeRepn = parser.process_module( modulePath, mtime, showWarnings )
 
     return elementTreeRepn
-
+        
 if __name__ == "__main__":
     if len( sys.argv ) == 1:
         sample_code = perl_lexer.provide_sample_code()
