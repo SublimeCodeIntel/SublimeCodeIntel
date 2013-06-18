@@ -23,3 +23,5 @@ except ImportError:
                         platform = "MacOS X Universal"
                     except ImportError:
                         raise ImportError("Could not find a suitable ciElementTree binary for your platform and architecture.")
+
+from xml.etree.ElementTree import tostring

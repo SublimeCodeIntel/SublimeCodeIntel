@@ -227,6 +227,8 @@ def provide_sample_code():
  # comment at col 1
   # comment at col 2
 
+my $a = Foo->new();
+
 {
 package Foo;
 
@@ -234,6 +236,18 @@ sub new {
    my ($class, %args) = @_;
    my $self = {count => 0, list = [] };
    bless $self, (ref $class || $class);
+}
+
+func f_m  ($self, $arg) {
+    push @{$self->{list}}, $arg;
+    $self->{count} += 1;
+    $arg;
+}
+
+method m_m ($arg) {
+    push @{$self->{list}}, $arg;
+    $self->{count} += 1;
+    $arg;
 }
 
 sub m {
@@ -265,8 +279,8 @@ sub our_generate { my $self = shift; my $file_info = shift;
        print qq(percent string\n);
     }
 
-   }
-   }
+}
+}
 """
 
 

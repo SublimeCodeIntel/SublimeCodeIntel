@@ -311,7 +311,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                     calltip(view, 'tip', calltips[0])
 
                     if content[sel.a - 1] == '(' and content[sel.a] == ')':
-                        rex = re.compile("\(([^\[\(\)]*)")
+                        rex = re.compile( "\((.*?)\)" )
                         m = rex.search(calltips[0])
 
                         if m is None:

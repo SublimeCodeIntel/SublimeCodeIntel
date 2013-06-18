@@ -60,7 +60,7 @@ perl_keywords = \
     "system syswrite tell telldir tie tied time times tr truncate "\
     "uc ucfirst umask undef unless unlink unpack unshift untie until "\
     "use utime values vec wait waitpid wantarray warn when while write "\
-    "x xor y"
+    "x xor y func method"
 
 python_keywords = \
     "and assert break class continue def del elif else except " \
