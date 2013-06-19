@@ -10,8 +10,8 @@
             "platforms": {
                 "*": [
                     {
-                        "version": "1.4.0",
-                        "url": "https://nodeload.github.com/Kronuz/SublimeCodeIntel/zip/v1.4"
+                        "version": "1.4.1",
+                        "url": "https://nodeload.github.com/SublimeCodeIntel/SublimeCodeIntel/zip/v1.4"
                     }
                 ]
             }
