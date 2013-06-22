@@ -10,7 +10,7 @@
             "platforms": {
                 "*": [
                     {
-                        "version": "1.4.1",
+                        "version": "1.4.2",
                         "url": "https://nodeload.github.com/SublimeCodeIntel/SublimeCodeIntel/zip/v1.4"
                     }
                 ]
