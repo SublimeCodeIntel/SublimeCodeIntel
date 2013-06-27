@@ -228,7 +228,7 @@ def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
 
 
 def guess_lang(view=None, path=None):
-    if not view.settings().get('codeintel', True):
+    if not view or not view.settings().get('codeintel', True):
         return None
 
     syntax = None
