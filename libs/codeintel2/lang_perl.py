@@ -55,6 +55,7 @@ from SilverCity.Lexer import Lexer
 from SilverCity import ScintillaConstants
 
 from codeintel2.common import *
+from codeintel2.common import _xpcom_
 from codeintel2.citadel import (ImportHandler, CitadelBuffer,
                                 CitadelEvaluator, CitadelLangIntel)
 from codeintel2.citadel_common import ScanRequest
@@ -69,7 +70,7 @@ from codeintel2.langintel import (ParenStyleCalltipIntelMixin,
                                   ProgLangTriggerIntelMixin)
 
 if _xpcom_:
-    from xpcom.server import UnwrapObject
+    from xpcom.server import UnwrapObject  # @UnresolvedImport
 
 
 

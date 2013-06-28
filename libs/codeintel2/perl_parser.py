@@ -86,19 +86,20 @@ def memoize( function, limit = None ):
 
         return memoize_wrapper
     else:
-    dict = {}
-    list = []
+        dict = {}
+        list = []
+
         def memoize_wrapper( *args, **kwargs ):
             key = cPickle.dumps( ( args, kwargs ) )
-        try:
+            try:
                 list.append( list.pop( list.index( key ) ) )
-        except ValueError:
+            except ValueError:
                 dict[key] = function( *args, **kwargs )
                 list.append( key )
                 if limit is not None and len( list ) > limit:
                     del dict[list.pop( 0 )]
 
-        return dict[key]
+            return dict[key]
 
     memoize_wrapper._memoize_dict = dict
     memoize_wrapper._memoize_list = list
