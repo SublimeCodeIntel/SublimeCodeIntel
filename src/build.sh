@@ -2,9 +2,9 @@
 # In Linux, Sublime Text's Python is compiled with UCS4:
 if [ $OSTYPE = "linux-gnu" ]; then
 	if [ `uname -m` == 'x86_64' ]; then
-		export CFLAGS='-fPIC -DPy_UNICODE_SIZE=4 -I../pcre-8.21'
+		export CFLAGS='-fPIC -DPy_UNICODE_SIZE=4 -I/tmp/pcre-8.21'
 	else
-		export CFLAGS='-DPy_UNICODE_SIZE=4 -I../pcre-8.21'
+		export CFLAGS='-DPy_UNICODE_SIZE=4 -I/tmp/pcre-8.21'
 	fi
 fi
 export LDFLAGS='-L/tmp/pcre-8.21/.libs'
