@@ -6,11 +6,11 @@
             "description": "Full-featured code intelligence and smart autocomplete engine",
             "author": "Kronuz",
             "homepage": "http://github.com/SublimeCodeIntel/SublimeCodeIntel",
-            "last_modified": "2013-06-19 0:00:00",
+            "last_modified": "2013-07-05 0:00:00",
             "platforms": {
                 "*": [
                     {
-                        "version": "1.4.2",
+                        "version": "1.4.3",
                         "url": "https://nodeload.github.com/SublimeCodeIntel/SublimeCodeIntel/zip/v1.4"
                     }
                 ]
