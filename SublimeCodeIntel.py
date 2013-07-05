@@ -192,11 +192,13 @@ def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=
             if msg != current_msg and order == current_order:
                 if msg:
                     print >>condeintel_log_file, "+", "%s: %s" % (type.capitalize(), msg)
-                    view.set_status(id, "%s: %s" % (type.capitalize(), msg))
                     (logger or log.info)(msg)
-                else:
-                    view.erase_status(id)
-                status_msg[id][0] = [type, msg, order]
+                if type != 'debug':
+                    if msg:
+                        view.set_status(id, "%s: %s" % (type.capitalize(), msg))
+                    else:
+                        view.erase_status(id)
+                    status_msg[id][0] = [type, msg, order]
                 if 'warning' not in id and msg:
                     status_lineno[id] = lineno
                 elif id in status_lineno:
@@ -267,15 +269,15 @@ def guess_lang(view=None, path=None):
 
     _codeintel_disabled_languages = [l.lower() for l in view.settings().get('codeintel_disabled_languages', [])]
     if lang and lang.lower() in _codeintel_disabled_languages:
-        logger(view, 'info', "skip `%s': disabled language" % lang)
+        logger(view, 'debug', "skip `%s': disabled language" % lang)
         languages[id][_k_] = None
         return
 
     if not lang and _lang and _lang not in ('Console',):
         if mgr:
-            logger(view, 'info', "Invalid language: %s. Available: %s" % (_lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs()))))
+            logger(view, 'debug', "Invalid language: %s. Available: %s" % (_lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs()))))
         else:
-            logger(view, 'info', "Invalid language: %s" % _lang)
+            logger(view, 'debug', "Invalid language: %s" % _lang)
 
     languages[id][_k_] = lang
     return lang
