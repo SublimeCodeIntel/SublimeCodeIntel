@@ -276,7 +276,7 @@ def guess_lang(view=None, path=None):
         languages[vid][_k_] = None
         return
 
-    if not lang and _lang and _lang not in ('Console',):
+    if not lang and _lang and _lang in ('Console', 'Plain text'):
         if mgr:
             logger(view, 'debug', "Invalid language: %s. Available: %s" % (_lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs()))))
         else:
@@ -603,9 +603,10 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
 
             valid = True
             if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
-                msg = "Invalid language: %s. Available: %s" % (lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs())))
-                log.debug(msg)
-                codeintel_log.warning(msg)
+                if lang in ('Console', 'Plain text'):
+                    msg = "Invalid language: %s. Available: %s" % (lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs())))
+                    log.debug(msg)
+                    codeintel_log.warning(msg)
                 valid = False
 
             # Load configuration files:
