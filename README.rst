@@ -119,6 +119,16 @@ v2.0 (11-07-2013):
 
 + SublimeCodeIntel's openkomodo codeintel engine updated. The new codeintel is faster and more reliable.
 
++ Sources have their own repositories at http://github.com/SublimeCodeIntel
+
+- Disables Sublime Text 2's auto_complete by default (new ``sublime_auto_complete`` setting)
+
+- JavaScript and PHP: Do not include all files and directories from the project base directory while scanning.
+
+- JavaScript: Maximum directory depth is set to 2 (add explicit paths using javascriptExtraPaths).
+
+- PHP: Maximum directory depth is set to 5 (add explicit paths using phpExtraPaths).
+
 + Snippets for functions inserted during autocomplete.
 
 + Binary files for Linux, Windows and Mac OS X updated.
@@ -146,8 +156,6 @@ v2.0 (11-07-2013):
 - PHP and UDL languages bugs fixed.
 
 - Stability improved (Should no longer use 100% CPU all the time.)
-
-+ Sources have their own repositories at http://github.com/SublimeCodeIntel
 
 
 v1.4 (05-07-2013):

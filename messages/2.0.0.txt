@@ -13,6 +13,13 @@ NEW FEATURES
 
 
 CHANGES/FIXES
+- Disables Sublime Text 2's auto_complete by default (new ``sublime_auto_complete`` setting)
+
+- JavaScript and PHP: Do not include all files and directories from the project base directory while scanning.
+
+- JavaScript: Maximum directory depth is set to 2 (add explicit paths using javascriptExtraPaths).
+
+- PHP: Maximum directory depth is set to 5 (add explicit paths using phpExtraPaths).
 
 + Snippets for functions inserted during autocomplete.
 

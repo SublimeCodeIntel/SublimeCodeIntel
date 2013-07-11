@@ -102,6 +102,16 @@
                 "PYTHONPATH": "/usr/local/lib/python2.7/site-packages:/usr/local/lib/python:$PYTHONPATH"
                 */
             }
+        },
+        "JavaScript": {
+            "javascriptExtraPaths": [],
+            "codeintel_scan_files_in_project": false,
+            "codeintel_max_recursive_dir_depth": 2
+        },
+        "PHP": {
+            "phpExtraPaths": [],
+            "codeintel_scan_files_in_project": false,
+            "codeintel_max_recursive_dir_depth": 5
         }
     }
 }

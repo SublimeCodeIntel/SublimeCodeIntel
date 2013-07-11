@@ -42,9 +42,9 @@ For "Jump to symbol declaration":
 Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config'). All configurations are optional. Example:
     {
         "PHP": {
-            "php": '/usr/bin/php',
-            "phpExtraPaths": [],
-            "phpConfigFile": 'php.ini'
+            "php": "/usr/bin/php",
+            "phpConfigFile": "php.ini",
+            "phpExtraPaths": []
         },
         "JavaScript": {
             "javascriptExtraPaths": []
@@ -58,11 +58,11 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
             "rubyExtraPaths": []
         },
         "Python": {
-            "python": '/usr/bin/python',
+            "python": "/usr/bin/python",
             "pythonExtraPaths": []
         },
         "Python3": {
-            "python": '/usr/bin/python3',
+            "python": "/usr/bin/python3",
             "pythonExtraPaths": []
         }
     }
