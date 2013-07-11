@@ -306,6 +306,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
             content = view.substr(sublime.Region(0, view.size()))
 
             def _trigger(calltips, cplns=None):
+                view_settings = view.settings()
                 if cplns is not None or calltips is not None:
                     codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
 
@@ -329,7 +330,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                     # Trigger a tooltip
                     calltip(view, 'tip', calltips[0])
                     # Insert function call snippets:
-                    if view.settings().get('codeintel_snippets', True):
+                    if view_settings.get('codeintel_snippets', True):
                         # Insert parameters as snippet:
                         if content[sel.begin() - 1] == '(' and content[sel.begin()] == ')':
                             m = re.search(r'\(([^\[\(\)]*)', calltips[0])
