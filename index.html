@@ -24,14 +24,14 @@
     <!-- HEADER -->
     <div id="header_wrap" class="outer">
         <header class="inner">
-          <a id="forkme_banner" href="https://github.com/Kronuz/SublimeCodeIntel">View on GitHub</a>
+          <a id="forkme_banner" href="https://github.com/SublimeCodeIntel/SublimeCodeIntel">View on GitHub</a>
 
           <h1 id="project_title"><span class="title">Sublime</span>CodeIntel</h1>
           <h2 id="project_tagline">A full-featured code intelligence and smart autocomplete engine for Sublime Text 2.<br><span class="title">JavaScript, Mason, XBL, XUL, RHTML, SCSS, Python, HTML, Ruby, Python3, XML, XSLT, Django, HTML5, Perl, CSS, Twig, Less, Smarty, Node.js, Tcl, TemplateToolkit, PHP.</span></h2>
 
             <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/Kronuz/SublimeCodeIntel/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/Kronuz/SublimeCodeIntel/tarball/master">Download this project as a tar.gz file</a>
+              <a class="zip_download_link" href="https://github.com/SublimeCodeIntel/SublimeCodeIntel/zip/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/SublimeCodeIntel/SublimeCodeIntel/tarball/master">Download this project as a tar.gz file</a>
             </section>
         </header>
     </div>
@@ -55,9 +55,9 @@
             </div>
 
             <div id="content">
-              <div id="content1">First description.</div>
-              <div id="content2" style="display: none;">Second description.</div>
-              <div id="content3" style="display: none;">Last description.</div>
+              <div id="content1">Autocomplete code!</div>
+              <div id="content2" style="display: none;">Jump to symbol definition!</div>
+              <div id="content3" style="display: none;">Make your life easier with code intelligence!</div>
             </div>
           </div>
         </div>
@@ -66,7 +66,7 @@
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
 
-<p>Code intelligence plugin ported from <code>Open Komodo Editor &lt;http://www.openkomodo.com/&gt;</code>_ to <code>Sublime Text 2 &lt;http://www.sublimetext.com/2&gt;</code>_.</p>
+<p>Code intelligence plugin ported from <a href="http://www.openkomodo.com/" target="_blank">Open Komodo Editor</a> to <a href="http://www.sublimetext.com/2" target="_blank">Sublime Text 2</a>.</p>
 
 <p>Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2):</p>
 
@@ -81,9 +81,7 @@
 <li>Function Call tooltips - Displays information in the status bar about the working function.</li>
 </ul><p>Plugin should work in all three platforms (MacOS X, Windows and Linux).</p>
 
-<p>.. image:: <a href="http://pledgie.com/campaigns/16511.png?skin_name=chrome">http://pledgie.com/campaigns/16511.png?skin_name=chrome</a>
-   :alt: Click here to lend your support to SublimeCodeIntel and make a donation at pledgie.com!
-   :target: <a href="http://pledgie.com/campaigns/16511">http://pledgie.com/campaigns/16511</a></p>
+<p><a href="http://pledgie.com/campaigns/16511"><img src="http://pledgie.com/campaigns/16511.png?skin_name=chrome" alt="Click here to lend your support to SublimeCodeIntel and make a donation at pledgie.com!"/></a></p>
 
 <h2>Installing</h2>
 
@@ -91,40 +89,50 @@
 
 <p>Once you install Package Control, restart ST2 and bring up the Command Palette (<code>Command+Shift+P</code> on OS X, <code>Control+Shift+P</code> on Linux/Windows). Select "Package Control: Install Package", wait while Package Control fetches the latest package list, then select SublimeCodeIntel when the list appears. The advantage of using this method is that Package Control will automatically keep SublimeCodeIntel up to date with the latest version.</p>
 
-<p><strong>Without Git:</strong> Download the latest source from <code>GitHub &lt;http://github.com/Kronuz/SublimeCodeIntel&gt;</code>_ and copy the whole directory into the Packages directory.</p>
+<p><strong>Without Git:</strong> Download the latest source from <a href="http://github.com/SublimeCodeIntel/SublimeCodeIntel" target="_blank">GitHub</a> and copy the whole directory into the Packages directory.</p>
 
-<p><strong>With Git:</strong> Clone the repository in your Sublime Text 2 Packages directory, located somewhere in user's "Home" directory::</p>
+<p><strong>With Git:</strong> Clone the repository in your Sublime Text 2 Packages directory, located somewhere in user's "Home" directory:</p>
 
-<pre><code>git clone git://github.com/Kronuz/SublimeCodeIntel.git
+<pre><code>git clone git://github.com/SublimeCodeIntel/SublimeCodeIntel.git
 </code></pre>
 
 <p>The "Packages" packages directory is located at:</p>
 
 <ul>
 <li>
-<p>OS X::</p>
+<p>OS X:</p>
 
-<p>~/Library/Application Support/Sublime Text 2/Packages/</p>
+<p><code>~/Library/Application Support/Sublime Text 2/Packages/</code></p>
 </li>
 <li>
-<p>Linux::</p>
+<p>Linux:</p>
 
-<p>~/.config/sublime-text-2/Packages/</p>
+<p><code>~/.config/sublime-text-2/Packages/</code></p>
 </li>
 <li>
-<p>Windows::</p>
+<p>Windows:</p>
 
-<p>%APPDATA%/Sublime Text 2/Packages/</p>
+<p><code>%APPDATA%/Sublime Text 2/Packages/</code></p>
 </li>
 </ul><h2>Using</h2>
 
 <ul>
-<li>Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click. To "Jump to Symbol Declaration" use <tt>ctr+super+alt+Up</tt> (or <tt>alt+click</tt> in Windows, <tt>super+click</tt> in Linux or <tt>ctrl+click</tt> in Mac OS X) over the symbol, and <tt>ctr+super+alt+Left</tt> for going back.</li>
-<li>Start typing code as usual, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use <tt>shift+ctrl+space</tt> (<tt>shift+super+space</tt> in Mac OS X).</li>
+<li>Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click. To "Jump to Symbol Declaration" use <code>Control+Command+Alt+Up</code> (or <code>Alt+Click</code> on Windows, <code>Command+Click</code> on Linux or <code>Control+Click</code> on Mac OS X) over the symbol, and <code>Control+Command+alt+Left</code> for going back.</li>
+<li>Start typing code as usual, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use <code>Shift+Control+Space</code> (<code>Shift+Command+Space</code> on Mac OS X).</li>
 </ul>
 <p>Don't despair! The first time you use it it needs to build some indexes and it can take more than a few seconds (around six in my configuration).</p>
 
 <p>It just works!</p>
+
+<h2>Troubleshooting</h2>
+<ul>
+<li>Check the <code>~/.codeintel/codeintel.log</code> file to see if there are any errors in it or in the Sublime Text 2 console.</li>
+
+<li>Delete the directory with the CodeIntel database <code>~/.codeintel/db</code> and restart Sublime Text 2.</li>
+
+<li>Building process is no longer distributed with this repository. You need to get <code>SublimeCodeIntel/<a href="https://github.com/SublimeCodeIntel/CodeIntelSources/" target="_blank">CodeIntelSources</a></code> to run build.sh. More information in <code>SublimeCodeIntel/CodeIntelSources/<a href="https://github.com/SublimeCodeIntel/CodeIntelSources/src" target="_blank">src</a></code>.</li>
+<li>Open an Issue in <a href="https://github.com/SublimeCodeIntel/SublimeCodeIntel/issues" target="_blank">GitHub</a></li>
+</ul>
 
       </section>
 
