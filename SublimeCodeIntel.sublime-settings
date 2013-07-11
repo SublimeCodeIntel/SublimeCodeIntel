@@ -57,6 +57,37 @@
         "JavaScript":["/build/", "/min/"]
     },
 
+    /* Code Scanning: Controls how the Code Intelligence system scans your source code files. */
+
+    /* Maximum directory depth: */
+    "codeintel_max_recursive_dir_depth": 10,
+
+    /* Include all files and directories from the project base directory: */
+    "codeintel_scan_files_in_project": true,
+
+    /* API Catalogs: SublimeCodeIntel uses API catalogs to provide autocomplete and calltips for 3rd-party libraies.
+       Add te libraries that you use in your code. Note: Adding all API catalogs for a particular language can lead to confusing results.
+
+       Avaliable catalogs:
+            PyWin32 (Python3) (for Python3: Python Extensions for Windows)
+            PyWin32 (for Python: Python Extensions for Windows)
+            Rails (for Ruby: Rails version 1.1.6)
+            jQuery (for JavaScript: jQuery JavaScript library - version 1.9.1)
+            Prototype (for JavaScript: JavaScript framework for web development)
+            dojo (for JavaScript: Dojo Toolkit API - version 1.5.0)
+            Ext_30 (for JavaScript: Ext JavaScript framework - version 3.0)
+            HTML5 (for JavaScript: HTML5 (Canvas, Web Messaging, Microdata))
+            MochiKit (for JavaScript: A lightweight JavaScript library - v1.4.2)
+            Mozilla Toolkit (for JavaScript: Mozilla Toolkit API - version 1.8)
+            XBL (for JavaScript: XBL JavaScript support - version 1.0)
+            YUI (for JavaScript: Yahoo! User Interface Library - v2.8.1)
+            Drupal (for PHP: A full-featured PHP content management/discussion engine -- v5.1)
+            PECL (for PHP: A collection of PHP Extensions)
+    */
+    "codeintel_selected_catalogs": [
+        "PyWin32", "jQuery", "Rails"
+    ],
+
     /*
         Defines a configuration for each language.
     */

@@ -547,7 +547,11 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     vid = view.id()
     folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
     folders_id = str(hash(frozenset(folders)))
-    codeintel_config = view.settings().get('codeintel_config', {})
+    view_settings = view.settings()
+    codeintel_config = view_settings.get('codeintel_config', {})
+    _codeintel_max_recursive_dir_depth = view_settings.get('codeintel_max_recursive_dir_depth', 10)
+    _codeintel_scan_files_in_project = view_settings.get('codeintel_scan_files_in_project', True)
+    _codeintel_selected_catalogs = view_settings.get('codeintel_selected_catalogs', [])
 
     def _codeintel_scan():
         global despair, despaired
@@ -609,16 +613,30 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                     codeintel_log.warning(msg)
                 valid = False
 
+            codeintel_config_lang = codeintel_config.get(lang, {})
+            codeintel_max_recursive_dir_depth = codeintel_config_lang.get('codeintel_max_recursive_dir_depth', _codeintel_max_recursive_dir_depth)
+            codeintel_scan_files_in_project = codeintel_config_lang.get('codeintel_scan_files_in_project', _codeintel_scan_files_in_project)
+            codeintel_selected_catalogs = codeintel_config_lang.get('codeintel_selected_catalogs', _codeintel_selected_catalogs)
+
+            avail_catalogs = mgr.db.get_catalogs_zone().avail_catalogs()
+
             # Load configuration files:
-            for catalog in mgr.db.get_catalogs_zone().avail_catalogs():
+            all_catalogs = []
+            for catalog in avail_catalogs:
+                all_catalogs.append("%s (for %s: %s)" % (catalog['name'], catalog['lang'], catalog['description']))
                 if catalog['lang'] == lang:
-                    catalogs.append(catalog['name'])
+                    if catalog['name'] in codeintel_selected_catalogs:
+                        catalogs.append(catalog['name'])
+            msg = "Avaliable catalogs: %s" % ', '.join(all_catalogs) or None
+            log.debug(msg)
+            codeintel_log.debug(msg)
+
             config = {
-                "codeintel_selected_catalogs": catalogs,
-                "codeintel_max_recursive_dir_depth": 10,
-                "codeintel_scan_files_in_project": True,
+                'codeintel_max_recursive_dir_depth': codeintel_max_recursive_dir_depth,
+                'codeintel_scan_files_in_project': codeintel_scan_files_in_project,
+                'codeintel_selected_catalogs': catalogs,
             }
-            config.update(codeintel_config.get(lang, {}))
+            config.update(codeintel_config_lang)
 
             _config = {}
             try:
@@ -674,7 +692,10 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 msgs.append(('info', "\n%s\n%s" % (msg, "-" * len(msg))))
 
             if catalogs:
-                msgs.append(('info', "New env with catalogs for '%s': %s" % (lang, ', '.join(catalogs) or None)))
+                msg = "New env with catalogs for '%s': %s" % (lang, ', '.join(catalogs) or None)
+                log.debug(msg)
+                codeintel_log.warning(msg)
+                msgs.append(('info', msg))
 
             buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
 
@@ -875,6 +896,9 @@ ALL_SETTINGS = [
     'codeintel_disabled_languages',
     'codeintel_live',
     'codeintel_live_disabled_languages',
+    'codeintel_max_recursive_dir_depth',
+    'codeintel_scan_files_in_project',
+    'codeintel_selected_catalogs',
     'codeintel_syntax_map',
     'codeintel_scan_exclude_dir',
     'codeintel_config',
