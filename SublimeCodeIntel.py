@@ -299,9 +299,6 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
 
         lpos = view.line(sel).begin()
         text = view.substr(sublime.Region(lpos, pos + 1))
-        if not text.strip():
-            return
-
         next = text[-1] if len(text) == pos + 1 - lpos else None
 
         if not next or next != '_' and not next.isalnum():
