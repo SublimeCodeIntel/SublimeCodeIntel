@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """Completion evaluation code for Perl.
@@ -98,7 +98,7 @@ class _PerlPkgTable(object):
         pkg = pkg_tbl.pkg_from_pkg_name(pkg_name)
         mod, pkg = pkg_tbl.mod_and_pkg_from_pkg_name(pkg_name)
     """
-    #TODO: Consider an index (a la toplevelname_index) for imported
+    # TODO: Consider an index (a la toplevelname_index) for imported
     #      Perl packages. Post-4.0. Only iff Perl cpln needs the
     #      speed.
 
@@ -159,11 +159,11 @@ class _PerlPkgTable(object):
 
         A "loaded" Perl package is one that is imported (via "use" or
         "require") or locally defined via a "package" statement.
-        
+
         If a particular Perl module cannot be imported it is presumed to
         define one package of the same name (which is typical). In this
         case, <blob> will be None.
-        """ 
+        """
         for item in self._item_cache:
             yield item
         for item in self._generator:
@@ -184,7 +184,7 @@ class _PerlPkgTable(object):
                 if mod is not None:
                     break
             else:
-                #self.debug("could not import module %r, assuming it "
+                # self.debug("could not import module %r, assuming it "
                 #           "defines package of same name", mod_name)
                 item = (None, set([mod_name]))
                 self._item_cache.append(item)
@@ -197,7 +197,7 @@ class _PerlPkgTable(object):
 
     def _imported_mod_names_from_mod(self, mod):
         """Yield "reasonable" module names imported in the given module.
-        
+
         "Reasonable" here means those that can be handled by the Perl
         cpln evalrs. The issue is Perl 'require' statements that can
         quote a string, use string interpolation, etc.
@@ -206,7 +206,7 @@ class _PerlPkgTable(object):
 
         for imp_elem in mod.getiterator("import"):
             mod_name = imp_elem.get("module")
-            
+
             if '$' in mod_name:
                 # Abort on these guys:
                 #   require $blah;        <import module="$blah"/>
@@ -215,7 +215,7 @@ class _PerlPkgTable(object):
             elif mod_name[0] in ('"', "'"):
                 # Try to gracefully handle these guys:
                 #   require 'MyFoo.pm';   <import module="'MyFoo.pm'"/>
-                #   require "MyBar.pm";   <import module="&quot;MyBar.pm&quot;"/>
+                # require "MyBar.pm";   <import module="&quot;MyBar.pm&quot;"/>
                 sans_quotes = mod_name[1:-1]
                 sans_ext, ext = splitext(sans_quotes)
                 if ext != ".pm":
@@ -229,28 +229,25 @@ class _PerlPkgTable(object):
 
     def _pkg_info_from_mod(self, mod):
         """Return Perl package info for this module blob.
-        
+
         Returns a 2-tuple:
             (<set of imported module names>, <set of defined package names>)
         """
         key = "perl-pkg-info"
         if key not in mod.cache:
             mod_names = set(self._imported_mod_names_from_mod(mod))
-            #print "%r imports: %s" % (mod, ', '.join(mod_names))
+            # print "%r imports: %s" % (mod, ', '.join(mod_names))
 
             # Perl packages can only be defined at the top-level.
             pkg_names = set(elem.get("name") for elem in mod
                             if elem.get("ilk") == "class")
-            #print "%r defines: %s" % (mod, ', '.join(pkg_names))
+            # print "%r defines: %s" % (mod, ', '.join(pkg_names))
 
             mod.cache[key] = (mod_names, pkg_names)
         return mod.cache[key]
 
 
-
-
 #---- the tree evaluators
-
 class CandidatesForTreeEvaluator(TreeEvaluator):
     """Candidate functionality for the base TreeEvaluator class to be
     shared by the other lang-specific TreeEvaluators.
@@ -259,6 +256,7 @@ class CandidatesForTreeEvaluator(TreeEvaluator):
     """
 
     _built_in_blob = None
+
     @property
     def built_in_blob(self):
         if self._built_in_blob is None:
@@ -293,6 +291,7 @@ class CandidatesForTreeEvaluator(TreeEvaluator):
                 yield '()'
             else:
                 yield tok
+
     def _join_citdl_expr(self, tokens):
         return '.'.join(tokens).replace('.()', '()')
 
@@ -305,6 +304,7 @@ class CandidatesForTreeEvaluator(TreeEvaluator):
     # but that is overkill for now, I think.
     _SENTINEL_MAX_EXPR_COUNT = 10
     _eval_count_from_expr = None
+
     def _check_infinite_recursion(self, expr):
         if self._eval_count_from_expr is None:
             # Move this init into eval() when on TreeEvalutor.
@@ -338,7 +338,7 @@ class PerlTreeEvaluatorBase(CandidatesForTreeEvaluator):
         _handled_pkg_names.add(pkg_name)
 
         # Get the locally defined subs.
-        members = [("function", n) for n,el in pkg.names.items()
+        members = [("function", n) for n, el in pkg.names.items()
                    if el.get("ilk") == "function"]
 
         # Get inherited subs.
@@ -354,7 +354,6 @@ class PerlTreeEvaluatorBase(CandidatesForTreeEvaluator):
 
         return members
 
-
     # Special Perl variables/subs to typically _exclude_ from completions.
     _special_names_to_skip = set([
         "$AUTOLOAD", "AUTOLOAD", "DESTROY",
@@ -368,27 +367,27 @@ class PerlTreeEvaluatorBase(CandidatesForTreeEvaluator):
         if DEBUG:
             print banner("Perl post_process_cplns (before)")
             pprint(cplns)
-        
+
         trg_type = self.trg.type
         if trg_type in ("package-subs", "object-subs"):
-            #TODO: This may not be necessary if current evalr only
+            # TODO: This may not be necessary if current evalr only
             #      generates the function.
             cplns = [c for c in cplns
                      if c[0] == "function"
                      if c[1] not in self._special_names_to_skip]
         elif trg_type == "package-members":
-            if self.prefix_filter in ('', '&'): # filter out variables
+            if self.prefix_filter in ('', '&'):  # filter out variables
                 cplns = [c for c in cplns
                          if c[0] != "variable"
                          if c[1] not in self._special_names_to_skip]
-            elif self.prefix_filter in ('$', '@', '%'): # filter out funcs
+            elif self.prefix_filter in ('$', '@', '%'):  # filter out funcs
                 cplns = [c for c in cplns
                          if c[0] != "function"
                          if c[1] not in self._special_names_to_skip]
             else:
-                cplns = [c for c in cplns 
+                cplns = [c for c in cplns
                          if c[1] not in self._special_names_to_skip]
-                
+
             # Morph type and value of variable based on the prefix.
             # For example the completions for: `$HTTP::Message::` include
             # ("variable", "$VERSION"). The actual correct completion is
@@ -412,8 +411,8 @@ class PerlTreeEvaluatorBase(CandidatesForTreeEvaluator):
                         print "tokenize perl var: %r -> %r %r"\
                               % (value, prefix, name)
                     if prefix:
-                        prefix = prefix[-1] # only last char is relevant
-                    
+                        prefix = prefix[-1]  # only last char is relevant
+
                     if self.prefix_filter in (None, '*', '$'):
                         # '*': pass all
                         # '$': pass all because arrays and hashes can have
@@ -423,8 +422,8 @@ class PerlTreeEvaluatorBase(CandidatesForTreeEvaluator):
                         # If the filter is '%' or '@', then filter out vars
                         # not of that persuasion.
                         continue
-                    
-                    #TODO: Test cases for these and review by Perl guy.
+
+                    # TODO: Test cases for these and review by Perl guy.
                     if prefix in ('$', '%', '@'):
                         # Don't yet support '*' special a/c image.
                         type = prefix+type
@@ -442,7 +441,7 @@ class PerlTreeEvaluatorBase(CandidatesForTreeEvaluator):
 
 class PerlPackageMembersTreeEvaluator(PerlTreeEvaluatorBase):
     """TreeEvaluator to handle 'perl-complete-package-members'.
-    
+
         [prefix]SomePackage::<|>
     """
     # TODO: Consider implementing this subtlety (if current behaviour is
@@ -466,7 +465,8 @@ class PerlPackageMembersTreeEvaluator(PerlTreeEvaluatorBase):
                     prefix_match = pkg_name[prefix_len:]
                     if "::" in prefix_match:
                         prefix_match = prefix_match[:prefix_match.index("::")]
-                    #self.debug("prefix match: %r -> %r", pkg_name, prefix_match)
+                    # self.debug("prefix match: %r -> %r", pkg_name,
+                    # prefix_match)
                     prefix_matches.add(prefix_match)
 
         if prefix_matches:
@@ -481,7 +481,7 @@ class PerlPackageMembersTreeEvaluator(PerlTreeEvaluatorBase):
             else:
                 self.info("pkg match for %r: %r", self.expr, pkg)
                 cplns += self._members_from_pkg(self.expr, pkg)
-                
+
         return cplns
 
     def _members_from_pkg(self, pkg_name, pkg, _handled_pkg_names=None):
@@ -498,7 +498,7 @@ class PerlPackageMembersTreeEvaluator(PerlTreeEvaluatorBase):
         # Get the locally defined members.
         members = []
         for name, elem in pkg.names.items():
-            #self.debug("%r: %r", name, elem)
+            # self.debug("%r: %r", name, elem)
             if elem.tag == "variable":
                 if "__local__" not in elem.get("attributes", ""):
                     members.append(("variable", name))
@@ -542,7 +542,7 @@ class PerlPackageSubsTreeEvaluator(PerlTreeEvaluatorBase):
         _handled_pkg_names.add(pkg_name)
 
         # Get the locally defined subs.
-        members = [("function", n) for n,el in pkg.names.items()
+        members = [("function", n) for n, el in pkg.names.items()
                    if el.get("ilk") == "function"]
 
         # Get inherited subs.
@@ -557,7 +557,6 @@ class PerlPackageSubsTreeEvaluator(PerlTreeEvaluatorBase):
                                                    _handled_pkg_names)
 
         return members
-
 
 
 class PerlTreeEvaluator(PerlTreeEvaluatorBase):
@@ -598,14 +597,18 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
             self.error("cannot call a Perl %s: '%s' is <%s %s>",
                        perl_type, self.expr, perl_type, elem.get("name"))
             return None
-        return [ self._calltip_from_func(elem) ]
+        return [self._calltip_from_func(elem)]
 
     def eval_defns(self):
         self.log_start()
         start_scoperef = self.get_start_scoperef()
         self.info("start scope is %r", start_scoperef)
         hit = self._hit_from_citdl(self.expr, start_scoperef, defn_only=True)
-        return [ self._defn_from_hit(hit) ]
+        elem, (blob, lpath) = hit
+        # Bug 99113 - Unlike all the other languages, the Perl scoperef
+        # contains the item we're trying to resolve, so drop it.
+        fixed_hit = (elem, (blob, lpath[:-1]))
+        return [self._defn_from_hit(fixed_hit)]
 
     def _perl_type_from_elem(self, elem):
         if elem.tag == "scope":
@@ -637,14 +640,14 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
         self._check_infinite_recursion(expr)
 
         tokens = list(self._tokenize_citdl_expr(expr))
-        #self.debug("expr tokens: %r", tokens)
+        # self.debug("expr tokens: %r", tokens)
 
         # First part...
         first_token = tokens.pop(0)
         hit = self._hit_from_first_part(first_token, scoperef)
         if not hit:
             raise CodeIntelError("could not resolve '%s'" % first_token)
-        #self.debug("_hit_from_citdl: first part: %r -> %r", first_token, hit)
+        # self.debug("_hit_from_citdl: first part: %r -> %r", first_token, hit)
 
         # ...remaining parts.
         while tokens:
@@ -653,7 +656,7 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
                 raise CodeIntelError("eval of Perl function calls not yet "
                                      "implemented: %r" % expr)
             self.info("lookup '%s' on %r in %r", token, *hit)
-            #TODO: Should we catch CodeIntelError, self.error() and
+            # TODO: Should we catch CodeIntelError, self.error() and
             #      return None?
             hit = self._hit_from_getattr(token, *hit)
         if tokens:
@@ -682,11 +685,11 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
                         <class 'Data::Dumper'>,
                         (<blob 'Data::Dumper'>, [])
         """
-        #self.log("find '%s' starting at %s:", first_token, scoperef)
+        # self.log("find '%s' starting at %s:", first_token, scoperef)
         while 1:
             elem = self._elem_from_scoperef(scoperef)
             if first_token in elem.names:
-                #TODO: skip __hidden__ names
+                # TODO: skip __hidden__ names
                 self.log("is '%s' accessible on %s? yes: %s",
                          first_token, scoperef, elem.names[first_token])
                 scoperef[1].append(first_token)
@@ -705,7 +708,6 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
                          first_token, scoperef, pkg)
                 return (pkg, (mod, [first_token]))
 
-
             self.log("is '%s' accessible on %s? no", first_token, scoperef)
             scoperef = self.parent_scoperef_from_scoperef(scoperef)
             if not scoperef:
@@ -718,13 +720,14 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
         """
         if elem.tag == "variable":
             elem_is_var_on_entry = True
-            elem, scoperef = self._hit_from_variable_type_inference(elem, scoperef)
+            elem, scoperef = self._hit_from_variable_type_inference(
+                elem, scoperef)
         else:
             elem_is_var_on_entry = False
 
         assert elem.tag == "scope"
         ilk = elem.get("ilk")
-        if ilk == "class": # i.e. a Perl package
+        if ilk == "class":  # i.e. a Perl package
             attr = elem.names.get(token)
             if attr is not None:
                 return attr, (scoperef[0], scoperef[1] + [token])
@@ -758,8 +761,8 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
         elif ilk == "blob":  # i.e. a Perl module
             raise CodeIntelError("didn't expect a getattr on a Perl "
                                  "module: %r on %r" % (token, elem))
-            #attr = elem.names.get(first_token)
-            #if attr is not None:
+            # attr = elem.names.get(first_token)
+            # if attr is not None:
             #    self.log("attr is %r in %r", attr, elem)
             #    return attr, scoperef
 
@@ -797,7 +800,7 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
                     continue
                 yield (classref_mod, classref_pkg)
                 for item in self._inherited_mods_and_pkgs_from_pkg(
-                                classref_pkg, _handled_pkg_names):
+                        classref_pkg, _handled_pkg_names):
                     yield item
 
     def _hit_from_elem_imports(self, token, elem):
@@ -826,7 +829,7 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
                 if mod is not None:
                     elem = pkg.names.get(token)
                     if elem is not None:
-                        #TODO: Should we exclude this if not in
+                        # TODO: Should we exclude this if not in
                         #      @EXPORT_OK?
                         self.debug("is '%s' from %r? yes: %s",
                                    token, imp_elem, elem)
@@ -861,7 +864,7 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
 
     def _hit_from_variable_type_inference(self, elem, scoperef):
         """Resolve the type inference for the given element."""
-        #TODO:PERF: Consider cheating here with the knowledge that the
+        # TODO:PERF: Consider cheating here with the knowledge that the
         #           current perlcile (the one as of Komodo 4.0.0) never
         #           emits anything except a package name for a type
         #           inference.
@@ -873,11 +876,9 @@ class PerlTreeEvaluator(PerlTreeEvaluatorBase):
 
     def _hit_from_type_inference(self, citdl, scoperef):
         """Resolve the 'citdl' type inference at 'scoperef'."""
-        #TODO:PERF: Consider cheating here with the knowledge that the
+        # TODO:PERF: Consider cheating here with the knowledge that the
         #           current perlcile (the one as of Komodo 4.0.0) never
         #           emits anything except a package name for a type
         #           inference.
         self.info("resolve '%s' type inference:", citdl)
         return self._hit_from_citdl(citdl, scoperef)
-
-

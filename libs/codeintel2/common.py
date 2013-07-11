@@ -1,26 +1,26 @@
 #!python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """Code Intelligence: common definitions"""
@@ -87,8 +87,8 @@ else:
     except ImportError:
         _xpcom_ = False
 
-#XXX Should only do this hack for non-Komodo local codeintel usage.
-#XXX We need to have a better mechanism for rationalizing and sharing
+# XXX Should only do this hack for non-Komodo local codeintel usage.
+# XXX We need to have a better mechanism for rationalizing and sharing
 #    common lexer style classes. For now we'll just HACKily grab from
 #    Komodo's styles.py. Some of this is duplicating logic in
 #    KoLanguageServiceBase.py.
@@ -105,51 +105,57 @@ finally:
 
 # Allow the CILEs to generate type guesses based on type names (e.g.
 # "event" is an Event in JS).
-ENABLE_HEURISTICS = True 
-
+ENABLE_HEURISTICS = True
 
 
 #---- warnings
-
 class CodeIntelDeprecationWarning(DeprecationWarning):
     pass
 # Here is how to disable these warnings in your code:
 #   import warnings
 #   from codeintel2.common import CodeIntelDeprecationWarning
 #   warnings.simplefilter("ignore", CodeIntelDeprecationWarning)
-warnings.simplefilter("ignore", CodeIntelDeprecationWarning) # turn off for now
-
+warnings.simplefilter(
+    "ignore", CodeIntelDeprecationWarning)  # turn off for now
 
 
 #---- exceptions
-
 class CodeIntelError(Exception):
     """Base Code Intelligence system error."""
     pass
-Error = CodeIntelError #XXX Remove uses of this in favour of CodeIntelError.
+Error = CodeIntelError  # XXX Remove uses of this in favour of CodeIntelError.
+
 
 class NotATriggerError(CodeIntelError):
     pass
+
+
 class EvalError(CodeIntelError):
     pass
+
+
 class EvalTimeout(EvalError):
     pass
 
+
 class VirtualMethodError(CodeIntelError):
-    #TODO: pull out the method and class name from the stack for errmsg
+    # TODO: pull out the method and class name from the stack for errmsg
     #      tell user what needs to be implemented
     pass
 
+
 class CitadelError(CodeIntelError):
     pass
+
 
 class NoBufferAccessorError(CodeIntelError):
     """The accessor has no buffer/content to access."""
     pass
 
+
 class CILEError(CitadelError):
     """CILE processing error."""
-    #XXX Should add some relevant data to the exception. Perhaps
+    # XXX Should add some relevant data to the exception. Perhaps
     #    the request should be passed in and this c'tor can extract
     #    data it wants to keep.  This could be used to facilitate
     #    submitting bug reports on our Language Engines.
@@ -160,36 +166,40 @@ class CIXError(CitadelError):
     """Code Intelligence XML error."""
     pass
 
+
 class CIDBError(CitadelError):
     """Code Intelligence Database error."""
-    #TODO: Transition to DatabaseError and ensure that the change in
+    # TODO: Transition to DatabaseError and ensure that the change in
     #      base class doesn't cause problems.
     pass
+
 
 class DatabaseError(CodeIntelError):
     pass
 
+
 class CorruptDatabase(DatabaseError):
     """Corruption in some part of the database was found."""
-    #XXX Should add attributes that indicate which part
+    # XXX Should add attributes that indicate which part
     #    was corrupt and/or one of a known set of possible corrupts.
     #    Then add a Database.recover() function that could attempt
     #    to recover with that argument.
     pass
+
 
 class NotFoundInDatabase(DatabaseError):
     """No data for the buffer was found in the database."""
     pass
 
 
-class CITDLError(CitadelError):  #XXX Just drop in favour of CitadelError?
+class CITDLError(CitadelError):  # XXX Just drop in favour of CitadelError?
     """CITDL syntax error."""
     pass
 
 
 class NoModuleEntry(CIDBError):
     """There is no entry for this module in the CIDB.
-    
+
     The "module_path" second constructor argument (possibly None) is required
     to allow completion handling (which will be trapping these errors) to use
     that path to kick off a scan for it. This shouldn't be a burden as the
@@ -197,8 +207,9 @@ class NoModuleEntry(CIDBError):
     """
     def __init__(self, module_name, module_path):
         CIDBError.__init__(self)
-        self.module_name = module_name # the module name
+        self.module_name = module_name  # the module name
         self.module_path = module_path
+
     def __str__(self):
         path_info = ""
         if self.module_path:
@@ -206,19 +217,19 @@ class NoModuleEntry(CIDBError):
         return "no module entry for '%s'%s in CIDB"\
                % (self.module_name, path_info)
 
-class NoCIDBModuleEntry(CIDBError): #XXX change name to NoModuleEntryForPath
+
+class NoCIDBModuleEntry(CIDBError):  # XXX change name to NoModuleEntryForPath
     """There is no module entry for the given path in the CIDB."""
     def __init__(self, path):
         CIDBError.__init__(self)
         self.path = path
+
     def __str__(self):
         return "no module entry for '%s' in CIDB"\
                % os.path.basename(self.path)
 
 
-
 #---- globals
-
 # Trigger forms.
 TRG_FORM_CPLN, TRG_FORM_CALLTIP, TRG_FORM_DEFN = range(3)
 
@@ -229,11 +240,11 @@ PRIORITY_CURRENT = 2        # UI requires info on this file soon
 PRIORITY_OPEN = 3           # UI will likely require info on this file soon
 PRIORITY_BACKGROUND = 4     # info may be needed sometime
 
-#TODO: these are unused, drop them
+# TODO: these are unused, drop them
 # CIDB base type constants
 BT_CLASSREF, BT_INTERFACEREF = range(2)
 
-#TODO: These are unused, drop them, the symbolType2Name below and its dead
+# TODO: These are unused, drop them, the symbolType2Name below and its dead
 #      usage in cb.py.
 # CIDB symbol type constants
 (ST_FUNCTION, ST_CLASS, ST_INTERFACE, ST_VARIABLE, ST_ARGUMENT) = range(5)
@@ -246,9 +257,7 @@ _symbolType2Name = {
 }
 
 
-
 #---- common codeintel base classes
-
 class Trigger(object):
     if _xpcom_:
         _com_interfaces_ = [components.interfaces.koICodeIntelTrigger]
@@ -265,23 +274,31 @@ class Trigger(object):
     #       Foo::Bar-><|>   # trigger token is '->', length = 2
     # This default to 1.
     length = None
+    # The number of characters after pos that should be replaced.  Most of the
+    # time this will be zero.  For example
+    #      foo.<|>prop      # extentLength is 4, for "prop"
+    # Note that this goes in the opposite direction of .length
+    extentLength = None
     retriggerOnCompletion = False
 
-    def __init__(self, lang, form, type, pos, implicit, length=1,
-                 **extra):
+    def __init__(
+        self, lang, form, type, pos, implicit, length=1, extentLength=0,
+            **extra):
         self.lang = lang
         self.form = form
         self.type = type
         self.pos = pos
         self.implicit = implicit
         self.length = length
-        self.extra = extra # Trigger-specific extra data, if any
+        self.extentLength = extentLength
+        self.extra = extra  # Trigger-specific extra data, if any
 
     @property
     def id(self):
         return (self.lang, self.form, self.type)
 
     __name = None
+
     @property
     def name(self):
         """A more user-friendly name for this trigger, e.g.
@@ -302,7 +319,7 @@ class Trigger(object):
     def is_same(self, trg):
         """Return True iff the given trigger is (effectively) the same
         as this one.
-        
+
         Dev Note: "Effective" is currently left a little fuzzy. Just
         comparing enough to fix Komodo Bug 55378.
         """
@@ -311,10 +328,20 @@ class Trigger(object):
         if (self.pos == trg.pos
             and self.type == trg.type
             and self.form == trg.form
-            and self.lang == trg.lang):
+                and self.lang == trg.lang):
             return True
         else:
             return False
+
+    def to_dict(self):
+        """Serialize this trigger as a dictionary
+        This is used for out-of-process codeintel
+        """
+        return dict(lang=self.lang, form=self.form, type=self.type,
+                    pos=self.pos, implicit=self.implicit, length=self.length,
+                    extentLength=self.extentLength,
+                    retriggerOnCompletion=self.retriggerOnCompletion,
+                    **self.extra)
 
 
 class Definition(object):
@@ -357,11 +384,11 @@ class Definition(object):
     def __repr__(self):
         if self.path is None:
             return "<Definition: %s '%s' at %s#%s lpath=%s>"\
-                    % (self.ilk, self.name, self.blobname, self.line, self.lpath)
+                % (self.ilk, self.name, self.blobname, self.line, self.lpath)
         else:
             return "<Definition: %s '%s' at %s#%s in %s lpath=%s>"\
-                    % (self.ilk, self.name, self.blobname, self.line,
-                       basename(self.path), self.lpath)
+                % (self.ilk, self.name, self.blobname, self.line,
+                   basename(self.path), self.lpath)
 
     def equals(self, other):
         """ Equality comparision for XPCOM """
@@ -370,8 +397,9 @@ class Definition(object):
                 other = UnwrapObject(other)
             except:
                 pass
-        for attr in ("lang", "path", "blobname", "lpath", "name", "line", "ilk",
-                     "citdl", "doc", "signature", "attributes", "returns"):
+        for attr in (
+            "lang", "path", "blobname", "lpath", "name", "line", "ilk",
+                "citdl", "doc", "signature", "attributes", "returns"):
             if getattr(self, attr) != getattr(other, attr):
                 return False
         return True
@@ -380,14 +408,27 @@ class Definition(object):
         """ toString implementation for XPCOM """
         return repr(self)
 
+    @classmethod
+    def unique_definitions(cls, defns):
+        """Takes a collection of defns and returns the unique list of defns."""
+        unique_defns = []
+        for defn in defns:
+            for unique_defn in unique_defns:
+                if unique_defn.path == defn.path and unique_defn == defn:
+                    # defn is already in the unique_defn list.
+                    break
+            else:
+                unique_defns.append(defn)
+        return unique_defns
+
 
 class CILEDriver(object):
     """Base class for all CILE drivers.
-    
+
     CILE stands for "CodeIntel Language Engine". A CILE is the thing that
     knows how to convert content of a specific language to CIX (the XML data
     loaded into the CIDB, then used for completion, code browsers, etc.)
-    
+
     A CILE *driver* is a class that implements this interface on top of a
     language's CILE. A CILE might be a Python module, a separate executable,
     whatever.
@@ -395,7 +436,7 @@ class CILEDriver(object):
     def __init__(self, mgr):
         self.mgr = mgr
 
-    #DEPRECATED
+    # DEPRECATED
     def scan(self, request):
         """Scan the given file and return data as a CIX document.
 
@@ -404,11 +445,11 @@ class CILEDriver(object):
         This method MUST be re-entrant. The scheduler typically runs a pool
         of scans simultaneously so individual drivers can be called into from
         multiple threads.
-        
+
         If the scan was successful, returns a CIX document (XML). Note: the
         return value should be unicode string, i.e. NOT an encoded byte
         string -- encoding to UTF-8 is done as necessary elsewhere.
-        
+
         Raises a CILEError if there was a problem scanning. I.e. a driver
         should be resistant to CILE hangs and crashes.
         """
@@ -465,11 +506,9 @@ class EvalController(object):
     or calltips. Typically for "interesting" interaction on would subclass
     this and pass an instance of that class to Buffer.async_eval_at_trg().
     """
-    if _xpcom_:
-        _com_interfaces_ = [components.interfaces.koICodeIntelEvalController]
 
     def __init__(self):
-        self.complete_event = threading.Event() # use a pool?
+        self.complete_event = threading.Event()  # use a pool?
         self._done = False
         self._aborted = False
         self.buf = None
@@ -502,6 +541,7 @@ class EvalController(object):
         self.buf = None
         self.trg = None
         self.complete_event.set()
+
     def is_done(self):
         return self._done
 
@@ -510,6 +550,7 @@ class EvalController(object):
         completion session.
         """
         self._aborted = True
+
     def is_aborted(self):
         return self._aborted
 
@@ -519,17 +560,26 @@ class EvalController(object):
         """
         self.complete_event.wait(timeout)
 
-    def debug(self, msg, *args): pass
-    def info(self, msg, *args): pass
-    def warn(self, msg, *args): pass
-    def error(self, msg, *args): pass
+    def debug(self, msg, *args):
+        pass
 
-    #XXX Perhaps this capturing should be in a sub-class used only for
+    def info(self, msg, *args):
+        pass
+
+    def warn(self, msg, *args):
+        pass
+
+    def error(self, msg, *args):
+        pass
+
+    # XXX Perhaps this capturing should be in a sub-class used only for
     #    testing. Normal IDE behaviour is to fwd the data in set_*().
     def set_cplns(self, cplns):
         self.cplns = cplns
+
     def set_calltips(self, calltips):
         self.calltips = calltips
+
     def set_defns(self, defns):
         self.defns = defns
 
@@ -544,10 +594,13 @@ class LogEvalController(EvalController):
 
     def debug(self, msg, *args):
         self.logger.debug(msg, *args)
+
     def info(self, msg, *args):
         self.logger.info(msg, *args)
+
     def warn(self, msg, *args):
         self.logger.warn(msg, *args)
+
     def error(self, msg, *args):
         self.logger.error(msg, *args)
 
@@ -556,7 +609,7 @@ class Evaluator(object):
     """To do asynchronous autocomplete/calltip evaluation you create an
     Evaluator instance (generally a specialized subclass of) and pass it
     to Manager.request_eval() and/or Manager.request_reeval().
-    
+
     At a minimum a subclass must implement the eval() method making sure
     that the rules described for Buffer.async_eval_at_trg() are followed
     (see buffer.py). Typically this just means:
@@ -572,7 +625,7 @@ class Evaluator(object):
       in an IDE to have one on the go)
     - calling the evaluator's eval() method in a subthread
     - calling ctlr.done(<reason>) if the eval terminates with an exception
-    
+
     One important base class is the CitadelEvaluator (see citadel.py) that
     knows how to do CITDL evaluation using the CIDB. Citadel languages
     (e.g. Perl, Python, ...) will generally use CitadelEvaluators for most
@@ -581,7 +634,7 @@ class Evaluator(object):
     def __init__(self, ctlr, buf, trg):
         assert isinstance(ctlr, EvalController)
         self.ctlr = ctlr
-        #assert isinstance(buf, Buffer) # commented out to avoid circular dep
+        # assert isinstance(buf, Buffer) # commented out to avoid circular dep
         self.buf = buf
         assert isinstance(trg, Trigger)
         self.trg = trg
@@ -598,24 +651,26 @@ class Evaluator(object):
 
 #---- helper methods
 
-#TODO: drop this (see note above)
+# TODO: drop this (see note above)
 def symbolType2Name(st):
     return _symbolType2Name[st]
 
-#TODO: drop this, see similar func in parseutil.py
+# TODO: drop this, see similar func in parseutil.py
+
+
 def xmlattrstr(attrs):
     """Construct an XML-safe attribute string from the given attributes
-    
+
         "attrs" is a dictionary of attributes
-    
+
     The returned attribute string includes a leading space, if necessary,
     so it is safe to use the string right after a tag name.
     """
-    #XXX Should this be using 
+    # XXX Should this be using
     from xml.sax.saxutils import quoteattr
     s = ''
     names = attrs.keys()
-    names.sort() # dump attrs sorted by key, not necessary but is more stable
+    names.sort()  # dump attrs sorted by key, not necessary but is more stable
     for name in names:
         s += ' %s=%s' % (name, quoteattr(str(attrs[name])))
     return s
@@ -625,27 +680,29 @@ def isUnsavedPath(path):
     """Return true if the given path is a special <Unsaved>\sub\path file."""
     tag = "<Unsaved>"
     length = len(tag)
-    if path.startswith(tag) and (len(path)==length or path[length] in "\\/"):
+    if path.startswith(tag) and (len(path) == length or path[length] in "\\/"):
         return True
     else:
         return False
 
-#TODO: move this utils.py
+# TODO: move this utils.py
 _uriMatch = re.compile("^\w+://")
+
+
 def canonicalizePath(path, normcase=True):
     r"""Return what CodeIntel considers a canonical version of the given path.
-    
+
         "path" is the path to canonicalize.
         "normcase" (optional, default True) is a boolean indicating if the
             case should be normalized.
-    
+
     "Special" paths are ones of the form "<Tag>\sub\path". Supported special
     path tags:
         <Unsaved>       Used when the given path isn't a real file: e.g.
                         unsaved document buffers.
 
     Raises a ValueError if it cannot be converted to a canonical path.
-    
+
     >>> canonicalizePath(r"C:\Python22\Lib\os.py")  # normcase on Windows
     'c:\\python22\\lib\\os.py'
     >>> canonicalizePath(r"<Unsaved>\Python-1.py")
@@ -671,7 +728,7 @@ def canonicalizePath(path, normcase=True):
             tag = first
             subpath = rest
             if tag == "<Unsaved>":
-                pass # leave tag unchanged
+                pass  # leave tag unchanged
             else:
                 raise ValueError("unknown special path tag: %s" % tag)
             cpath = tag
@@ -681,8 +738,8 @@ def canonicalizePath(path, normcase=True):
                     subpath = os.path.normcase(subpath)
                 cpath = os.path.join(cpath, subpath)
             return cpath
-    if _uriMatch.match(path): # ftp://, koremote://
-        #XXX Should we normcase() a UR[LI]
+    if _uriMatch.match(path):  # ftp://, koremote://
+        # XXX Should we normcase() a UR[LI]
         return path
     else:
         cpath = os.path.normpath(os.path.abspath(path))
@@ -690,7 +747,9 @@ def canonicalizePath(path, normcase=True):
             cpath = os.path.normcase(cpath)
         return cpath
 
-#TODO: move this utils.py
+# TODO: move this utils.py
+
+
 def parseAttributes(attrStr=None):
     """Parse the given attributes string (from CIX) into an attribute dict."""
     attrs = {}
@@ -704,11 +763,10 @@ def parseAttributes(attrStr=None):
     return attrs
 
 
-
 #---- self-test code
-
 if __name__ == '__main__':
     def _test():
-        import doctest, common
+        import doctest
+        import common
         return doctest.testmod(common)
     _test()

@@ -19,19 +19,6 @@ doxygen_keywords = \
     "var verbatim verbinclude version warning weakgroup $ @ \ & < > # { }"
 
 
-java_keywords = \
-    "abstract assert boolean break byte case catch char class "\
-    "const continue default do double else extends final finally float for future "\
-    "generic goto if implements import inner instanceof int interface long "\
-    "native new null outer package private protected public rest "\
-    "return short static super switch synchronized this throw throws "\
-    "transient try var void volatile while"
-
-javadoc_keywords = \
-    "author code docRoot deprecated exception inheritDoc link linkplain "\
-    "literal param return see serial serialData serialField since throws "\
-    "value version"
-
 perl_keywords = \
     "__FILE__ __LINE__ __PACKAGE__ __DATA__ __END__ AUTOLOAD "\
     "BEGIN CHECK CORE DESTROY END INIT CHECK UNITCHECK abs accept "\
@@ -126,29 +113,6 @@ sql_keywords = \
     "YEAR "\
     "ZONE"
 
-verilog_keywords =\
-                 "always end endcase begin endfunction module "\
-                 "case endmodule casex function or default if "\
-                 "else initial and table rcmos task "\
-                 "ifnone casez join release assign "\
-                 "cmos large repeat deassign macromodule rnmos "\
-                 "medium rpmos disable nand rtran edge nmos "\
-                 "rtranif0 vectored endprimitive nor rtranif1 wait endspecify not scalared wand "\
-                 "endtable endtask specify event pmos "\
-                 "while for primitive wor force pull0 strong1 "\
-                 "xnor forever xor fork "
-
-verilog_keywords2 =\
-                 "inout posedge input reg "\
-                 "tri case negedge tri0 tri1 output "\
-                 "wire  parameter highz0 pullup buf highz1 "\
-                 "bufif0  real time bufif1 integer realtime tran tranif0 "\
-                 "tranif1  triand defparam "\
-                 "trior trireg "\
-                 "notif0 small weak0 notif1  weak1  "\
-                 "specparam  strong0 pull0 strong1 "\
-                 "pull1 supply0 pulldown supply "
-
 vxml_elements =\
     "assign audio block break catch choice clear disconnect else elseif "\
     "emphasis enumerate error exit field filled form goto grammar help "\
@@ -156,7 +120,7 @@ vxml_elements =\
     "param phoneme prompt property prosody record reprompt return s say-as "\
     "script sentence subdialog submit throw transfer value var voice vxml"
 
-vxml_attributes=\
+vxml_attributes =\
     "accept age alphabet anchor application base beep bridge category charset "\
     "classid cond connecttimeout content contour count dest destexpr dtmf dtmfterm "\
     "duration enctype event eventexpr expr expritem fetchtimeout finalsilence "\
@@ -167,7 +131,7 @@ vxml_attributes=\
 
 vxml_keywords = vxml_elements + " " + vxml_attributes + " " + "public !doctype"
 
-html4_elements=\
+html4_elements =\
     "a abbr acronym address applet area b base basefont " \
     "bdo big blockquote body br button caption center " \
     "cite code col colgroup dd del dfn dir div dl dt em " \
@@ -179,7 +143,7 @@ html4_elements=\
     "table tbody td textarea tfoot th thead title tr tt u ul " \
     "var xml xmlns"
 
-html5_elements=\
+html5_elements =\
     "article aside audio canvas command datalist details dialog " \
     "embed figcaption figure footer header hgroup keygen mark menu " \
     "meter nav output progress rp rt ruby section source summary " \
@@ -188,7 +152,7 @@ html5_elements=\
 # Note: There hypertext_elements are not sorted!
 hypertext_elements = html4_elements + " " + html5_elements
 
-hypertext_attributes=\
+hypertext_attributes =\
     "abbr accept-charset accept accesskey action align alink " \
     "alt archive axis background bgcolor border " \
     "cellpadding cellspacing char charoff charset checked cite " \
@@ -212,7 +176,8 @@ hypertext_attributes=\
     "text password checkbox radio submit reset " \
     "file hidden image"
 
-hypertext_keywords = hypertext_elements + " " + hypertext_attributes + " " + "public !doctype"
+hypertext_keywords = hypertext_elements + " " + \
+    hypertext_attributes + " " + "public !doctype"
 
 php_keywords =\
     "and argv as argc break case cfunction class continue declare default do "\
@@ -251,8 +216,9 @@ xslt_attributes = \
 
 
 xslt_keywords = xslt_elements + " " + xslt_attributes + " " + ' '.join(
-        ['xsl:' + word for word in (xslt_elements + " " + xslt_attributes).split(' ')]
-    )  
+    ['xsl:' + word for word in (
+     xslt_elements + " " + xslt_attributes).split(' ')]
+)
 
 js_keywords = (
     "abstract boolean break byte case catch "
@@ -266,7 +232,8 @@ js_keywords = (
     "throws transient true try typeof var void "
     "while with")
 
-# http://msdn.microsoft.com/library/default.asp?url=/library/en-us/vblr7/html/vaorivblangkeywordsall.asp
+# http://msdn.microsoft.com/library/default.asp?url=/library/en-
+# us/vblr7/html/vaorivblangkeywordsall.asp
 vb_keywords = (
     "addhandler addressof alias and andalso  ansi as assembly "
     "auto boolean byref byte byval call case catch "
@@ -283,7 +250,7 @@ vb_keywords = (
     "paramarray preserve private property protected public raiseevent "
     "readonly redim rem removehandler resume "
     "return select set shadows step stop string structure "
-    "sub synclock then throw to true try typeof " 
+    "sub synclock then throw to true try typeof "
     "unicode until variant when while with withevents writeonly xor")
 
 css_keywords = \
@@ -389,7 +356,7 @@ postscript_level2_keywords = \
     "startjob uappend ucache ucachestatus ueofill ufill undef undefinefont " \
     "undefineresource undefineuserobject upath ustroke ustrokepath vmreclaim " \
     "writeobject xshow xyshow yshow"
-    
+
 postscript_level3_keywords = \
     "cliprestore clipsave composefont currentsmoothness findcolorrendering " \
     "setsmoothness shfill"

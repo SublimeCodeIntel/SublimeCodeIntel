@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """Completion evaluation code for JavaScript"""
@@ -49,13 +49,12 @@ if _xpcom_:
     from xpcom import components
 
 
-
 class CandidatesForTreeEvaluator(TreeEvaluator):
     # Note: the "alt" changes added in change 281350 make some of the
     # functionality on this class *not* appropriate for the shared
     # TreeEvaluator. I.e. _elem_from_scoperef et al should be moved
     # *out* of CandidatesForTreeEvaluator.
-    
+
     # This is a dict when set, multiple elements that have the same lpath will
     # be set in here, ensuring we get the correct one from an lpath lookup.
     # Fixes the following bug:
@@ -89,8 +88,10 @@ class CandidatesForTreeEvaluator(TreeEvaluator):
                 yield '()'
             else:
                 yield tok
+
     def _join_citdl_expr(self, tokens):
         return '.'.join(tokens).replace('.()', '()')
+
 
 class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
     def eval_cplns(self):
@@ -108,9 +109,9 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             if not cplns:
                 raise CodeIntelError("No completions found")
         # For logging messages every call
-        #print indent('\n'.join("%s: %s" % (lvl, args and m % (args) or m)
+        # print indent('\n'.join("%s: %s" % (lvl, args and m % (args) or m)
         #                for lvl,m, args in self.ctlr.log))
-        #print indent('\n'.join(["Hit: %r" % (cpln, ) for cpln in cplns]))
+        # print indent('\n'.join(["Hit: %r" % (cpln, ) for cpln in cplns]))
         return cplns
 
     def eval_calltips(self):
@@ -131,7 +132,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         hits = self._hits_from_citdl(self.expr, start_scoperef, defn_only=True)
         if not hits:
             raise CodeIntelError("No definitions found")
-        return [ self._defn_from_hit(x) for x in hits ]
+        return [self._defn_from_hit(x) for x in hits]
 
     def parent_scoperef_from_scoperef(self, scoperef,
                                       started_in_builtin_window_scope=False):
@@ -169,6 +170,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         return "Window"
 
     _langintel = None
+
     @property
     def langintel(self):
         if self._langintel is None:
@@ -176,6 +178,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         return self._langintel
 
     _libs = None
+
     @property
     def libs(self):
         if self._libs is None:
@@ -188,6 +191,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         return self.libs[-1]
 
     _built_in_blob = None
+
     @property
     def built_in_blob(self):
         if self._built_in_blob is None:
@@ -226,7 +230,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                     self.log("push scope to class ctor %s", scoperef)
 
         started_in_builtin_window_scope = (scoperef[0] is self.built_in_blob
-            and scoperef[1] and scoperef[1][0] == self._global_var)
+                                           and scoperef[1] and scoperef[1][0] == self._global_var)
         while 1:
             try:
                 elem = self._elem_from_scoperef(scoperef)
@@ -248,7 +252,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             except KeyError:
                 self.log("is '%s' accessible on %s? no", token, scoperef)
                 scoperef = self.parent_scoperef_from_scoperef(scoperef,
-                                    started_in_builtin_window_scope)
+                                                              started_in_builtin_window_scope)
                 if not scoperef:
                     return None, None
 
@@ -284,26 +288,26 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                         continue
                 if "__local__" in attributes:
                     # XXX: Move start_scoperef to be a part of the class
-                    #start_scoperef = self.get_start_scoperef()
-                    #scope_elem = start_scoperef[0]
-                    #for lname in start_scoperef[1]:
+                    # start_scoperef = self.get_start_scoperef()
+                    # scope_elem = start_scoperef[0]
+                    # for lname in start_scoperef[1]:
                     #    if elem == scope_elem:
                     #        members.add( ("variable", child.get("name")) )
                     #        break
                     #    scope_elem = scope_elem.names[lname]
-                    #else: # Don't show this variable
+                    # else: # Don't show this variable
                     continue
 
                 if child.tag == "scope":
                     if skip_js_ctor and child.get("ilk") == "function" \
                        and "__ctor__" in attributes:
                         continue
-                    members.add( (child.get("ilk"), child.get("name")) )
+                    members.add((child.get("ilk"), child.get("name")))
                 elif child.tag == "variable":
                     if len(child):
-                        members.add( ("namespace", child.get("name")) )
+                        members.add(("namespace", child.get("name")))
                     else:
-                        members.add( ("variable", child.get("name")) )
+                        members.add(("variable", child.get("name")))
                 else:
                     raise NotImplementedError("unknown hit child tag '%s': %r"
                                               % (child.tag, child))
@@ -323,7 +327,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         ctlines = []
         if not signature:
             name = elem.get("name")
-            #XXX Note difference for Tcl in _getSymbolCallTips.
+            # XXX Note difference for Tcl in _getSymbolCallTips.
             ctlines = [name + "(...)"]
         else:
             ctlines = signature.splitlines(0)
@@ -360,7 +364,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         calltips = []
 
         for elem, scoperef in hits:
-            #self.log("calltip for hit: %r", hit)
+            # self.log("calltip for hit: %r", hit)
             if elem.tag == "variable":
                 # Ignore variable hits.
                 self.debug("_calltips_from_hits:: ignoring variable: %r", elem)
@@ -386,86 +390,90 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             ## TODO: Bad with empty lpath: "(from  in prototype)"
             ## TODO: Problematic for test suite with "rand??" module names.
             ## TODO: Don't add for a local hit.
-            #blobname = scoperef[0].get("name")
-            #if blobname == "*":
+            # blobname = scoperef[0].get("name")
+            # if blobname == "*":
             #    blobname = "stdlib"
-            #scopename = '.'.join(scoperef[1])
-            #calltips[-1] += "\n(from %s in %s)" % (scopename, blobname)
+            # scopename = '.'.join(scoperef[1])
+            # calltips[-1] += "\n(from %s in %s)" % (scopename, blobname)
         return calltips
 
     def _hits_from_citdl(self, expr, scoperef, defn_only=False):
-        self._check_infinite_recursion(expr)
+        with self._check_infinite_recursion(expr):
 
-        if "[" in expr:
-            # TODO: We cannot resolve array type inferences yet.
-            raise CodeIntelError("no type-inference yet for arrays: %r" % expr)
+            if "[" in expr:
+                # TODO: We cannot resolve array type inferences yet.
+                raise CodeIntelError(
+                    "no type-inference yet for arrays: %r" % expr)
 
-        tokens = list(self._tokenize_citdl_expr(expr))
+            tokens = list(self._tokenize_citdl_expr(expr))
 
-        #self.log("expr tokens: %r", tokens)
+            # self.log("expr tokens: %r", tokens)
 
-        # First part... we try to match as much as possible straight up
-        hits, nconsumed = self._hits_from_first_part(tokens, scoperef)
-        if not hits:
-            raise CodeIntelError("could not resolve first part of '%s'" % expr)
-        self.debug("_hits_from_citdl: first part: %r -> %r",
-                   tokens[:nconsumed], hits)
+            # First part... we try to match as much as possible straight up
+            hits, nconsumed = self._hits_from_first_part(tokens, scoperef)
+            if not hits:
+                raise CodeIntelError(
+                    "could not resolve first part of '%s'" % expr)
+            self.debug("_hits_from_citdl: first part: %r -> %r",
+                       tokens[:nconsumed], hits)
 
-        # ...the remainder.
-        remaining_tokens = tokens[nconsumed:]
-        for token in tokens[nconsumed:]:
-            new_hits = []
-            for elem, scoperef in hits:
-                self.debug("_hits_from_citdl: resolve %r on %r in %r",
-                           token, elem, scoperef)
-                if token == "()":
-                    try:
-                        new_hits += self._hits_from_call(elem, scoperef)
-                    except CodeIntelError, ex:
-                        self.warn("could resolve call on %r: %s", elem, ex)
-                else:
-                    try:
-                        new_hit = self._hit_from_getattr(
-                                    elem, scoperef, token)
-                    except CodeIntelError, ex:
-                        self.warn(str(ex))
+            # ...the remainder.
+            remaining_tokens = tokens[nconsumed:]
+            for token in tokens[nconsumed:]:
+                new_hits = []
+                for elem, scoperef in hits:
+                    self.debug("_hits_from_citdl: resolve %r on %r in %r",
+                               token, elem, scoperef)
+                    if token == "()":
+                        try:
+                            new_hits += self._hits_from_call(elem, scoperef)
+                        except CodeIntelError, ex:
+                            self.warn("could resolve call on %r: %s", elem, ex)
                     else:
-                        new_hits.append(new_hit)
-            hits = new_hits 
+                        try:
+                            new_hit = self._hit_from_getattr(
+                                elem, scoperef, token)
+                        except CodeIntelError, ex:
+                            self.warn(str(ex))
+                        else:
+                            new_hits.append(new_hit)
+                hits = new_hits
 
-        # Resolve any variable type inferences.
-        #XXX Don't we have to *recursively* resolve hits?
-        #    If that is done, then need to watch out for infinite loop
-        #    because _hits_from_variable_type_inference() for a variable
-        #    with children just returns itself. I.e. you *can't* resolve
-        #    the <variable> away.
-        resolved_hits = []
-        if self.buf:
-            curr_blob = self.buf.blob_from_lang.get(self.lang, {})
-        else:
-            curr_blob = None
-
-        for elem, scoperef in hits:
-            if scoperef[0] != curr_blob:
-                if "__file_local__" in elem.get("attributes", "").split():
-                    self.log("skipping __file_local__ %r in %r", elem, scoperef)
-                    continue
-            if elem.tag == "variable" and not defn_only:
-                try:
-                    if (not elem.get("citdl")) and elem.get("ilk") == "argument":
-                        # this is an argument, try to infer things from the caller
-                        subhits = self._hits_from_argument(elem, scoperef)
-                    else:
-                        subhits = self._hits_from_variable_type_inference(
-                                    elem, scoperef)
-                except CodeIntelError, ex:
-                    self.warn("could not resolve %r: %s", elem, ex)
-                else:
-                    resolved_hits += subhits
+            # Resolve any variable type inferences.
+            # XXX Don't we have to *recursively* resolve hits?
+            #    If that is done, then need to watch out for infinite loop
+            #    because _hits_from_variable_type_inference() for a variable
+            #    with children just returns itself. I.e. you *can't* resolve
+            #    the <variable> away.
+            resolved_hits = []
+            if self.buf:
+                curr_blob = self.buf.blob_from_lang.get(self.lang, {})
             else:
-                resolved_hits.append( (elem, scoperef) )
+                curr_blob = None
 
-        return resolved_hits
+            for elem, scoperef in hits:
+                if scoperef[0] != curr_blob:
+                    if "__file_local__" in elem.get("attributes", "").split():
+                        self.log(
+                            "skipping __file_local__ %r in %r", elem, scoperef)
+                        continue
+                if elem.tag == "variable" and not defn_only:
+                    try:
+                        if (not elem.get("citdl")) and elem.get("ilk") == "argument":
+                            # this is an argument, try to infer things from the
+                            # caller
+                            subhits = self._hits_from_argument(elem, scoperef)
+                        else:
+                            subhits = self._hits_from_variable_type_inference(
+                                elem, scoperef)
+                    except CodeIntelError, ex:
+                        self.warn("could not resolve %r: %s", elem, ex)
+                    else:
+                        resolved_hits += subhits
+                else:
+                    resolved_hits.append((elem, scoperef))
+
+            return resolved_hits
 
     def _hits_from_argument(self, elem, scoperef):
         """
@@ -475,11 +483,14 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         @returns list of hits
         """
         assert elem.get("ilk") == "argument", \
-           "_hits_from_argument expects an argument, got a %r" % elem.get("ilk")
+            "_hits_from_argument expects an argument, got a %r" % elem.get(
+                "ilk")
         hits = []
-        scope = self._elem_from_scoperef(scoperef) # the function the argument is in
+        scope = self._elem_from_scoperef(
+            scoperef)  # the function the argument is in
 
-        args = [arg for arg in scope.findall("variable") if arg.get("ilk") == "argument"]
+        args = [arg for arg in scope.findall(
+            "variable") if arg.get("ilk") == "argument"]
         for pos in range(len(args)):
             if args[pos].get("name") == elem.get("name"):
                 break
@@ -489,16 +500,17 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
 
         for caller in scope.getiterator("caller"):
             citdl = caller.get("citdl")
-            caller_pos = int(caller.get("pos") or 0) # 1-indexed
+            caller_pos = int(caller.get("pos") or 0)  # 1-indexed
             if citdl is None or caller_pos < 1:
                 # invalid caller
                 continue
             for caller_hit in self._hits_from_citdl(citdl, scoperef):
-                caller_func = caller_hit[0] # the calling function
+                caller_func = caller_hit[0]  # the calling function
                 if caller_func.get("ilk") != "function":
                     # nevermind, not a function
                     continue
-                caller_args = [arg for arg in caller_func.getiterator("variable") if arg.get("ilk") == "argument"]
+                caller_args = [arg for arg in caller_func.getiterator(
+                    "variable") if arg.get("ilk") == "argument"]
                 if caller_pos > len(caller_args):
                     # no such argument
                     continue
@@ -507,11 +519,13 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                 if not citdl:
                     continue
                 for citdl_hit in self._hits_from_citdl(citdl, caller_hit[1]):
-                    # got the function being called, now look up the argument by pos
+                    # got the function being called, now look up the argument
+                    # by pos
                     func = citdl_hit[0]
                     if func.get("ilk") != "function":
                         continue
-                    args = [arg for arg in func.getiterator("variable") if arg.get("ilk") == "argument"]
+                    args = [arg for arg in func.getiterator(
+                        "variable") if arg.get("ilk") == "argument"]
                     if pos >= len(args):
                         continue
                     citdl = args[pos].get("citdl")
@@ -547,7 +561,8 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             requirename = self.trg.extra.get("_params")
             if requirename is not None:
                 import codeintel2.lang_javascript
-                requirename = codeintel2.lang_javascript.Utils.unquoteJsString(requirename)
+                requirename = codeintel2.lang_javascript.Utils.unquoteJsString(
+                    requirename)
                 self.log("_hits_from_call: resolving CommonJS require(%r)",
                          requirename)
                 hits = self._hits_from_commonjs_require(requirename, scoperef)
@@ -604,7 +619,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                     self.log("attr is %r on %r", attr, hit_elem)
                     if hit_scoperef:
                         class_scoperef = (hit_scoperef[0],
-                                      hit_scoperef[1]+[hit_elem.get("name")])
+                                          hit_scoperef[1]+[hit_elem.get("name")])
                         # If this is a variable defined in a class, move the
                         # scope to become the position in the class where the
                         # variable was defined (usually the ctor class function)
@@ -615,12 +630,14 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                            lineno > int(hit_elem.get("line", "-1")) and \
                            lineno <= int(hit_elem.get("lineend", "-1")):
                             # get the scope of the variable
-                            blob, lpath = self.buf.scoperef_from_blob_and_line(hit_elem,
-                                                                      lineno)
+                            blob, lpath = self.buf.scoperef_from_blob_and_line(
+                                hit_elem,
+                                lineno)
                             if lpath:
                                 class_scoperef = (class_scoperef[0],
                                                   class_scoperef[1]+lpath)
-                                self.log("Updating scoperef to: %r", class_scoperef)
+                                self.log(
+                                    "Updating scoperef to: %r", class_scoperef)
                     else:
                         class_scoperef = (None, [hit_elem.get("name")])
                     return (attr, class_scoperef)
@@ -636,7 +653,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                                 self.log("is '%s' from %s base class? yes",
                                          token, base_elem)
                                 new_scoperef = (base_scoperef[0],
-                                                base_scoperef[1]+
+                                                base_scoperef[1] +
                                                 [base_elem.get("name")])
                                 return (base_elem.names[token], new_scoperef)
                             self.log("is '%s' from %s base class? no", token,
@@ -658,8 +675,9 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             # Node.js / CommonJS hack: try to resolve things via require()
             requirename = elem.get('required_library_name')
             if requirename:
-                self.log("_hits_from_variable_type_inference: resolving require(%r)",
-                         requirename)
+                self.log(
+                    "_hits_from_variable_type_inference: resolving require(%r)",
+                    requirename)
                 hits += self._hits_from_commonjs_require(requirename, scoperef)
 
         if len(elem) != 0:
@@ -679,11 +697,12 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             # different match that has the same name, so we go looking for it.
             # Fix for bug: http://bugs.activestate.com/show_bug.cgi?id=71666
             self.log("_hits_from_variable_type_inference:: recursive citdl "
-                      " expression found, trying alternatives.")
+                     " expression found, trying alternatives.")
             try:
                 parent_elem = self._elem_from_scoperef(scoperef)
             except KeyError, ex:
-                raise CodeIntelError("could not resolve recursive citdl expression %r" % citdl)
+                raise CodeIntelError(
+                    "could not resolve recursive citdl expression %r" % citdl)
             else:
                 alt_hits = []
                 # Look for alternative non-variable matches.
@@ -696,16 +715,19 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                             self._alt_elem_from_scoperef = {}
                         alt_sref_name = ".".join(scoperef[1] + [citdl])
                         self._alt_elem_from_scoperef[alt_sref_name] = child
-                        self.log("Alternative hit found: %r, scoperef: %r", child, scoperef, )
+                        self.log(
+                            "Alternative hit found: %r, scoperef: %r", child, scoperef, )
                 if alt_hits:
                     return alt_hits
                 # Try from the parent scoperef then.
                 scoperef = self.parent_scoperef_from_scoperef(scoperef)
                 if scoperef is None:
                     # When we run out of scope, raise an error
-                    raise CodeIntelError("could not resolve recursive citdl expression %r" % citdl)
+                    raise CodeIntelError(
+                        "could not resolve recursive citdl expression %r" % citdl)
                 # Continue looking using _hits_from_citdl with the parent.
-                self.log("Continue search for %r from the parent scope.", citdl)
+                self.log(
+                    "Continue search for %r from the parent scope.", citdl)
 
         try:
             hits += self._hits_from_citdl(citdl, scoperef)
@@ -723,7 +745,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
 
     def _hits_from_first_part(self, tokens, scoperef):
         """Resolve the first part of the expression.
-        
+
         If the first token is found at the global or built-in level (or
         not found at all locally) then it may be a shared namespace with
         other files in the execution set. Get that down to a list of
@@ -746,7 +768,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             or not scoperef[1]      # first token was found at global level
             # first token was found on built-in Window class (the top scope)
             or (scoperef[1] == ['Window'] and scoperef[0].get("name") == "*")
-           ):
+            ):
             # Search symbol table in execution set.
             #
             # Example: 'myPet.name.toLowerCase()' and 'myPet' is found
@@ -762,18 +784,20 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
 
             hits = []
             for nconsumed in range(first_call_idx, 0, -1):
-                lpath = tuple(tokens[:nconsumed]) # for hits_from_lpath()
+                lpath = tuple(tokens[:nconsumed])  # for hits_from_lpath()
                 if elem is not None and len(lpath) > 1:
                     # Try at the current elem we found in the file
                     try:
-                        self.log("Checking for deeper local match %r from scoperef %r", lpath[1:], scoperef)
+                        self.log("Checking for deeper local match %r from scoperef %r", lpath[
+                                 1:], scoperef)
                         check_elem = elem
                         for p in lpath[1:]:   # we matched first token already
                             check_elem = check_elem.names[p]
-                        check_scoperef = (scoperef[0], scoperef[1] + list(lpath[:-1]))
+                        check_scoperef = (scoperef[
+                                          0], scoperef[1] + list(lpath[:-1]))
                         hits.insert(0, (check_elem,
                                         check_scoperef))
-                        self.log("_hit_from_first_part: found deeper local elem: "\
+                        self.log("_hit_from_first_part: found deeper local elem: "
                                  "%s %r at %r",
                                 check_elem.get("ilk") or check_elem.tag,
                                 check_elem.get("name"),
@@ -805,7 +829,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                         except KeyError:
                             break
                     else:
-                        if new_elem not in (e for e,sr in hits):
+                        if new_elem not in (e for e, sr in hits):
                             new_scoperef = (scoperef[0], tokens[:nconsumed-1])
                             hits.insert(0, (new_elem, new_scoperef))
         else:
@@ -836,9 +860,11 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             for blob in blobs or []:
                 exports = blob.names.get("exports")
                 if exports is not None and exports.tag == "variable":
-                    hits += self._hits_from_variable_type_inference(exports, [blob, ["exports"]])
+                    hits += self._hits_from_variable_type_inference(
+                        exports, [blob, ["exports"]])
                 else:
-                    self.log("Exported exports to be a variable, got %r instead", exports)
+                    self.log(
+                        "Exported exports to be a variable, got %r instead", exports)
         return hits
 
     ## n-char trigger completions ##
@@ -847,7 +873,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         """Return all available element names beginning with expr"""
         self.log("_completion_names_from_scope:: %r, scoperef: %r",
                  expr, scoperef)
-        #global_blob = self._elem_from_scoperef(self._get_global_scoperef(scoperef))
+        # global_blob = self._elem_from_scoperef(self._get_global_scoperef(scoperef))
         # Get all of the imports
 
         # Keep a dictionary of completions.
@@ -872,7 +898,7 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             if elem is None:
                 continue
             for name in elem.names:
-                #self.log("_completion_names_from_scope:: checking name: %r",
+                # self.log("_completion_names_from_scope:: checking name: %r",
                 #         name)
                 if name and name.startswith(expr):
                     if name not in all_completions:
@@ -880,10 +906,11 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                         if loopcount and "__local__" in hit_elem.get("attributes", "").split():
                             # Skip things that should only be local to the
                             # original scope.
-                            #self.log("_completion_names_from_scope:: skipping local %r",
+                            # self.log("_completion_names_from_scope:: skipping local %r",
                             #         name)
                             continue
-                        all_completions[name] = hit_elem.get("ilk") or hit_elem.tag
+                        all_completions[name] = hit_elem.get(
+                            "ilk") or hit_elem.tag
             # Continue walking up the scope chain...
             scoperef = self.parent_scoperef_from_scoperef(scoperef)
 
@@ -918,40 +945,39 @@ from ciElementTree import Element, SubElement, dump
 if _xpcom_:
     from xpcom import xpt
     _xpcom_ = True
-    import xpcom.xpt
     from gencix_utils import *
-    
+
     # Dictionary of known xpcom types and what they map to in JavaScript
     javascript_type_from_xpt_tag = {
-        xpt.T_I8                : "Number",
-        xpt.T_I16               : "Number",
-        xpt.T_I32               : "Number",
-        xpt.T_I64               : "Number",
-        xpt.T_U8                : "Number",
-        xpt.T_U16               : "Number",
-        xpt.T_U32               : "Number",
-        xpt.T_U64               : "Number",
-        xpt.T_FLOAT             : "Number",
-        xpt.T_DOUBLE            : "Number",
-        xpt.T_BOOL              : "Boolean",
-        xpt.T_CHAR              : "String",
-        xpt.T_WCHAR             : "String",
-        xpt.T_VOID              : "void",
-        xpt.T_IID               : None,
-        xpt.T_DOMSTRING         : "DOMString",
-        xpt.T_CHAR_STR          : "String",
-        xpt.T_WCHAR_STR         : "String",
-        xpt.T_INTERFACE         : None,
-        xpt.T_INTERFACE_IS      : None,
-        xpt.T_ARRAY             : "Array",
-        xpt.T_PSTRING_SIZE_IS   : None,
-        xpt.T_PWSTRING_SIZE_IS  : None,
+        xpt.T_I8: "Number",
+        xpt.T_I16: "Number",
+        xpt.T_I32: "Number",
+        xpt.T_I64: "Number",
+        xpt.T_U8: "Number",
+        xpt.T_U16: "Number",
+        xpt.T_U32: "Number",
+        xpt.T_U64: "Number",
+        xpt.T_FLOAT: "Number",
+        xpt.T_DOUBLE: "Number",
+        xpt.T_BOOL: "Boolean",
+        xpt.T_CHAR: "String",
+        xpt.T_WCHAR: "String",
+        xpt.T_VOID: "void",
+        xpt.T_IID: None,
+        xpt.T_DOMSTRING: "DOMString",
+        xpt.T_CHAR_STR: "String",
+        xpt.T_WCHAR_STR: "String",
+        xpt.T_INTERFACE: None,
+        xpt.T_INTERFACE_IS: None,
+        xpt.T_ARRAY: "Array",
+        xpt.T_PSTRING_SIZE_IS: None,
+        xpt.T_PWSTRING_SIZE_IS: None,
         # These are missing from xpt, when these cross the xpconnect boundary
         # they are converted into unicode strings automatically. See:
         # http://developer.mozilla.org/en/docs/XPCOM_string_guide#IDL_String_types
-        23: "String", # T_UTF8STRING
-        24: "String", # T_CSTRING
-        25: "String", # T_ASTRING
+        23: "String",  # T_UTF8STRING
+        24: "String",  # T_CSTRING
+        25: "String",  # T_ASTRING
     }
 
     def process_xpcom_arguments(m):
@@ -966,7 +992,7 @@ if _xpcom_:
                 arg_type = "Array"
             else:
                 arg_type = javascript_type_from_xpt_tag.get(t.tag, "unknown")
-    
+
             if param.IsIn():
                 args.append("in %s" % (arg_type))
                 param_count += 1
@@ -988,12 +1014,12 @@ if _xpcom_:
             print "No interface with iid: %r" % (iid, )
         else:
             # Filter out non-xpcom methods
-            methods = [ m for m in interface.methods if not m.IsNotXPCOM() ]
-            getters = [ m for m in methods if m.IsGetter() ]
-            getters += [ m for m in methods if m.IsSetter() ]
-            methods = [ m for m in methods if not m.IsGetter() and
-                                              not m.IsSetter() ]
-        
+            methods = [m for m in interface.methods if not m.IsNotXPCOM()]
+            getters = [m for m in methods if m.IsGetter()]
+            getters += [m for m in methods if m.IsSetter()]
+            methods = [m for m in methods if not m.IsGetter() and
+                                              not m.IsSetter()]
+
             for m in getters:
                 args, returntype = process_xpcom_arguments(m)
                 variable_elem = elem.names.get(m.name)
@@ -1003,7 +1029,7 @@ if _xpcom_:
                                                citdl=returntype)
                 # Else, this must be a setter, which does not have a type.
             for m in methods:
-                #print m.name
+                # print m.name
                 func_elem = SubElement(elem, "scope", name=m.name,
                                        ilk="function")
                 args, returntype = process_xpcom_arguments(m)
@@ -1019,7 +1045,7 @@ if _xpcom_:
                                            citdl="Number",
                                            attributes="constant")
         return elem
-    
+
 
 # Globals used for holding the xpcom cix information, the base xpcom structure
 # is generated once per run, then interface details are added on demand.
@@ -1028,13 +1054,14 @@ _g_xpcom_components_elem = None
 # The map of iid to xpcom cix element.
 _g_xpcom_cix_for_iid = {}
 
+
 def _add_xpcom_blob(built_in_blob):
     global _g_xpcom_components_elem
     global _g_xpcom_interfaces_elem
     if _xpcom_:
         if _g_xpcom_components_elem is None:
             # create the blob to hold xpcom data
-            #print "Building xpcom cix wrapper for the first time"
+            # print "Building xpcom cix wrapper for the first time"
             _g_xpcom_components_elem = SubElement(built_in_blob, "variable",
                                          citdl="Object", name="Components")
             xpcComponents = iid_to_cix("nsIXPCComponents")
@@ -1042,24 +1069,24 @@ def _add_xpcom_blob(built_in_blob):
             elem_classes = None
             for elem in xpcComponents:
                 if elem.get("name") == "classes":
-                    #print "Found the classes elem: %r" % (elem, )
+                    # print "Found the classes elem: %r" % (elem, )
                     elem.attrib["citdl"] = "Object"
                     elem_classes = elem
                 elif elem.get("name") == "interfaces":
-                    #print "Found the interfaces elem: %r" % (elem, )
+                    # print "Found the interfaces elem: %r" % (elem, )
                     elem.attrib["citdl"] = "Object"
                     _g_xpcom_interfaces_elem = elem
                 _g_xpcom_components_elem.append(elem)
-    
+
             # Add Components.interfaces data
             for interface in components.interfaces.keys():
                 elem = SubElement(_g_xpcom_interfaces_elem, "scope",
                                   ilk="class", name=interface)
-    
+
             # Add Components.classes data
             for klass in components.classes.keys():
                 elem = SubElement(elem_classes, "variable", name=klass)
-    
+
             # Add some common aliases
             for alias_name in ("CI", "Ci", ):
                 SubElement(built_in_blob, "variable",
@@ -1074,6 +1101,7 @@ def _add_xpcom_blob(built_in_blob):
         # will already contain the Components elem.
         elif built_in_blob.names.get("Components") is None:
             built_in_blob.append(_g_xpcom_components_elem)
+
 
 def _xpcom_iid_to_cix(iid):
     """Return a cix element containg the xpcom interface for the given iid."""
@@ -1090,7 +1118,8 @@ def _xpcom_iid_to_cix(iid):
         # Remove the dummy place holder element if there is one, this is here
         # only to provide support for "Components.interfaces.<|>" completions.
         if iid in _g_xpcom_interfaces_elem.names:
-            _g_xpcom_interfaces_elem.remove(_g_xpcom_interfaces_elem.names[iid])
+            _g_xpcom_interfaces_elem.remove(
+                _g_xpcom_interfaces_elem.names[iid])
         _g_xpcom_interfaces_elem.append(elem)
         _g_xpcom_cix_for_iid[iid] = elem
     return elem

@@ -1,26 +1,26 @@
 #!python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """The API catalogs-zone of the codeintel database.
@@ -62,22 +62,18 @@ import Queue
 import ciElementTree as ET
 from codeintel2.common import *
 from codeintel2.buffer import Buffer
-from codeintel2.util import dedent, safe_lang_from_lang, banner, hotshotit, getMemoryUsage
+from codeintel2.util import dedent, safe_lang_from_lang, banner, hotshotit
 from codeintel2.tree import tree_from_cix_path
 from codeintel2.database.util import filter_blobnames_for_prefix
 from codeintel2.database.resource import AreaResource
 
 
-
 #---- globals
-
 log = logging.getLogger("codeintel.db")
-#log.setLevel(logging.DEBUG)
-
+# log.setLevel(logging.DEBUG)
 
 
 #---- Database zone and lib implementations
-
 class CatalogsZone(object):
     """Singleton zone managing the db/catalogs/... area.
 
@@ -88,7 +84,7 @@ class CatalogsZone(object):
     _blob_index = None
     _toplevelname_index = None
     _toplevelprefix_index = None
-    
+
     _have_updated_at_least_once = False
 
     def __init__(self, mgr, catalog_dirs=None):
@@ -105,7 +101,7 @@ class CatalogsZone(object):
 
         self.base_dir = join(self.db.base_dir, "db", "catalogs")
 
-        self._lib_cache = {} # (lang, selection_res_ids) -> CatalogLib
+        self._lib_cache = {}  # (lang, selection_res_ids) -> CatalogLib
 
         self._lock = threading.RLock()
         self._blob_and_atime_from_blobname_from_lang_cache = {}
@@ -135,6 +131,7 @@ class CatalogsZone(object):
         return selection_from_selector
 
     _res_ids_from_selector_cache = None
+
     def _res_ids_from_selections(self, selections):
         """Returns a tuple of the database resource ids for the given
         selections and a list of selections that didn't match any loaded
@@ -155,7 +152,7 @@ class CatalogsZone(object):
         res_ids = []
         missing_selections = []
         for selector, selection \
-            in self._selection_from_selector(selections).items():
+                in self._selection_from_selector(selections).items():
             try:
                 res_ids += self._res_ids_from_selector_cache[selector]
             except KeyError, ex:
@@ -239,7 +236,7 @@ class CatalogsZone(object):
         ensure we don't keep everything cached from the db in memory
         until process completion.
         """
-        #TOTEST: Does Python/Komodo actually release this memory or
+        # TOTEST: Does Python/Komodo actually release this memory or
         #        are we kidding ourselves?
         self._lock.acquire()
         try:
@@ -251,9 +248,9 @@ class CatalogsZone(object):
             log.info("catalog: culling memory")
             now = time.time()
             for lang, blob_and_atime_from_blobname \
-                in self._blob_and_atime_from_blobname_from_lang_cache.items():
+                    in self._blob_and_atime_from_blobname_from_lang_cache.items():
                 for blobname, (blob, atime) in blob_and_atime_from_blobname.items():
-                    if now - atime > 300.0: # >5 minutes since last access
+                    if now - atime > 300.0:  # >5 minutes since last access
                         del blob_and_atime_from_blobname[blobname]
         finally:
             self._lock.release()
@@ -264,19 +261,26 @@ class CatalogsZone(object):
         """
         log.debug("CatalogsZone: reporting memory")
 
+        import memutils
         from xpcom import components
         process = ""
 
+        total_mem_usage = 0
         for lang, blob_and_atime_from_blobname in self._blob_and_atime_from_blobname_from_lang_cache.items():
             for blobname, blob_and_atime in blob_and_atime_from_blobname.items():
                 blob, atime = blob_and_atime
+                blob_mem_usage = memutils.memusage(blob)
+                total_mem_usage += blob_mem_usage
                 reporter.callback(process,
-                                  "explicit/komodo/codeintel/%s/catalog/%s" % (lang, blobname),
+                                  "explicit/python/codeintel/%s/catalog/%s" % (
+                                      lang, blobname),
                                   components.interfaces.nsIMemoryReporter.KIND_HEAP,
                                   components.interfaces.nsIMemoryReporter.UNITS_BYTES,
-                                  getMemoryUsage(blob),
-                                  "The number of bytes of %s codeintel %s catalog blobs" % (lang, blobname),
+                                  blob_mem_usage,
+                                  "The number of bytes of %s codeintel %s catalog blobs." % (
+                                      lang, blobname),
                                   closure)
+        return total_mem_usage
 
     def avail_catalogs(self, selections=None):
         """Generate a list of available catalogs.
@@ -338,7 +342,7 @@ class CatalogsZone(object):
 
     def update(self, selections=None, progress_cb=None):
         """Update the catalog as necessary.
-        
+
             "selections" (optional) is a list of string of the same form
                 as to `.get_lib()' -- used here to filter the catalogs
                 that we consider for updating.
@@ -352,13 +356,15 @@ class CatalogsZone(object):
         self._lock.acquire()
         try:
             self._have_updated_at_least_once = True
-    
+
             # Figure out what updates need to be done...
             if progress_cb:
-                try:    progress_cb("Determining necessary catalog updates...", 5)
-                except: log.exception("error in progress_cb (ignoring)")
+                try:
+                    progress_cb("Determining necessary catalog updates...", 5)
+                except:
+                    log.exception("error in progress_cb (ignoring)")
             res_name_from_res_path = dict(  # this is our checklist
-                (p, v[2]) for p,v in self.res_index.items())
+                (p, v[2]) for p, v in self.res_index.items())
             todos = []
             log.info("updating %s: %d catalog dir(s)", self,
                      len(self.catalog_dirs))
@@ -374,34 +380,36 @@ class CatalogsZone(object):
                     todos.append(("add", res, catalog_info["name"]))
                 else:
                     mtime = os.stat(cix_path).st_mtime
-                    if last_updated != mtime: # epsilon? '>=' instead of '!='?
+                    if last_updated != mtime:  # epsilon? '>=' instead of '!='?
                         # update with newer version
                         todos.append(("update", res, catalog_info["name"]))
-                    #else:
+                    # else:
                     #    log.debug("not updating '%s' catalog: mtime is unchanged",
                     #              catalog_info["name"])
-                    del res_name_from_res_path[res.area_path] # tick it off
-    
+                    del res_name_from_res_path[res.area_path]  # tick it off
+
             for res_area_path, res_name in res_name_from_res_path.items():
                 # remove this obsolete CIX file
                 try:
-                    todos.append( ("remove", AreaResource(res_area_path), res_name) )
+                    todos.append(("remove", AreaResource(
+                        res_area_path), res_name))
                 except ValueError, ex:
                     # Skip resources in unknown areas. This is primarily to
                     # allow debugging/testing (when the set of registered
                     # path_areas may not include the set when running in
                     # Komodo.)
                     pass
-    
+
             # Filter todos on selections, if any.
             if selections is not None:
-                selection_from_selector = self._selection_from_selector(selections)
+                selection_from_selector = self._selection_from_selector(
+                    selections)
                 before = todos[:]
                 todos = [todo for todo in todos
-                    if todo[2].lower() in selection_from_selector
-                    or normpath(normcase(todo[1].path)) in selection_from_selector
-                ]
-    
+                         if todo[2].lower() in selection_from_selector
+                         or normpath(normcase(todo[1].path)) in selection_from_selector
+                         ]
+
             # ... and then do them.
             if not todos:
                 return
@@ -409,39 +417,53 @@ class CatalogsZone(object):
                 log.debug("%s `%s' catalog (%s)", action, name, res)
                 try:
                     if action == "add":
-                        desc = "Adding '%s' API catalog" % basename(res.subpath)
+                        desc = "Adding '%s' API catalog" % basename(
+                            res.subpath)
                         if progress_cb:
-                            try:    progress_cb(desc, (5 + 95/len(todos)*i))
-                            except: log.exception("error in progress_cb (ignoring)")
+                            try:
+                                progress_cb(desc, (5 + 95/len(todos)*i))
+                            except:
+                                log.exception(
+                                    "error in progress_cb (ignoring)")
                         else:
                             self.db.report_event(desc)
                         self._add_res(res)
                     elif action == "remove":
-                        desc = "Removing '%s' API catalog" % basename(res.subpath)
+                        desc = "Removing '%s' API catalog" % basename(
+                            res.subpath)
                         if progress_cb:
-                            try:    progress_cb(desc, (5 + 95/len(todos)*i))
-                            except: log.exception("error in progress_cb (ignoring)")
+                            try:
+                                progress_cb(desc, (5 + 95/len(todos)*i))
+                            except:
+                                log.exception(
+                                    "error in progress_cb (ignoring)")
                         else:
                             self.db.report_event(desc)
                         self._remove_res(res)
                     elif action == "update":
-                        desc = "Updating '%s' API catalog" % basename(res.subpath)
+                        desc = "Updating '%s' API catalog" % basename(
+                            res.subpath)
                         if progress_cb:
-                            try:    progress_cb(desc, (5 + 95/len(todos)*i))
-                            except: log.exception("error in progress_cb (ignoring)")
+                            try:
+                                progress_cb(desc, (5 + 95/len(todos)*i))
+                            except:
+                                log.exception(
+                                    "error in progress_cb (ignoring)")
                         else:
                             self.db.report_event(desc)
-                        #XXX Bad for filesystem. Change this to do it
+                        # XXX Bad for filesystem. Change this to do it
                         #    more intelligently if possible.
                         self._remove_res(res)
                         self._add_res(res)
                 except DatabaseError, ex:
                     log.warn("%s (skipping)" % ex)
-    
+
             if progress_cb:
-                try:    progress_cb("Saving catalog indices...", 95)
-                except: log.exception("error in progress_cb (ignoring)")
-            self._res_ids_from_selector_cache = None # invalidate this cache
+                try:
+                    progress_cb("Saving catalog indices...", 95)
+                except:
+                    log.exception("error in progress_cb (ignoring)")
+            self._res_ids_from_selector_cache = None  # invalidate this cache
             if self._res_index is not None:
                 self.db.save_pickle(
                     join(self.base_dir, "res_index"),
@@ -463,6 +485,7 @@ class CatalogsZone(object):
 
     _existing_res_ids_cache = None
     _new_res_id_counter = 0
+
     def _new_res_id(self):
         if self._existing_res_ids_cache is None:
             self._existing_res_ids_cache \
@@ -495,17 +518,18 @@ class CatalogsZone(object):
                                   lang, basename(path))
                         os.remove(path)
                 except EnvironmentError, ex:
-                    #XXX If get lots of these, then try harder. Perhaps
+                    # XXX If get lots of these, then try harder. Perhaps
                     #    creating a zombies area, or creating a list of
                     #    them: self.db.add_zombie(dbpath).
-                    #XXX THis isn't a correct analysis: the dbfile may just
+                    # XXX THis isn't a correct analysis: the dbfile may just
                     #    not have been there.
                     log.warn("could not remove dbfile '%s' (%s '%s'): "
                              "leaving zombie", dbpath, lang, blobname)
 
                 # Update 'toplevel*_index' for $lang.
                 # toplevelname_index:   {lang -> ilk -> toplevelname -> res_id -> blobnames}
-                # toplevelprefix_index: {lang -> ilk -> prefix -> res_id -> toplevelnames}
+                # toplevelprefix_index: {lang -> ilk -> prefix -> res_id ->
+                # toplevelnames}
                 for ilk, toplevelnames in toplevelnames_from_ilk.iteritems():
                     try:
                         bfrft = self.toplevelname_index[lang][ilk]
@@ -515,10 +539,10 @@ class CatalogsZone(object):
                                 del bfrft[toplevelname]
                     except KeyError, ex:
                         self.db.corruption("CatalogsZone._remove_res",
-                            "error removing top-level names of ilk '%s' for "
-                                "'%s' resource from toplevelname_index: %s"
-                                % (ilk, basename(res.path), ex),
-                            "ignore")
+                                           "error removing top-level names of ilk '%s' for "
+                                           "'%s' resource from toplevelname_index: %s"
+                                           % (ilk, basename(res.path), ex),
+                                           "ignore")
 
                     try:
                         tfrfp = self.toplevelprefix_index[lang][ilk]
@@ -529,10 +553,10 @@ class CatalogsZone(object):
                                 del tfrfp[prefix]
                     except KeyError, ex:
                         self.db.corruption("CatalogsZone._remove_res",
-                            "error removing top-level name of ilk '%s' for "
-                                "'%s' resource from toplevelprefix_index: %s"
-                                % (ilk, basename(res.path), ex),
-                            "ignore")
+                                           "error removing top-level name of ilk '%s' for "
+                                           "'%s' resource from toplevelprefix_index: %s"
+                                           % (ilk, basename(res.path), ex),
+                                           "ignore")
 
         del self.res_index[res.area_path]
 
@@ -568,7 +592,8 @@ class CatalogsZone(object):
 
             # Update 'toplevel*_index'.
             # toplevelname_index:   {lang -> ilk -> toplevelname -> res_id -> blobnames}
-            # toplevelprefix_index: {lang -> ilk -> prefix -> res_id -> toplevelnames}
+            # toplevelprefix_index: {lang -> ilk -> prefix -> res_id ->
+            # toplevelnames}
             bfrftfi = self.toplevelname_index.setdefault(lang, {})
             tfrfpfi = self.toplevelprefix_index.setdefault(lang, {})
             for ilk, toplevelnames in toplevelnames_from_ilk.iteritems():
@@ -591,7 +616,7 @@ class CatalogsZone(object):
             dbfile_and_res_id_from_blobname \
                 = self.blob_index.setdefault(lang, {})
             assert blobname not in dbfile_and_res_id_from_blobname, \
-                   ("codeintel: %s %r blob in `%s' collides "
+                ("codeintel: %s %r blob in `%s' collides "
                     "with existing %s %r blob (from res_id %r) in catalog: "
                     "(XXX haven't decided how to deal with that yet)"
                     % (lang, blobname, cix_path, lang, blobname,
@@ -651,7 +676,7 @@ class CatalogsZone(object):
         if necessary).
         """
         blob = self.get_blob(lang, blobname, look_in_cache_only=True)
-        if blob is not None: 
+        if blob is not None:
             if "lpaths" in blob.cache:
                 return blob.cache["lpaths"]
         else:
@@ -698,8 +723,9 @@ class CatalogLib(object):
             self.selection_res_id_set = set(selection_res_ids)
         self._import_handler = None
         self._blob_imports_from_prefix_cache = {}
-        
+
     _repr_cache = None
+
     def __repr__(self):
         if self._repr_cache is None:
             # Include the base names of the selected resources in the name.
@@ -733,10 +759,10 @@ class CatalogLib(object):
         return res_id in self.selection_res_id_set
 
     def get_blob(self, blobname):
-        if not self.has_blob(blobname): # knows how to filter on selections
+        if not self.has_blob(blobname):  # knows how to filter on selections
             return None
         return self.catalogs_zone.get_blob(self.lang, blobname)
-    
+
     def get_blob_imports(self, prefix):
         """Return the set of imports under the given prefix.
 
@@ -753,7 +779,7 @@ class CatalogLib(object):
                     = self.catalogs_zone.blob_index[self.lang]
             except KeyError:
                 return set()
-            
+
             if self.selection_res_id_set is None:
                 matches = filter_blobnames_for_prefix(
                     dbfile_and_res_id_from_blobname,
@@ -772,13 +798,14 @@ class CatalogLib(object):
     def _blobnames_from_toplevelname(self, toplevelname, ilk=None):
         """Yield all blobnames in the currently selected catalogs
         with the given toplevelname.
-        
+
         If "ilk" is given then only symbols of that ilk will be considered.
         """
-        # toplevelname_index: {lang -> ilk -> toplevelname -> res_id -> blobnames}
+        # toplevelname_index: {lang -> ilk -> toplevelname -> res_id ->
+        # blobnames}
         if self.lang in self.catalogs_zone.toplevelname_index:
             for i, potential_bfrft \
-                in self.catalogs_zone.toplevelname_index[self.lang].iteritems():
+                    in self.catalogs_zone.toplevelname_index[self.lang].iteritems():
                 if ilk is not None and i != ilk:
                     continue
                 if toplevelname not in potential_bfrft:
@@ -797,23 +824,24 @@ class CatalogLib(object):
 
     def hits_from_lpath(self, lpath, ctlr=None, curr_buf=None):
         assert isinstance(lpath, tuple)  # common mistake to pass in a string
-        
+
         hits = []
         for blobname in self._blobnames_from_toplevelname(lpath[0]):
             lpaths = self.catalogs_zone.lpaths_from_lang_and_blobname(
-                        self.lang, blobname)
-            if lpath not in lpaths: continue
+                self.lang, blobname)
+            if lpath not in lpaths:
+                continue
             blob = self.catalogs_zone.get_blob(self.lang, blobname)
-            #TODO: Convert lpath's in tree-evalrs to tuples instead of lists.
-            elem = _elem_from_scoperef( (blob, list(lpath)) )
-            hits.append( (elem, (blob, list(lpath[:-1]))) )
+            # TODO: Convert lpath's in tree-evalrs to tuples instead of lists.
+            elem = _elem_from_scoperef((blob, list(lpath)))
+            hits.append((elem, (blob, list(lpath[:-1]))))
 
         return hits
 
     def toplevel_cplns(self, prefix=None, ilk=None, ctlr=None):
         """Return completion info for all top-level names matching the
         given prefix and ilk in all selected blobs in this lib.
-        
+
             "prefix" is a 3-character prefix with which to filter top-level
                 names. If None (or not specified), results are not filtered
                 based on the prefix.
@@ -850,7 +878,7 @@ class CatalogLib(object):
                 elif self.selection_res_id_set is None:
                     for i, bfrft in toplevelname_index[self.lang].iteritems():
                         cplns += [(i, t) for t in bfrft]
-                else: # ilk=None, have a selection set
+                else:  # ilk=None, have a selection set
                     for i, bfrft in toplevelname_index[self.lang].iteritems():
                         cplns += [(i, t) for t, bfr in bfrft.iteritems()
                                   if self.selection_res_id_set.intersection(bfr)]
@@ -880,7 +908,7 @@ class CatalogLib(object):
                         cplns += [(i, t)
                                   for toplevelnames in tfrfp[prefix].itervalues()
                                   for t in toplevelnames]
-                else: # ilk=None, have a selection set
+                else:  # ilk=None, have a selection set
                     for i, tfrfp in toplevelprefix_index[self.lang].iteritems():
                         if prefix not in tfrfp:
                             continue
@@ -891,9 +919,7 @@ class CatalogLib(object):
         return cplns
 
 
-
 #---- internal support routines
-
 def _elem_from_scoperef(scoperef):
     """A scoperef is (<blob>, <lpath>). Return the actual elem in
     the <blob> ciElementTree being referred to.
@@ -902,5 +928,3 @@ def _elem_from_scoperef(scoperef):
     for lname in scoperef[1]:
         elem = elem.names[lname]
     return elem
-
-

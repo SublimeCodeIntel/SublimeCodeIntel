@@ -11,7 +11,7 @@ CSS_PSEUDO_CLASS_NAMES = """first-letter first-line link active visited
         first-child focus hover lang before after left right first""".split()
 
 CSS2_SPECIFIC_ATTRS_DICT = {
-    'azimuth'   : [
+    'azimuth': [
         'behind',
         'center',
         'center-left',
@@ -28,109 +28,109 @@ CSS2_SPECIFIC_ATTRS_DICT = {
         '!important',
     ],
     'border-bottom-color': [
-            'inherit',
-            'rgb(',
-            '!important',
-            '#',
-        ],
+    'inherit',
+    'rgb(',
+    '!important',
+    '#',
+    ],
     'border-bottom-style': [
-            'dashed',
-            'dotted',
-            'double',
-            'groove',
-            'hidden',
-            'inherit',
-            'inset',
-            'none',
-            'outset',
-            'ridge',
-            'solid',
-            '!important',
-        ],
+    'dashed',
+    'dotted',
+    'double',
+    'groove',
+    'hidden',
+    'inherit',
+    'inset',
+    'none',
+    'outset',
+    'ridge',
+    'solid',
+    '!important',
+    ],
     'border-collapse': [
-            'collapse',
-            'inherit',
-            'separate',
-            '!important',
-        ],
+    'collapse',
+    'inherit',
+    'separate',
+    '!important',
+    ],
     'border-top-color': [
-            'inherit',
-            'rgb(',
-            '!important',
-            '#',
-        ],
+    'inherit',
+    'rgb(',
+    '!important',
+    '#',
+    ],
     'border-top-style': [
-            'dashed',
-            'dotted',
-            'double',
-            'groove',
-            'hidden',
-            'inherit',
-            'inset',
-            'none',
-            'outset',
-            'ridge',
-            'solid',
-            '!important',
-        ],
-    'bottom'    : [
-            'auto',
-            'inherit',
-            '!important',
-        ],
+    'dashed',
+    'dotted',
+    'double',
+    'groove',
+    'hidden',
+    'inherit',
+    'inset',
+    'none',
+    'outset',
+    'ridge',
+    'solid',
+    '!important',
+    ],
+    'bottom': [
+    'auto',
+    'inherit',
+    '!important',
+    ],
     'caption-side': [
-            'bottom',
-            'inherit',
-            'left',
-            'right',
-            'top',
-            '!important',
-        ],
-    'clip'      : [
-            'auto',
-            'inherit',
-            'rect(',
-            '!important',
-        ],
-    'content'   : [
-            'close-quote',
-            'counter(',
-            'inherit',
-            'no-close-quote',
-            'no-open-quote',
-            'open-quote',
-            'url(',
-            '!important',
-        ],
+    'bottom',
+    'inherit',
+    'left',
+    'right',
+    'top',
+    '!important',
+    ],
+    'clip': [
+    'auto',
+    'inherit',
+    'rect(',
+    '!important',
+    ],
+    'content': [
+    'close-quote',
+    'counter(',
+    'inherit',
+    'no-close-quote',
+    'no-open-quote',
+    'open-quote',
+    'url(',
+    '!important',
+    ],
     'counter-increment': [
-            'inherit',
-            'none',
-            '!important',
-        ],
+    'inherit',
+    'none',
+    '!important',
+    ],
     'counter-reset': [
-            'inherit',
-            'none',
-            '!important',
-        ],
-    'cue'       : [
-            'inherit',
-            'none',
-            'url(',
-            '!important',
-        ],
-    'cue-after' : [
-            'inherit',
-            'none',
-            'url(',
-            '!important',
-        ],
+    'inherit',
+    'none',
+    '!important',
+    ],
+    'cue': [
+    'inherit',
+    'none',
+    'url(',
+    '!important',
+    ],
+    'cue-after': [
+    'inherit',
+    'none',
+    'url(',
+    '!important',
+    ],
     'cue-before': [
-            'inherit',
-            'none',
-            'url(',
+    'inherit',
+    'none',
+    'url(',
             '!important',
         ],
-    'cursor'    : [
+    'cursor': [
             'auto',
             'crosshair',
             'default',
@@ -151,13 +151,13 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'w-resize',
             '!important',
         ],
-    'direction' : [
+    'direction': [
             'inherit',
             'ltr',
             'rtl',
             '!important',
         ],
-    'elevation' : [
+    'elevation': [
             'above',
             'below',
             'higher',
@@ -172,7 +172,7 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'show',
             '!important',
         ],
-    'left'      : [
+    'left': [
             'auto',
             'inherit',
             '!important',
@@ -182,7 +182,7 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'inherit',
             '!important',
         ],
-    'marks'     : [
+    'marks': [
             'crop',
             'cross',
             'inherit',
@@ -194,7 +194,7 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'none',
             '!important',
         ],
-    'max-width' : [
+    'max-width': [
             'inherit',
             'none',
             '!important',
@@ -203,15 +203,15 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'inherit',
             '!important',
         ],
-    'min-width' : [
+    'min-width': [
             'inherit',
             '!important',
         ],
-    'orphans'   : [
+    'orphans': [
             'inherit',
             '!important',
         ],
-    'outline'   : [
+    'outline': [
             'dashed',
             'dotted',
             'double',
@@ -259,7 +259,7 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'thin',
             '!important',
         ],
-    'overflow'  : [
+    'overflow': [
             'auto',
             'hidden',
             'inherit',
@@ -267,7 +267,7 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'visible',
             '!important',
         ],
-    'page'      : [
+    'page': [
             'auto',
         ],
     'page-break-after': [
@@ -294,7 +294,7 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'inherit',
             '!important',
         ],
-    'pause'     : [
+    'pause': [
             'inherit',
             'ms',
             's',
@@ -312,7 +312,7 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             's',
             '!important',
         ],
-    'pitch'     : [
+    'pitch': [
             'high',
             'Hz',
             'inherit',
@@ -334,7 +334,7 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'url(',
             '!important',
         ],
-    'position'  : [
+    'position': [
             'absolute',
             'fixed',
             'inherit',
@@ -342,28 +342,28 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'static',
             '!important',
         ],
-    'quotes'    : [
+    'quotes': [
             'inherit',
             'none',
             '!important',
         ],
-    'richness'  : [
+    'richness': [
             'inherit',
             '!important',
         ],
-    'right'     : [
+    'right': [
             'auto',
             'inherit',
             '!important',
         ],
-    'size'      : [
+    'size': [
             'auto',
             'inherit',
             'landscape',
             'portrait',
             '!important',
         ],
-    'speak'     : [
+    'speak': [
             'inherit',
             'none',
             'normal',
@@ -399,7 +399,7 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'x-slow',
             '!important',
         ],
-    'stress'    : [
+    'stress': [
             'inherit',
             '!important',
         ],
@@ -416,7 +416,7 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             '!important',
             '#',
         ],
-    'top'       : [
+    'top': [
             'auto',
             'inherit',
             '!important',
@@ -442,7 +442,7 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'male',
             '!important',
         ],
-    'volume'    : [
+    'volume': [
             'inherit',
             'loud',
             'medium',
@@ -452,11 +452,11 @@ CSS2_SPECIFIC_ATTRS_DICT = {
             'x-soft',
             '!important',
         ],
-    'widows'    : [
+    'widows': [
             'inherit',
             '!important',
         ],
-    'z-index'   : [
+    'z-index': [
             'auto',
             'inherit',
             '!important',
@@ -536,7 +536,8 @@ CSS2_SPECIFIC_CALLTIP_DICT = {
 # Everything that was in CSS1 is also in CSS2.
 CSS_ATTR_DICT = CSS1_ATTR_DICT.copy()
 CSS_ATTR_DICT.update(CSS2_SPECIFIC_ATTRS_DICT)
-CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT = CSS1_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.copy()
+CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT = CSS1_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.copy(
+    )
 CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.update(CSS2_SPECIFIC_CALLTIP_DICT)
 
 for property, calltip in CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.items():
@@ -544,7 +545,8 @@ for property, calltip in CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.items():
         calltip += " (CSS1, CSS2)"
     else:
         calltip += " (CSS2)"
-    CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT[property] = "\n".join(textwrap.wrap(calltip, 40))
+    CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT[
+        property] = "\n".join(textwrap.wrap(calltip, 40))
 
 
 # Note: The System Colors below are not used yet.
@@ -580,8 +582,8 @@ css2_system_colors = {
 }
 
 # Add the css2 system colors.
-#from codeintel2.util import CompareNPunctLast
-#for attr, values in CSS_ATTR_DICT.items():
+# from codeintel2.util import CompareNPunctLast
+# for attr, values in CSS_ATTR_DICT.items():
 #    if '#' in values or 'rbg(' in values:
 #        CSS_ATTR_DICT[attr] = sorted(values + css2_system_colors.keys(),
 #                                     cmp=CompareNPunctLast)

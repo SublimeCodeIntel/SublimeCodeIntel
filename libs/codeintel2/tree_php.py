@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """Completion evaluation code for PHP"""
@@ -43,53 +43,53 @@ from codeintel2.util import make_short_name_dict, banner
 
 
 php_magic_global_method_data = {
-    "__autoload"  : "__autoload(string $className)\n"
-                    "This function is automatically called when a class\n"
-                    "is being called, but which hasn't been defined yet.",
+    "__autoload": "__autoload(string $className)\n"
+    "This function is automatically called when a class\n"
+    "is being called, but which hasn't been defined yet.",
 }
 php_magic_class_method_data = {
-    "__construct" : "__construct([mixed $args [, $...]])\n"
-                    "Initializes a newly created class instance.\n"
-                    "Note: parent constructors will need to be implictly\n"
-                    "called.",
-    "__destruct"  : "__destruct()\n"
-                    "This function is called when all references to this\n"
-                    "particular class instance are removed or when the\n"
-                    "object is explicitly destroyed.\n"
-                    "Note: parent destructors will need to be implictly\n"
-                    "called.",
-    "__call"      : "__call(string $name, array $arguments) -> mixed\n"
-                    "Is triggered when your class instance (and inherited\n"
-                    "classes) does not contain the method name.",
+    "__construct": "__construct([mixed $args [, $...]])\n"
+    "Initializes a newly created class instance.\n"
+    "Note: parent constructors will need to be implictly\n"
+    "called.",
+    "__destruct": "__destruct()\n"
+    "This function is called when all references to this\n"
+    "particular class instance are removed or when the\n"
+    "object is explicitly destroyed.\n"
+    "Note: parent destructors will need to be implictly\n"
+    "called.",
+    "__call": "__call(string $name, array $arguments) -> mixed\n"
+    "Is triggered when your class instance (and inherited\n"
+    "classes) does not contain the method name.",
     "__callStatic": "__callStatic(string $name, array $arguments) -> mixed\n"
                     "Is triggered when your class is accessed statically\n"
                     "and it does not contain the method name.",
-    "__get"       : "__get(string $name) -> mixed\n"
+    "__get": "__get(string $name) -> mixed\n"
                     "Is triggered when your class instance (and inherited\n"
                     "classes) does not contain the member or method name.",
-    "__set"       : "__set(string $name, mixed $value)\n"
+    "__set": "__set(string $name, mixed $value)\n"
                     "Is triggered when your class instance (and inherited\n"
                     "classes) does not contain the member or method name.",
-    "__isset"     : "__isset(string $name) -> bool\n"
+    "__isset": "__isset(string $name) -> bool\n"
                     "Overload the isset function for the class instance.",
-    "__unset"     : "__unset(string $name)\n"
+    "__unset": "__unset(string $name)\n"
                     "Overload the unset function for the class instance.",
-    "__sleep"     : "__sleep() -> array\n"
+    "__sleep": "__sleep() -> array\n"
                     "Called through serialize in order to generate a\n"
                     "storable representation of a class instance. Returns\n"
                     "an array of the variable names that need to\n"
                     "be stored.",
-    "__wakeup"    : "__wakeup()\n"
+    "__wakeup": "__wakeup()\n"
                     "Called through unserialize after restoring a\n"
                     "a class instance with it's serialized values.",
-    "__toString"  : "__toString() -> string\n"
+    "__toString": "__toString() -> string\n"
                     "Returns a string representation of the class instance.",
-    "__set_state" : "__set_state(array $properties)\n"
+    "__set_state": "__set_state(array $properties)\n"
                     "Static method that is called to restore a class\n"
                     "instance's state that was previously exported\n"
                     "using the var_export() function. Properties are\n"
                     "in the form array('property' => value, ...).",
-    "__clone"     : "__clone()\n"
+    "__clone": "__clone()\n"
                     "When the class instance is cloned using the\n"
                     "clone($object) function call, a new class instance\n"
                     "is created with shallow copies of all $object's\n"
@@ -97,32 +97,32 @@ php_magic_class_method_data = {
                     "the new instance to update any of these values.",
 }
 php_keyword_calltip_data = {
-    "array"       : "array(<list>)\n"
-                    "Create a PHP array.",
-    "declare"     : "declare(directive)\n"
-                    "Set execution directives for a block of code.\n",
-    "echo"        : "echo($arg1 [, $arg2... ])\n"
-                    "Output one or more strings.",
-    "eval"        : "eval($code) => mixed\n"
-                    "Evaluate the $code string as PHP code.",
-    "exit"        : "exit($status)\n"
-                    "$status can be either a string or an int.\n"
-                    "Outputs $status and then terminates the current script.\n"
-                    "If status is an integer, that value will also be used as\n"
-                    "the exit status. Exit statuses should be in the range 0\n"
-                    "to 254, the exit status 255 is reserved by PHP and shall\n"
-                    "not be used. The status 0 is used to terminate the\n"
-                    "program successfully. PHP >= 4.2.0 does NOT print the\n"
-                    "status if it is an integer.",
-    "include"     : "include(file_path)\n"
-                    "Includes and evaluates the specified file, produces a\n"
-                    "Fatal Error on error.",
+    "array": "array(<list>)\n"
+    "Create a PHP array.",
+    "declare": "declare(directive)\n"
+    "Set execution directives for a block of code.\n",
+    "echo": "echo($arg1 [, $arg2... ])\n"
+    "Output one or more strings.",
+    "eval": "eval($code) => mixed\n"
+    "Evaluate the $code string as PHP code.",
+    "exit": "exit($status)\n"
+    "$status can be either a string or an int.\n"
+    "Outputs $status and then terminates the current script.\n"
+    "If status is an integer, that value will also be used as\n"
+    "the exit status. Exit statuses should be in the range 0\n"
+    "to 254, the exit status 255 is reserved by PHP and shall\n"
+    "not be used. The status 0 is used to terminate the\n"
+    "program successfully. PHP >= 4.2.0 does NOT print the\n"
+    "status if it is an integer.",
+    "include": "include(file_path)\n"
+    "Includes and evaluates the specified file, produces a\n"
+    "Fatal Error on error.",
     "include_once": "include_once(file_path)\n"
                     "Includes and evaluates the specified file if it hasn't\n"
                     "been included before, produces a Fatal Error on error.",
-    "print"       : "print($arg)\n"
+    "print": "print($arg)\n"
                     "Output the $arg string.",
-    "require"     : "require(file_path)\n"
+    "require": "require(file_path)\n"
                     "Includes and evaluates the specified file, produces a\n"
                     "Fatal Error on error.",
     "require_once": "require_once(file_path)\n"
@@ -144,27 +144,29 @@ class PHPTreeEvaluator(TreeEvaluator):
                                        "for", "foreach",
                                        "while",
                                        "switch",
-                                      )
+                                       )
 
-    php_magic_global_method_cplns = [ ("function", name) for name in
-                sorted(php_magic_global_method_data.keys()) ]
+    php_magic_global_method_cplns = [("function", name) for name in
+                                     sorted(php_magic_global_method_data.keys())]
     # Classes can use both global and class specific functions.
-    php_magic_class_method_cplns = [ ("function", name) for name in
-                sorted(php_magic_class_method_data.keys()) ]
+    php_magic_class_method_cplns = [("function", name) for name in
+                                    sorted(php_magic_class_method_data.keys())]
 
     # A variable used to track the recursion depth of _hit_from_citdl().
     eval_depth = 0
 
-    #TODO: candidate for base TreeEvaluator class
+    # TODO: candidate for base TreeEvaluator class
     _langintel = None
+
     @property
     def langintel(self):
         if self._langintel is None:
             self._langintel = self.mgr.langintel_from_lang(self.trg.lang)
         return self._langintel
 
-    #TODO: candidate for base TreeEvaluator class
+    # TODO: candidate for base TreeEvaluator class
     _libs = None
+
     @property
     def libs(self):
         if self._libs is None:
@@ -172,9 +174,9 @@ class PHPTreeEvaluator(TreeEvaluator):
         return self._libs
 
     def get_next_scoperef(self, scoperef):
-        blob, lpath  = scoperef
+        blob, lpath = scoperef
         elem = self._elem_from_scoperef(scoperef)
-        linenum = self.line + 1 # convert to 1-based
+        linenum = self.line + 1  # convert to 1-based
         for subelem in elem.getchildren():
             start = int(subelem.get("line"))
             if start > linenum:
@@ -185,16 +187,16 @@ class PHPTreeEvaluator(TreeEvaluator):
 
     # Un-comment for an indented log record, each indented level will represent
     # a layer of recursion - which is quite useful for debugging.
-    #def log_start(self):
+    # def log_start(self):
     #    TreeEvaluator.log_start(self)
     #    self.eval_depth = 0
-    #def debug(self, msg, *args):
+    # def debug(self, msg, *args):
     #    msg = '  ' * self.eval_depth + msg
     #    TreeEvaluator.debug(self, msg, *args)
-    #def info(self, msg, *args):
+    # def info(self, msg, *args):
     #    msg = '  ' * self.eval_depth + msg
     #    TreeEvaluator.info(self, msg, *args)
-        
+
     def eval_cplns(self):
         self.log_start()
         self._imported_blobs = {}
@@ -206,18 +208,20 @@ class PHPTreeEvaluator(TreeEvaluator):
             next_scope = self.get_next_scoperef(start_scope)
             return self._comment_variables_from_scope(self.expr, next_scope)
         elif trg.type == "functions":
-            # The 3-character trigger, which not actually specific to functions.
+            # The 3-character trigger, which not actually specific to
+            # functions.
             retval = self._keywords_from_scope(self.expr, start_scope) + \
-                     self._functions_from_scope(self.expr, start_scope) + \
-                     self._constants_from_scope(self.expr, start_scope) + \
-                     self._classes_from_scope(self.expr[:3], start_scope) + \
-                     self._imported_namespaces_from_scope(self.expr, start_scope)
-            #if self.ctlr.is_aborted():
+                self._functions_from_scope(self.expr, start_scope) + \
+                self._constants_from_scope(self.expr, start_scope) + \
+                self._classes_from_scope(self.expr[:3], start_scope) + \
+                self._imported_namespaces_from_scope(
+                    self.expr, start_scope)
+            # if self.ctlr.is_aborted():
             #    return None
             return retval
         elif trg.type == "classes":
             return self._classes_from_scope(None, start_scope) + \
-                   self._imported_namespaces_from_scope(None, start_scope)
+                self._imported_namespaces_from_scope(None, start_scope)
         elif trg.type == "use":
             # When inside of a trait or a class - return trait completions, else
             # look for namespace completions.
@@ -228,8 +232,8 @@ class PHPTreeEvaluator(TreeEvaluator):
             else:
                 # All available namespaces and all available/global classes.
                 return self._namespaces_from_scope(None, start_scope) + \
-                       self._classes_from_scope(None, global_scoperef,
-                                                allowGlobalClasses=True)
+                    self._classes_from_scope(None, global_scoperef,
+                                             allowGlobalClasses=True)
         elif trg.type == "namespace-members" and (not self.expr or self.expr == "\\"):
             # All available namespaces and include all available global
             # functions/classes/constants as well.
@@ -241,7 +245,7 @@ class PHPTreeEvaluator(TreeEvaluator):
             return cplns
         elif trg.type == "interfaces":
             return self._interfaces_from_scope(self.expr, start_scope) + \
-                   self._imported_namespaces_from_scope(self.expr, start_scope)
+                self._imported_namespaces_from_scope(self.expr, start_scope)
         elif trg.type == "magic-methods":
             elem = self._elem_from_scoperef(start_scope)
             if elem.get("ilk") == "function":
@@ -256,7 +260,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                 # Return global magic methods.
                 return self.php_magic_global_method_cplns
         elif trg.type == "namespace-members" or \
-             trg.type == "use-namespace":
+                trg.type == "use-namespace":
             # Find the completions:
             cplns = []
             expr = self.expr
@@ -266,10 +270,10 @@ class PHPTreeEvaluator(TreeEvaluator):
             fqn = self._fqn_for_expression(expr, start_scope)
             hits = self._hits_from_namespace(fqn, start_scope)
             if hits:
-                #self.log("self.expr: %r", self.expr)
-                #self.log("hits: %r", hits)
+                # self.log("self.expr: %r", self.expr)
+                # self.log("hits: %r", hits)
                 cplns = list(self._members_from_hits(hits))
-                #self.log("cplns: %r", cplns)
+                # self.log("cplns: %r", cplns)
             # Return additional sub-namespaces that start with this prefix.
             if hits and hits[0][0] is not None:
                 # We hit a namespace, return additional namespaces that
@@ -279,7 +283,7 @@ class PHPTreeEvaluator(TreeEvaluator):
             self.debug("eval_cplns:: adding namespace hits that start with "
                        "fqn: %r", fqn)
             namespaces = self._namespaces_from_scope(fqn, start_scope)
-            #self.log("namespaces: %r", namespaces)
+            # self.log("namespaces: %r", namespaces)
             for ilk, n in namespaces:
                 namespace = n[len(fqn):]
                 if namespace and namespace.startswith("\\"):
@@ -294,8 +298,9 @@ class PHPTreeEvaluator(TreeEvaluator):
                 if self.expr == "parent" or \
                    self.expr.startswith("parent."):
                     self.log("Allowing protected parent members")
-                    return list(self._members_from_hit(hit, allowProtected=True,
-                                 allowPrivate=False))
+                    return list(
+                        self._members_from_hit(hit, allowProtected=True,
+                                               allowPrivate=False))
                 elif self.trg.type == "array-members":
                     return list(self._members_from_array_hit(hit, self.trg.extra.get('trg_char')))
                 else:
@@ -311,7 +316,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         if expr in self.php_ignored_calltip_expressions:
             return None
         elif expr in php_keyword_calltip_data:
-            return [ php_keyword_calltip_data.get(expr) ]
+            return [php_keyword_calltip_data.get(expr)]
         # XXX - Check the php version, magic methods only appeared in php 5.
         elif expr in php_magic_class_method_data:
             elem = self._elem_from_scoperef(start_scope)
@@ -322,7 +327,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                     elem = self._elem_from_scoperef((blob, lpath[:-1]))
             if elem.get("ilk") in ("class", "trait"):
                 # Use the class magic methods.
-                return [ php_magic_class_method_data[expr] ]
+                return [php_magic_class_method_data[expr]]
             # Else, let the tree work it out.
         elif expr in php_magic_global_method_data:
             elem = self._elem_from_scoperef(start_scope)
@@ -335,7 +340,7 @@ class PHPTreeEvaluator(TreeEvaluator):
             if elem.get("ilk") in ("class", "trait"):
                 # Not available inside a class.
                 return []
-            return [ php_magic_global_method_data[expr] ]
+            return [php_magic_global_method_data[expr]]
         hit = self._hit_from_citdl(expr, start_scope)
         return self._calltips_from_hit(hit)
 
@@ -358,7 +363,8 @@ class PHPTreeEvaluator(TreeEvaluator):
         if attributes:
             attr_split = attributes.split(" ")
             if "__not_yet_defined__" in attr_split:
-                self.log("_return_with_hit:: hit was a not_yet_defined, ignoring it: %r", hit)
+                self.log(
+                    "_return_with_hit:: hit was a not_yet_defined, ignoring it: %r", hit)
                 return False
         self.log("_return_with_hit:: hit is okay: %r", hit)
         return True
@@ -367,9 +373,11 @@ class PHPTreeEvaluator(TreeEvaluator):
                                                      elem_type, scope_names,
                                                      elem_retriever):
         """Return all available elem_type names beginning with expr"""
-        self.log("%s_names_from_scope_starting_with_expr:: expr: %r, scoperef: %r for %r",
-                 elem_type, expr, scoperef, scope_names)
-        global_blob = self._elem_from_scoperef(self._get_global_scoperef(scoperef))
+        self.log(
+            "%s_names_from_scope_starting_with_expr:: expr: %r, scoperef: %r for %r",
+            elem_type, expr, scoperef, scope_names)
+        global_blob = self._elem_from_scoperef(
+            self._get_global_scoperef(scoperef))
         # Get all of the imports
 
         # Start making the list of names
@@ -386,7 +394,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                 if namespace is not None:
                     elemlist.append(namespace)
                     # Note: This namespace may occur across multiple files, so we
-                    #       iterate over all known libs that use this namespace.
+                    # iterate over all known libs that use this namespace.
                     fqn = namespace.get("name")
                     lpath = (fqn, )
                     for lib in self.libs:
@@ -396,17 +404,17 @@ class PHPTreeEvaluator(TreeEvaluator):
             elif scope_type == "builtins":
                 lib = self.buf.stdlib
                 # Find the matching names (or all names if no expr)
-                #log.debug("Include builtins: elem_type: %s", elem_type)
+                # log.debug("Include builtins: elem_type: %s", elem_type)
                 names = lib.toplevel_cplns(prefix=expr, ilk=elem_type)
-                all_names.update([n for ilk,n in names])
+                all_names.update([n for ilk, n in names])
             # "Include everything" includes the builtins already
             elif scope_type == "imports":
                 # Iterate over all known libs
                 for lib in self.libs:
                     # Find the matching names (or all names if no expr)
-                    #log.debug("Include everything: elem_type: %s", elem_type)
+                    # log.debug("Include everything: elem_type: %s", elem_type)
                     names = lib.toplevel_cplns(prefix=expr, ilk=elem_type)
-                    all_names.update([n for ilk,n in names])
+                    all_names.update([n for ilk, n in names])
                 # Standard imports, specified through normal import semantics
                 elemlist = self._get_all_import_blobs_for_elem(global_blob)
             for elem in elemlist:
@@ -422,8 +430,9 @@ class PHPTreeEvaluator(TreeEvaluator):
                         # Iterate over the names and keep the ones containing
                         # the given prefix.
                         names = [x for x in names if x.startswith(expr)]
-                self.log("%s_names_from_scope_starting_with_expr:: adding %s: %r",
-                         elem_type, scope_type, names)
+                self.log(
+                    "%s_names_from_scope_starting_with_expr:: adding %s: %r",
+                    elem_type, scope_type, names)
                 all_names.update(names)
         return self._convertListToCitdl(elem_type, all_names)
 
@@ -449,16 +458,16 @@ class PHPTreeEvaluator(TreeEvaluator):
             scope_chain = ("locals", "globals", "imports", )
         # XXX - TODO: Move to 3 char trigger (if we want/need to)
         vars += self._element_names_from_scope_starting_with_expr(None,
-                            scoperef,
-                            "variable",
-                            scope_chain,
-                            self.variable_names_from_elem)
+                                                                  scoperef,
+                                                                  "variable",
+                                                                  scope_chain,
+                                                                  self.variable_names_from_elem)
         if expr:
             # XXX - TODO: Use VARIABLE_TRIGGER_LEN instead of hard coding 1
             expr = expr[:1]
-            return [ (ilk, name) for ilk, name in vars if name.startswith(expr) ]
+            return [(ilk, name) for ilk, name in vars if name.startswith(expr)]
         else:
-            return [ (ilk, name) for ilk, name in vars ]
+            return [(ilk, name) for ilk, name in vars]
 
     def _comment_variables_from_scope(self, expr, scoperef):
         """Return all available local variable names beginning with expr"""
@@ -466,22 +475,23 @@ class PHPTreeEvaluator(TreeEvaluator):
         # Only care about the local variables.
         scope_chain = ("locals", )
         vars = self._element_names_from_scope_starting_with_expr(None,
-                            scoperef,
-                            "variable",
-                            scope_chain,
-                            self.variable_names_from_elem)
+                                                                 scoperef,
+                                                                 "variable",
+                                                                 scope_chain,
+                                                                 self.variable_names_from_elem)
         # XXX - TODO: Use VARIABLE_TRIGGER_LEN instead of hard coding 1
         expr = expr[:1]
-        return [ (ilk, name) for ilk, name in vars if name.startswith(expr) ]
+        return [(ilk, name) for ilk, name in vars if name.startswith(expr)]
 
     def _constants_from_scope(self, expr, scoperef):
         """Return all available constant names beginning with expr"""
         # XXX - TODO: Use FUNCTION_TRIGGER_LEN instead of hard coding 3
-        return self._element_names_from_scope_starting_with_expr(expr and expr[:3] or None,
-                            scoperef,
-                            "constant",
-                            ("globals", "imports", "builtins"),
-                            self.constant_shortnames_from_elem)
+        return self._element_names_from_scope_starting_with_expr(
+            expr and expr[:3] or None,
+            scoperef,
+            "constant",
+            ("globals", "imports", "builtins"),
+            self.constant_shortnames_from_elem)
 
     def _keywords_from_scope(self, expr, scoperef):
         """Return all available keyword names beginning with expr"""
@@ -496,49 +506,53 @@ class PHPTreeEvaluator(TreeEvaluator):
     def _functions_from_scope(self, expr, scoperef):
         """Return all available function names beginning with expr"""
         # XXX - TODO: Use FUNCTION_TRIGGER_LEN instead of hard coding 3
-        return self._element_names_from_scope_starting_with_expr(expr and expr[:3] or None,
-                            scoperef,
-                            "function",
-                            ("locals", "namespace", "globals", "imports",),
-                            self.function_shortnames_from_elem)
+        return self._element_names_from_scope_starting_with_expr(
+            expr and expr[:3] or None,
+            scoperef,
+            "function",
+            ("locals", "namespace", "globals", "imports",),
+            self.function_shortnames_from_elem)
 
     def _classes_from_scope(self, expr, scoperef, allowGlobalClasses=False):
         """Return all available class names beginning with expr"""
         lookup_scopes = ("locals", "namespace", "globals", "imports",)
         if not allowGlobalClasses and self._namespace_elem_from_scoperef(scoperef):
-            # When inside a namespace, don't include global classes - bug 83192.
+            # When inside a namespace, don't include global classes - bug
+            # 83192.
             lookup_scopes = ("locals", "namespace",)
         return self._element_names_from_scope_starting_with_expr(expr,
-                            scoperef,
-                            "class",
-                            lookup_scopes,
-                            self.class_names_from_elem)
+                                                                 scoperef,
+                                                                 "class",
+                                                                 lookup_scopes,
+                                                                 self.class_names_from_elem)
 
     def _traits_from_scope(self, expr, scoperef, allowGlobalClasses=False):
         """Return all available class names beginning with expr"""
         return self._element_names_from_scope_starting_with_expr(expr,
-                            scoperef,
-                            "trait",
-                            ("globals", ),
-                            self.trait_names_from_elem)
+                                                                 scoperef,
+                                                                 "trait",
+                                                                ("globals", ),
+                                                                 self.trait_names_from_elem)
 
     def _imported_namespaces_from_scope(self, expr, scoperef):
         """Return all available class names beginning with expr"""
         return self._element_names_from_scope_starting_with_expr(expr,
-                            scoperef,
-                            "namespace",
-                            ("namespace", "globals"),
-                            self.imported_namespace_names_from_elem)
+                                                                 scoperef,
+                                                                 "namespace",
+                                                                ("namespace",
+                                                                 "globals"),
+                                                                 self.imported_namespace_names_from_elem)
 
     def _namespaces_from_scope(self, expr, scoperef):
         """Return all available namespaces beginning with expr"""
         if expr:
             expr = expr.strip("\\")
         namespaces = self._element_names_from_scope_starting_with_expr(expr,
-                                scoperef,
-                                "namespace",
-                                ("globals", "imports", "builtins",),
-                                self.namespace_names_from_elem)
+                                                                       scoperef,
+                                                                       "namespace",
+                                                                      ("globals", "imports",
+                                                                       "builtins",),
+                                                                      self.namespace_names_from_elem)
         # We only want to see the next sub-namespace, i.e. if the expr is
         #   \mynamespace\<|>
         # then only return the immediate child namespaces, such as:
@@ -558,7 +572,7 @@ class PHPTreeEvaluator(TreeEvaluator):
     def _interfaces_from_scope(self, expr, scoperef):
         """Return all available interface names beginning with expr"""
         # Need to work from the global scope for this one
-        return self._element_names_from_scope_starting_with_expr(expr,
+        return self._element_names_from_scope_starting_with_expr(expr or None,
                             scoperef,
                             "interface",
                             ("namespace", "globals", "imports",),
@@ -584,7 +598,8 @@ class PHPTreeEvaluator(TreeEvaluator):
         elif elem.tag == "alias":
             # Find the resolving function to get the signature, then we replace
             # the function name in the signature with the aliased name.
-            funcelem, scoperef = self._hit_from_variable_type_inference(elem, scoperef)
+            funcelem, scoperef = self._hit_from_variable_type_inference(
+                elem, scoperef)
             ctip = self._calltip_from_func(funcelem, scoperef)
             ctip = ctip.replace(funcelem.get("name"), elem.get("name"), 1)
             calltips.append(ctip)
@@ -623,9 +638,10 @@ class PHPTreeEvaluator(TreeEvaluator):
 
             self.log("_calltip_from_class:: no ctor in class %r", name)
 
-            # See if there is a parent class that has a constructor - bug 90156.
+            # See if there is a parent class that has a constructor - bug
+            # 90156.
             for classref in node.get("classrefs", "").split():
-                #TODO: update _hit_from_citdl to accept optional node type,
+                # TODO: update _hit_from_citdl to accept optional node type,
                 #      i.e. to only return classes in this case.
                 self.log("_calltip_from_class:: looking for parent class: %r",
                          classref)
@@ -650,9 +666,9 @@ class PHPTreeEvaluator(TreeEvaluator):
         members = set()
         for child in elem:
             # Should look like:  SERVER_NAME']
-            members.add( (child.get("ilk") or child.tag,
+            members.add((child.get("ilk") or child.tag,
                           #"%s%s]" % (child.get("name"), trg_char)) )
-                          child.get("name")) )
+                          child.get("name")))
         return members
 
     def _members_from_elem(self, elem, name_prefix=''):
@@ -665,19 +681,19 @@ class PHPTreeEvaluator(TreeEvaluator):
         if tag == "import":
             module_name = elem.get("module")
             cpln_name = module_name.split('.', 1)[0]
-            members.add( ("module", cpln_name) )
+            members.add(("module", cpln_name))
         elif tag == "alias":
-            members.add( ("function",
-                          name_prefix + elem.get("name")) )
+            members.add(("function",
+                          name_prefix + elem.get("name")))
         else:
-            members.add( (elem.get("ilk") or tag,
-                          name_prefix + elem.get("name")) )
+            members.add((elem.get("ilk") or tag,
+                          name_prefix + elem.get("name")))
         return members
 
     def _isElemInsideScoperef(self, elem, scoperef):
         blob, lpath = scoperef
         i = 0
-        #self.log("_isElemInsideScoperef, elem: %r, lpath: %r", elem, lpath)
+        # self.log("_isElemInsideScoperef, elem: %r, lpath: %r", elem, lpath)
         for i in range(len(lpath)):
             name = lpath[i]
             if name == elem.get("name"):
@@ -685,8 +701,8 @@ class PHPTreeEvaluator(TreeEvaluator):
                 #       actual elem, but this won't work correctly when there
                 #       is an alternative match being used. i.e.
                 #       http://bugs.activestate.com/show_bug.cgi?id=70015
-                #check_elem = self._elem_from_scoperef((blob, lpath[:i+1]))
-                #if check_elem == elem:
+                # check_elem = self._elem_from_scoperef((blob, lpath[:i+1]))
+                # if check_elem == elem:
                     # It's in the scope
                     return True
         return False
@@ -710,7 +726,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         static_cplns = (self.trg.type == "static-members")
 
         for child in elem:
-            #self.debug("_members_from_hit: checking child: %r", child)
+            # self.debug("_members_from_hit: checking child: %r", child)
             if child.tag == "import":
                 continue
             name_prefix = ''   # Used to add "$" for static variable names.
@@ -723,7 +739,8 @@ class PHPTreeEvaluator(TreeEvaluator):
                 if "protected" in attributes:
                     if allowProtected is None:
                         # Need to check if it's allowed
-                        allowProtected = self._isElemInsideScoperef(elem, self.get_start_scoperef())
+                        allowProtected = self._isElemInsideScoperef(
+                            elem, self.get_start_scoperef())
                     if not allowProtected:
                         # Checked scope already and it does not allow protected
                         # Thats means it also does not allow private
@@ -736,7 +753,8 @@ class PHPTreeEvaluator(TreeEvaluator):
                 if "private" in attributes:
                     if allowPrivate is None:
                         # Need to check if it's allowed
-                        allowPrivate = self._isElemInsideScoperef(elem, self.get_start_scoperef())
+                        allowPrivate = self._isElemInsideScoperef(
+                            elem, self.get_start_scoperef())
                     if not allowPrivate:
                         # Checked scope already and it does not allow private
                         self.log("hit '%s.%s' is private, not including",
@@ -764,8 +782,10 @@ class PHPTreeEvaluator(TreeEvaluator):
                 if ns_elem is not None:
                     # For class reference inside a namespace, *always* use the
                     # fully qualified name - bug 85643.
-                    classref = "\\" + self._fqn_for_expression(classref, scoperef)
-                self.debug("_members_from_hit: Getting members for inherited %r: %r",
+                    classref = "\\" + self._fqn_for_expression(
+                        classref, scoperef)
+                self.debug(
+                    "_members_from_hit: Getting members for inherited %r: %r",
                            elem_ilk, classref)
                 try:
                     subhit = self._hit_from_citdl(classref, scoperef)
@@ -775,9 +795,12 @@ class PHPTreeEvaluator(TreeEvaluator):
                 else:
                     if allowProtected is None:
                         # Need to check if it's allowed
-                        allowProtected = self._isElemInsideScoperef(elem, self.get_start_scoperef())
-                    # Checking the parent class, private is not allowed for sure
-                    members.update(self._members_from_hit(subhit, allowProtected, allowPrivate=False))
+                        allowProtected = self._isElemInsideScoperef(
+                            elem, self.get_start_scoperef())
+                    # Checking the parent class, private is not allowed for
+                    # sure
+                    members.update(self._members_from_hit(
+                        subhit, allowProtected, allowPrivate=False))
         return members
 
     def _members_from_hits(self, hits, allowProtected=None, allowPrivate=None):
@@ -818,7 +841,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         # First part...
         hits, nconsumed = self._hits_from_first_part(tokens, scoperef)
         if not hits:
-            #TODO: Add the fallback Buffer-specific near-by hunt
+            # TODO: Add the fallback Buffer-specific near-by hunt
             #      for a symbol for the first token. See my spiral-bound
             #      book for some notes.
             if self.trg.type == "namespace-members":
@@ -844,9 +867,10 @@ class PHPTreeEvaluator(TreeEvaluator):
                     self.debug("_hit_from_citdl:: resolve %r on %r in %r",
                                remaining_tokens, *hit)
                     if remaining_tokens[0] == "()":
-                        #TODO: impl this function
+                        # TODO: impl this function
                         # _hit_from_call(elem, scoperef) -> hit or raise
-                        #   CodeIntelError("could resolve call on %r: %s", hit[0], ex)
+                        # CodeIntelError("could resolve call on %r: %s",
+                        # hit[0], ex)
                         new_hit = self._hit_from_call(*hit)
                         nconsumed = 1
                     else:
@@ -864,23 +888,27 @@ class PHPTreeEvaluator(TreeEvaluator):
         if not hits:
             raise CodeIntelError("could not resolve first part of '%s'" % expr)
         if len(hits) > 2:
-            self.debug("_hit_from_citdl:: multiple hits found, returning the first hit")
+            self.debug(
+                "_hit_from_citdl:: multiple hits found, returning the first hit")
         hit = hits[0]
 
         # Resolve any variable type inferences.
-        #TODO: Need to *recursively* resolve hits.
+        # TODO: Need to *recursively* resolve hits.
         elem, scoperef = hit
         if elem.tag == "variable" and not defn_only:
-            elem, scoperef = self._hit_from_variable_type_inference(elem, scoperef)
+            elem, scoperef = self._hit_from_variable_type_inference(
+                elem, scoperef)
 
-        self.info("_hit_from_citdl:: found '%s' => %s on %s", expr, elem, scoperef)
+        self.info(
+            "_hit_from_citdl:: found '%s' => %s on %s", expr, elem, scoperef)
         return (elem, scoperef)
 
     def _alternative_elem_from_scoperef(self, traversed_items):
         """Find an alternative named element for the given traversal items"""
         for i in range(len(traversed_items)-1, -1, -1):
             elem, lname, failed_elems = traversed_items[i]
-            self.log("Checking for alt elem: %r, lpath: %r, failed_elems: %r", elem, lname, failed_elems)
+            self.log(
+                "Checking for alt elem: %r, lpath: %r, failed_elems: %r", elem, lname, failed_elems)
             for child in elem.getchildren():
                 if child.attrib.get("name") == lname and child not in failed_elems:
                     return i, child
@@ -902,14 +930,17 @@ class PHPTreeEvaluator(TreeEvaluator):
                 # http://bugs.activestate.com/show_bug.cgi?id=70015
                 child = None
                 if i > 0:
-                    #self.log("i now: %r, traversed_items: %r", i, traversed_items)
+                    # self.log("i now: %r, traversed_items: %r", i,
+                    # traversed_items)
                     traversed_items[i-1][2].append(elem)
-                    i, child = self._alternative_elem_from_scoperef(traversed_items)
+                    i, child = self._alternative_elem_from_scoperef(
+                        traversed_items)
                     traversed_items = traversed_items[:i]
                 if child is None:
                     self.info("elem %r is missing lname: %r", elem, lname)
                     raise
-                self.info("elem %r is missing lname: %r, found alternative: %r",
+                self.info(
+                    "elem %r is missing lname: %r, found alternative: %r",
                           elem, lname, child)
             traversed_items.append((elem, lname, []))
             elem = child
@@ -936,8 +967,8 @@ class PHPTreeEvaluator(TreeEvaluator):
 
     def _imported_namespace_elements_from_scoperef(self, scoperef):
         namespace_elems = {}
-        possible_elems = [ self._namespace_elem_from_scoperef(scoperef),
-                           self._get_global_scoperef(scoperef)[0] ]
+        possible_elems = [self._namespace_elem_from_scoperef(scoperef),
+                           self._get_global_scoperef(scoperef)[0]]
         for elem in possible_elems:
             if elem is not None:
                 for child in elem:
@@ -961,12 +992,14 @@ class PHPTreeEvaluator(TreeEvaluator):
             tokens = expr.split("\\")
             first_token = tokens[0]
 
-            used_namespaces = self._imported_namespace_elements_from_scoperef(scoperef)
+            used_namespaces = self._imported_namespace_elements_from_scoperef(
+                scoperef)
             elem = used_namespaces.get(first_token)
             if elem is not None:
                 symbol = elem.get("symbol")
                 alias = elem.get("alias")
-                self.log("_fqn_for_expression:: found used namespace: %r", elem)
+                self.log(
+                    "_fqn_for_expression:: found used namespace: %r", elem)
                 fqn = "%s\\%s" % (elem.get("module"), symbol)
                 if tokens[1:]:
                     fqn += "\\%s" % ("\\".join(tokens[1:]))
@@ -992,12 +1025,14 @@ class PHPTreeEvaluator(TreeEvaluator):
         global_scoperef = self._get_global_scoperef(scoperef)
         global_blob = self._elem_from_scoperef(global_scoperef)
 
-        #self.log("_hits_from_namespace:: globals: %r", global_blob.names.keys())
+        # self.log("_hits_from_namespace:: globals: %r",
+        # global_blob.names.keys())
         hits = []
         elem = global_blob.names.get(fqn)
         if elem is not None:
             self.log("_hits_from_namespace:: found %r locally: %r", fqn, elem)
-            hit_scoperef = [global_scoperef[0], global_scoperef[1] + [elem.get("name")]]
+            hit_scoperef = [global_scoperef[
+                0], global_scoperef[1] + [elem.get("name")]]
             hits.append((elem, hit_scoperef))
         else:
             # The last token in the namespace may be a class or a constant, instead
@@ -1006,19 +1041,23 @@ class PHPTreeEvaluator(TreeEvaluator):
             if len(tokens) > 1:
                 partial_fqn = "\\".join(tokens[:-1])
                 last_token = tokens[-1]
-                self.log("_hits_from_namespace:: checking for sub-namespace match: %r",
+                self.log(
+                    "_hits_from_namespace:: checking for sub-namespace match: %r",
                          partial_fqn)
-        
+
                 elem = global_blob.names.get(partial_fqn)
                 if elem is not None:
-                    self.log("_hits_from_namespace:: found sub-namespace locally, now find %r",
+                    self.log(
+                        "_hits_from_namespace:: found sub-namespace locally, now find %r",
                              last_token)
                     try:
                         hit_scoperef = [global_scoperef[0], (partial_fqn, )]
                         hits.append((elem.names[last_token], hit_scoperef))
                     except KeyError:
-                        # Fall through to other possible library matches (bug 85643).
-                        self.debug("_hits_from_namespace:: no subsequent hit found locally for %r",
+                        # Fall through to other possible library matches (bug
+                        # 85643).
+                        self.debug(
+                            "_hits_from_namespace:: no subsequent hit found locally for %r",
                                    last_token)
 
         lpath = (fqn, )
@@ -1073,7 +1112,8 @@ class PHPTreeEvaluator(TreeEvaluator):
                 elem = self._elem_from_scoperef(scoperef)
             if not elem:
                 return (None, None)
-            self.log("_hits_from_first_part:: need %s for %r", first_token, elem)
+            self.log(
+                "_hits_from_first_part:: need %s for %r", first_token, elem)
             if first_token == "parent":
                 first_token = elem.get("classrefs")
                 self.log("_hits_from_first_part:: Special handling for parent, "
@@ -1094,7 +1134,7 @@ class PHPTreeEvaluator(TreeEvaluator):
             if first_token in elem.names:
                 first_token_elem = elem.names[first_token]
                 if self._return_with_hit((first_token_elem, scoperef), 1):
-                    #TODO: skip __hidden__ names
+                    # TODO: skip __hidden__ names
                     self.log("_hits_from_first_part:: pt1: is '%s' accessible on %s? "
                              "yes: %s", first_token, scoperef, first_token_elem)
                     return ([(first_token_elem, scoperef)], 1)
@@ -1120,7 +1160,8 @@ class PHPTreeEvaluator(TreeEvaluator):
                         break
                 else:
                     if "\\" not in first_token and elem.get("ilk") == "namespace":
-                        self.log("_hits_from_first_part:: checking for a FQN hit")
+                        self.log(
+                            "_hits_from_first_part:: checking for a FQN hit")
                         # Being in a namespace, we also need to check if this name
                         # is accessable as a FQN - bug 86784.
                         fqn = self._fqn_for_expression(first_token, scoperef)
@@ -1131,7 +1172,8 @@ class PHPTreeEvaluator(TreeEvaluator):
                         except CodeIntelError:
                             pass
 
-            self.log("_hits_from_first_part:: pt3: is '%s' accessible on %s? no",
+            self.log(
+                "_hits_from_first_part:: pt3: is '%s' accessible on %s? no",
                      first_token, scoperef)
             # Do not go past the global scope reference
             if len(scoperef[1]) >= 1:
@@ -1151,21 +1193,20 @@ class PHPTreeEvaluator(TreeEvaluator):
             return ([hit], nconsumed)
         return None, None
 
-
     def _hit_from_elem_imports(self, tokens, elem):
         """See if token is from one of the imports on this <scope> elem.
 
         Returns (<hit>, <num-tokens-consumed>) or (None, None) if not found.
         """
-        #PERF: just have a .import_handler property on the evalr?
+        # PERF: just have a .import_handler property on the evalr?
         self.debug("_hit_from_elem_imports:: Checking imports, tokens[0]: %r "
                    "... imp_elem: %r", tokens[0], elem)
         import_handler = self.citadel.import_handler_from_lang(self.trg.lang)
         libs = self.buf.libs
 
-        #PERF: Add .imports method to ciElementTree for quick iteration
+        # PERF: Add .imports method to ciElementTree for quick iteration
         #      over them. Or perhaps some cache to speed this method.
-        #TODO: The right answer here is to not resolve the <import>,
+        # TODO: The right answer here is to not resolve the <import>,
         #      just return it. It is complicated enough that the
         #      construction of members has to know the original context.
         #      See the "Foo.mypackage.<|>mymodule.yo" part of test
@@ -1188,9 +1229,10 @@ class PHPTreeEvaluator(TreeEvaluator):
                         blob = import_handler.import_blob_name(
                                     module_name, libs, self.ctlr)
                     except CodeIntelError:
-                        self.debug("_hit_from_elem_imports:: Failed import: %s",
+                        self.debug(
+                            "_hit_from_elem_imports:: Failed import: %s",
                                    module_name)
-                        pass # don't freak out: might not be our import anyway
+                        pass  # don't freak out: might not be our import anyway
                     else:
                         self._imported_blobs[module_name] = 1
                         try:
@@ -1202,7 +1244,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                             self.debug("_hit_from_elem_imports:: "
                                        "_hit_from_getattr could not resolve: "
                                        "%r on %r", tokens, blob)
-                            pass # don't freak out: we'll try the next import
+                            pass  # don't freak out: we'll try the next import
                 else:
                     self.debug("_hit_from_elem_imports:: Recursive import: "
                                "Already imported module: %r", module_name)
@@ -1210,7 +1252,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         # include-everything stuff
         self.log("_hit_from_elem_imports:: trying import everything: tokens: "
                  "%r", tokens)
-        #self.log(banner("include-everything stuff", length=50))
+        # self.log(banner("include-everything stuff", length=50))
 
         # First check the full lpath, then try for smaller and smaller lengths
         for nconsumed in range(len(tokens), 0, -1):
@@ -1228,8 +1270,9 @@ class PHPTreeEvaluator(TreeEvaluator):
                     (hit_blob, hit_lpath) = import_scoperef
                     self.log("_hit_from_elem_imports:: ie: matched %r to %r "
                              "in blob %r", lpath, hit_elem, hit_blob, )
-                    unique_import_name = hit_blob.get("name") + "#" + str(lpath)
-                    #print unique_import_name
+                    unique_import_name = hit_blob.get(
+                        "name") + "#" + str(lpath)
+                    # print unique_import_name
                     if unique_import_name not in self._imported_blobs:
                         self._imported_blobs[unique_import_name] = 1
                         try:
@@ -1239,13 +1282,13 @@ class PHPTreeEvaluator(TreeEvaluator):
                             self.debug("_hit_from_elem_imports:: ie: "
                                        "_hit_from_getattr could not resolve: "
                                        "%r on %r", tokens, blob)
-                            pass # don't freak out: we'll try the next import
+                            pass  # don't freak out: we'll try the next import
                     else:
                         self.debug("_hit_from_elem_imports:: ie: Recursive "
                                    "import: Already imported module: %r",
                                    unique_import_name)
             self.log("_hit_from_elem_imports:: ie: no matches found")
-            #self.log(banner(None, length=50))
+            # self.log(banner(None, length=50))
 
         return None, None
 
@@ -1258,14 +1301,15 @@ class PHPTreeEvaluator(TreeEvaluator):
         some multi-level imports can result in multiple tokens being
         consumed.
         """
-        #TODO: On failure, call a hook to make an educated guess. Some
+        # TODO: On failure, call a hook to make an educated guess. Some
         #      attribute names are strong signals as to the object type
         #      -- typically those for common built-in classes.
         first_token = tokens[0]
         self.log("_hit_from_getattr:: resolve '%s' on %r in %r:", first_token,
                  elem, scoperef)
         if elem.tag == "variable":
-            elem, scoperef = self._hit_from_variable_type_inference(elem, scoperef)
+            elem, scoperef = self._hit_from_variable_type_inference(
+                elem, scoperef)
 
         assert elem.tag == "scope"
         ilk = elem.get("ilk")
@@ -1284,7 +1328,8 @@ class PHPTreeEvaluator(TreeEvaluator):
             if attr is not None:
                 self.log("_hit_from_getattr:: attr is %r in %r", attr, elem)
                 if static_member and "static" not in attr.get("attributes", "").split():
-                    self.warn("_hit_from_getattr:: %r in class %r is not marked static",
+                    self.warn(
+                        "_hit_from_getattr:: %r in class %r is not marked static",
                               first_token, elem)
                 classname = elem.get("name")
                 # XXX - This works, but does not feel right.
@@ -1296,7 +1341,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                 return (attr, class_scoperef), 1
             for classref in elem.get("traitrefs", "").split() + \
                             elem.get("classrefs", "").split():
-                #TODO: update _hit_from_citdl to accept optional node type,
+                # TODO: update _hit_from_citdl to accept optional node type,
                 #      i.e. to only return classes in this case.
                 self.log("_hit_from_getattr:: is '%s' available on parent "
                          "class: %r?", first_token, classref)
@@ -1317,7 +1362,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                                      hit[0])
                             return hit, nconsumed
                     except CodeIntelError, e:
-                        pass # don't freak out: we'll try the next classref
+                        pass  # don't freak out: we'll try the next classref
         elif ilk == "blob":
             attr = elem.names.get(first_token)
             if attr is not None:
@@ -1337,7 +1382,8 @@ class PHPTreeEvaluator(TreeEvaluator):
         citdl = elem.get("returns")
         if not citdl:
             raise CodeIntelError("no _hit_from_call info for %r" % elem)
-        self.log("_hit_from_call: resolve '%s' for %r, lpath: %r", citdl, elem, scoperef[1])
+        self.log("_hit_from_call: resolve '%s' for %r, lpath: %r",
+                 citdl, elem, scoperef[1])
         # Clear the imported blobs, it's a different evaluation - bug 90956.
         self._imported_blobs = {}
         # scoperef has to be on the function called
@@ -1353,7 +1399,8 @@ class PHPTreeEvaluator(TreeEvaluator):
             self.log("_hit_from_variable_type_inference:: elem %r is an array",
                      elem, )
             return (elem, scoperef)
-        self.log("_hit_from_variable_type_inference:: resolve '%s' type inference for %r:", citdl, elem)
+        self.log(
+            "_hit_from_variable_type_inference:: resolve '%s' type inference for %r:", citdl, elem)
         if citdl == elem.get("name") and elem.tag == "variable":
             # We really need an alternative match in this case, such as a class
             # or a function. First see if there are any matching names at the
@@ -1361,7 +1408,8 @@ class PHPTreeEvaluator(TreeEvaluator):
             # http://bugs.activestate.com/show_bug.cgi?id=70015
             parent_elem = self._elem_from_scoperef(scoperef)
             if parent_elem is not None:
-                sibling_matches = [x for x in parent_elem.getchildren() if x.get("name") == citdl and x.tag != "variable"]
+                sibling_matches = [x for x in parent_elem.getchildren() if x.get(
+                    "name") == citdl and x.tag != "variable"]
                 if sibling_matches:
                     return (sibling_matches[0], scoperef)
             scoperef = self.parent_scoperef_from_scoperef(scoperef)
@@ -1371,17 +1419,20 @@ class PHPTreeEvaluator(TreeEvaluator):
             # Variable was defined inside of a namespace, that means
             # it gets access to the namespace as well even though the
             # variable is defined to the global scope - bug 88964.
-            self.log("_hit_from_variable_type_inference:: variable was defined in namespace %r",
+            self.log(
+                "_hit_from_variable_type_inference:: variable was defined in namespace %r",
                      variable_namespace)
             blob = scoperef[0]
             ns_elem = blob.names.get(variable_namespace)
             if ns_elem is not None:
                 try:
-                    hit = self._hit_from_citdl(citdl, (blob, [variable_namespace]))
+                    hit = self._hit_from_citdl(citdl, (
+                        blob, [variable_namespace]))
                     if hit is not None:
                         return hit
                 except:
-                    self.log("_hit_from_variable_type_inference:: %r not found in namespace %r",
+                    self.log(
+                        "_hit_from_variable_type_inference:: %r not found in namespace %r",
                              citdl, variable_namespace)
 
         return self._hit_from_citdl(citdl, scoperef)
@@ -1405,12 +1456,11 @@ class PHPTreeEvaluator(TreeEvaluator):
         else:
             return (self.built_in_blob, [])
 
-
     #--- These method were inherited from JavaScriptTreeEvaluator.
     # If they are generic enough they should be moved to base
     # TreeEvaluator.
-
     _built_in_blob = None
+
     @property
     def built_in_blob(self):
         if self._built_in_blob is None:
@@ -1418,6 +1468,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         return self._built_in_blob
 
     _built_in_cache = None
+
     @property
     def built_in_cache(self):
         if self._built_in_cache is None:
@@ -1435,6 +1486,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                 yield '()'
             else:
                 yield tok
+
     def _join_citdl_expr(self, tokens):
         return '.'.join(tokens).replace('.()', '()')
 
@@ -1446,7 +1498,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         ctlines = []
         if not signature:
             name = node.get("name")
-            #XXX Note difference for Tcl in _getSymbolCallTips.
+            # XXX Note difference for Tcl in _getSymbolCallTips.
             ctlines = [name + "(...)"]
         else:
             ctlines = signature.splitlines(0)
@@ -1459,7 +1511,8 @@ class PHPTreeEvaluator(TreeEvaluator):
                 interfacerefs = parent_elem.get("interfacerefs", "").split()
                 name = node.get("name")
                 for interface in interfacerefs:
-                    ielem, iscoperef = self._hit_from_citdl(interface, scoperef)
+                    ielem, iscoperef = self._hit_from_citdl(
+                        interface, scoperef)
                     if ielem is not None:
                         # Found and interface, see if it has the info we need:
                         alt_node = ielem.names.get(name)
@@ -1468,14 +1521,12 @@ class PHPTreeEvaluator(TreeEvaluator):
                             break
         return '\n'.join(ctlines)
 
-
     #---- Internal Utility functions for PHP
-
     def _get_global_scoperef(self, scoperef):
         return (scoperef[0], [])
 
     def _convertListToCitdl(self, citdl_type, lst):
-        return sorted([ (citdl_type, v) for v in lst ])
+        return sorted([(citdl_type, v) for v in lst])
 
     def _make_shortname_lookup_citdl_dict(self, citdl_type, namelist, length=1):
         d = make_short_name_dict(namelist, length=length)
@@ -1487,7 +1538,7 @@ class PHPTreeEvaluator(TreeEvaluator):
 
     def _get_all_children_with_details(self, node, tagname, attributes=None, startswith=None):
         """Returns a list of child nodes that have the tag name and attributes.
-        
+
         @param node {Element} the base node to search from
         @param tagname {str} the child tag name to find
         @param attributes {dict} the child node must have these attributes
@@ -1518,7 +1569,7 @@ class PHPTreeEvaluator(TreeEvaluator):
             return import_handler.import_blob_name(module_name, libs,
                                                    self.ctlr)
         except CodeIntelError:
-            pass # don't freak out: might not be our import anyway
+            pass  # don't freak out: might not be our import anyway
 
     # Only used by _get_all_import_blobs_for_elem
     def _get_all_import_blobs_dict_for_elem(self, elem, imported_blobs):
@@ -1528,16 +1579,20 @@ class PHPTreeEvaluator(TreeEvaluator):
         """
         for imp_elem in (i for i in elem if i.tag == "import"):
             module_name = imp_elem.get("module")
-            self.debug("_get_all_import_blobs_dict_for_elem:: Getting imports from %r", module_name)
+            self.debug(
+                "_get_all_import_blobs_dict_for_elem:: Getting imports from %r", module_name)
             if module_name and module_name not in imported_blobs:
-                import_blob = self._get_import_blob_with_module_name(module_name)
+                import_blob = self._get_import_blob_with_module_name(
+                    module_name)
                 if import_blob is not None:
                     imported_blobs[module_name] = import_blob
                     # Get imports from imports
                     # Example, foo imports bar, bar imports baz
-                    self._get_all_import_blobs_dict_for_elem(import_blob, imported_blobs)
+                    self._get_all_import_blobs_dict_for_elem(
+                        import_blob, imported_blobs)
             else:
-                self.debug("_get_all_import_blobs_dict_for_elem:: Recursive import: Already imported module: %r",
+                self.debug(
+                    "_get_all_import_blobs_dict_for_elem:: Recursive import: Already imported module: %r",
                            module_name)
 
     def _get_all_import_blobs_for_elem(self, elem):
@@ -1549,12 +1604,13 @@ class PHPTreeEvaluator(TreeEvaluator):
         imported_blobs = {}
         self._get_all_import_blobs_dict_for_elem(elem, imported_blobs)
         blobs = imported_blobs.values()
-        self.debug("_get_all_import_blobs_for_elem:: Imported blobs: %r", blobs)
+        self.debug(
+            "_get_all_import_blobs_for_elem:: Imported blobs: %r", blobs)
         return blobs
 
-    #_built_in_keyword_names = None
+    # _built_in_keyword_names = None
     #@property
-    #def built_in_keyword_names(self):
+    # def built_in_keyword_names(self):
     #    if self._built_in_keyword_names is None:
     #        # Get all class names from the nodes
     #        # XXX - Fix keywords
@@ -1574,7 +1630,8 @@ class PHPTreeEvaluator(TreeEvaluator):
         variable_names = cache.get(cache_item_name)
         if variable_names is None:
             variables = self._get_all_children_with_details(elem, "variable")
-            variable_names = [ x.get("name") for x in variables if x.get("ilk") != "constant" ]
+            variable_names = [x.get(
+                "name") for x in variables if x.get("ilk") != "constant"]
             cache[cache_item_name] = variable_names
         return variable_names
 
@@ -1584,7 +1641,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         if constant_names is None:
             constants = self._get_all_children_with_details(elem, "variable",
                                                             {"ilk": "constant"})
-            constant_names = [ x.get("name") for x in constants ]
+            constant_names = [x.get("name") for x in constants]
             cache[cache_item_name] = constant_names
         return constant_names
 
@@ -1594,7 +1651,8 @@ class PHPTreeEvaluator(TreeEvaluator):
         if constant_short_names is None:
             constant_short_names = make_short_name_dict(
                                     self.constant_names_from_elem(elem),
-                                    # XXX - TODO: Use constant_TRIGGER_LEN instead of hard coding 3
+                                    # XXX - TODO: Use constant_TRIGGER_LEN
+                                    # instead of hard coding 3
                                     length=3)
             cache[cache_item_name] = constant_short_names
         return constant_short_names
@@ -1605,7 +1663,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         if function_names is None:
             functions = self._get_all_children_with_details(elem, "scope",
                                                             {"ilk": "function"})
-            function_names = [ x.get("name") for x in functions ]
+            function_names = [x.get("name") for x in functions]
             cache[cache_item_name] = function_names
         return function_names
 
@@ -1615,7 +1673,8 @@ class PHPTreeEvaluator(TreeEvaluator):
         if function_short_names is None:
             function_short_names = make_short_name_dict(
                                     self.function_names_from_elem(elem),
-                                    # XXX - TODO: Use FUNCTION_TRIGGER_LEN instead of hard coding 3
+                                    # XXX - TODO: Use FUNCTION_TRIGGER_LEN
+                                    # instead of hard coding 3
                                     length=3)
             cache[cache_item_name] = function_short_names
         return function_short_names
@@ -1626,7 +1685,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         if class_names is None:
             classes = self._get_all_children_with_details(elem, "scope",
                                                             {"ilk": "class"})
-            class_names = [ x.get("name") for x in classes ]
+            class_names = [x.get("name") for x in classes]
             cache[cache_item_name] = class_names
         return class_names
 
@@ -1636,7 +1695,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         if trait_names is None:
             traits = self._get_all_children_with_details(elem, "scope",
                                                             {"ilk": "trait"})
-            trait_names = [ x.get("name") for x in traits ]
+            trait_names = [x.get("name") for x in traits]
             cache[cache_item_name] = trait_names
         return trait_names
 
@@ -1660,7 +1719,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         if namespace_names is None:
             elems = self._get_all_children_with_details(elem, "scope",
                                                         {"ilk": "namespace"})
-            namespace_names = [ x.get("name") for x in elems ]
+            namespace_names = [x.get("name") for x in elems]
             cache[cache_item_name] = namespace_names
         return namespace_names
 
@@ -1670,6 +1729,6 @@ class PHPTreeEvaluator(TreeEvaluator):
         if interface_names is None:
             interfaces = self._get_all_children_with_details(elem, "scope",
                                                             {"ilk": "interface"})
-            interface_names = [ x.get("name") for x in interfaces ]
+            interface_names = [x.get("name") for x in interfaces]
             cache[cache_item_name] = interface_names
         return interface_names

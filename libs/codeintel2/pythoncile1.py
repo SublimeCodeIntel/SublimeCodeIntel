@@ -12,7 +12,7 @@
         mtime = os.stat("foo.py")[stat.ST_MTIME]
         content = open("foo.py", "r").read()
         scan(content, "foo.py", mtime=mtime)
-    
+
     Command-line Usage:
         pythoncile.py [<options>...] [<Python files>...]
 
@@ -37,13 +37,13 @@
     This is a Language Engine for the Code Intelligence (codeintel) system.
     Code Intelligence XML format. See:
         http://specs.activestate.com/Komodo_3.0/func/code_intelligence.html
-    
+
     The command-line interface will return non-zero iff the scan failed.
 """
 # Dev Notes:
 # <none>
 #
-#TODO:
+# TODO:
 # - type inferencing: asserts
 # - type inferencing: return statements
 # - type inferencing: calls to isinstance
@@ -104,16 +104,15 @@ from codeintel2 import tdparser
 
 #---- exceptions
 
+
 class PythonCILEError(CILEError):
     pass
 
 
-
 #---- global data
-
 _version_ = (0, 3, 0)
 log = logging.getLogger("pythoncile")
-#log.setLevel(logging.DEBUG)
+# log.setLevel(logging.DEBUG)
 util.makePerformantLogger(log)
 
 _gClockIt = 0   # if true then we are gathering timing data
@@ -121,22 +120,22 @@ _gClock = None  # if gathering timing data this is set to time retrieval fn
 _gStartTime = None   # start time of current file being scanned
 
 
-
 #---- internal routines and classes
-
 def _isclass(namespace):
     return (len(namespace["types"]) == 1
             and "class" in namespace["types"])
+
 
 def _isfunction(namespace):
     return (len(namespace["types"]) == 1
             and "function" in namespace["types"])
 
+
 def getAttrStr(attrs):
     """Construct an XML-safe attribute string from the given attributes
-    
+
         "attrs" is a dictionary of attributes
-    
+
     The returned attribute string includes a leading space, if necessary,
     so it is safe to use the string right after a tag name. Any Unicode
     attributes will be encoded into UTF8 encoding as part of this process.
@@ -162,9 +161,10 @@ else:
     # literal '?' -- this is better than failing outright.
     charrefreplace = 'replace'
 
+
 def xmlencode(s):
     """Encode the given string for inclusion in a UTF-8 XML document.
-    
+
     Note: s must *not* be Unicode, it must be encoded before being passed in.
 
     Specifically, illegal or unpresentable characters are encoded as
@@ -188,34 +188,36 @@ def xmlencode(s):
     #        ago, and I don't recall what I mean by "avoid shuffling the data
     #        around", but it must be related to something I observed without
     #        that code.
-    
+
     # replace with XML decimal char entity, e.g. '&#7;'
     return _encre.sub(lambda m: '&#%d;' % ord(m.group(1)), s)
 
+
 def cdataescape(s):
     """Return the string escaped for inclusion in an XML CDATA section.
-    
+
     Note: Any Unicode will be encoded to UTF8 encoding as part of this process.
 
     A CDATA section is terminated with ']]>', therefore this token in the
     content must be escaped. To my knowledge the XML spec does not define
     how to do that. My chosen escape is (courteousy of EricP) is to split
     that token into multiple CDATA sections, so that, for example:
-    
+
         blah...]]>...blah
-    
+
     becomes:
-    
+
         blah...]]]]><![CDATA[>...blah
-    
+
     and the resulting content should be copacetic:
-    
+
         <b><![CDATA[blah...]]]]><![CDATA[>...blah]]></b>
     """
     if isinstance(s, unicode):
         s = s.encode("utf-8")
     parts = s.split("]]>")
     return "]]]]><![CDATA[>".join(parts)
+
 
 def _unistr(x):
     if isinstance(x, unicode):
@@ -225,19 +227,23 @@ def _unistr(x):
     else:
         return unicode(x)
 
+
 def _et_attrs(attrs):
     return dict((_unistr(k), xmlencode(_unistr(v))) for k, v in attrs.items()
-                                                    if v is not None)
+                if v is not None)
+
 
 def _et_data(data):
     return xmlencode(_unistr(data))
-    
+
+
 def _node_attrs(node, **kw):
     return dict(name=node["name"],
                 line=node.get("line"),
                 doc=node.get("doc"),
                 attributes=node.get("attributes") or None,
                 **kw)
+
 
 def _node_citdl(node):
     max_type = None
@@ -246,8 +252,8 @@ def _node_citdl(node):
     guesses = node.get("types", {})
     for type, score in guesses.items():
         if ' ' in type:
-            #XXX Drop the <start-scope> part of CITDL for now.
-            type = type.split(None,1)[0]
+            # XXX Drop the <start-scope> part of CITDL for now.
+            type = type.split(None, 1)[0]
         # Don't emit None types, it does not help us. Fix for bug:
         #  http://bugs.activestate.com/show_bug.cgi?id=71989
         if type != "None":
@@ -255,11 +261,11 @@ def _node_citdl(node):
                 max_type = type
                 max_score = score
     return max_type
-    
+
 
 class AST2CIXVisitor:
     """Generate Code Intelligence XML (CIX) from walking a Python AST tree.
-    
+
     This just generates the CIX content _inside_ of the <file/> tag. The
     prefix and suffix have to be added separately.
 
@@ -268,6 +274,7 @@ class AST2CIXVisitor:
           original content. The generated CIX XML will also be UTF-8 encoded.
     """
     DEBUG = 0
+
     def __init__(self, moduleName=None, content=None, lang="Python"):
         self.lang = lang
         if self.DEBUG is None:
@@ -279,7 +286,7 @@ class AST2CIXVisitor:
             self.lines = None
         # Symbol Tables (dicts) are built up for each scope. The namespace
         # stack to the global-level is maintain in self.nsstack.
-        self.st = { # the main module symbol table
+        self.st = {  # the main module symbol table
             # <scope name>: <namespace dict>
         }
         self.nsstack = []
@@ -302,7 +309,8 @@ class AST2CIXVisitor:
 
     def cix_module(self, node):
         """Emit CIX for the given module namespace."""
-        #log.debug("cix_module(%s, level=%r)", '.'.join(node["nspath"]), level)
+        # log.debug("cix_module(%s, level=%r)", '.'.join(node["nspath"]),
+        # level)
         assert len(node["types"]) == 1 and "module" in node["types"]
         attrs = _node_attrs(node, lang=self.lang, ilk="blob")
         module = self.emit_start('scope', attrs)
@@ -312,7 +320,7 @@ class AST2CIXVisitor:
         self.emit_end('scope')
 
     def cix_import(self, node):
-        #log.debug("cix_import(%s, level=%r)", node["module"], level)
+        # log.debug("cix_import(%s, level=%r)", node["module"], level)
         attrs = node
         self.emit_tag('import', attrs)
 
@@ -332,7 +340,7 @@ class AST2CIXVisitor:
             self.cix_variable(node, parentIsClass)
 
     def cix_variable(self, node, parentIsClass=0):
-        #log.debug("cix_variable(%s, level=%r, parentIsClass=%r)",
+        # log.debug("cix_variable(%s, level=%r, parentIsClass=%r)",
         #          '.'.join(node["nspath"]), level, parentIsClass)
         attrs = _node_attrs(node, citdl=_node_citdl(node))
         if parentIsClass and "is-class-var" not in node:
@@ -345,11 +353,11 @@ class AST2CIXVisitor:
         self.emit_tag('variable', attrs)
 
     def cix_class(self, node):
-        #log.debug("cix_class(%s, level=%r)", '.'.join(node["nspath"]), level)
+        # log.debug("cix_class(%s, level=%r)", '.'.join(node["nspath"]), level)
 
         if node["classrefs"]:
             citdls = (t for t in (_node_citdl(n) for n in node["classrefs"])
-                        if t is not None)
+                      if t is not None)
             classrefs = " ".join(citdls)
         else:
             classrefs = None
@@ -366,16 +374,17 @@ class AST2CIXVisitor:
             self.cix_import(import_)
 
         self.cix_symbols(node["symbols"], parentIsClass=1)
-        
+
         self.emit_end('scope')
 
     def cix_argument(self, node):
-        #log.debug("cix_argument(%s, level=%r)", '.'.join(node["nspath"]), level)
+        # log.debug("cix_argument(%s, level=%r)", '.'.join(node["nspath"]),
+        # level)
         attrs = _node_attrs(node, citdl=_node_citdl(node), ilk="argument")
         self.emit_tag('variable', attrs)
 
     def cix_function(self, node):
-        #log.debug("cix_function(%s, level=%r)", '.'.join(node["nspath"]), level)
+        # log.debug("cix_function(%s, level=%r)", '.'.join(node["nspath"]), level)
         # Determine the best return type.
         best_citdl = None
         max_count = 0
@@ -397,12 +406,12 @@ class AST2CIXVisitor:
         for arg in node["arguments"]:
             argNames.append(arg["name"])
             self.cix_argument(arg)
-        symbols = {} # don't re-emit the function arguments
+        symbols = {}  # don't re-emit the function arguments
         for symbolName, symbol in node["symbols"].items():
             if symbolName not in argNames:
                 symbols[symbolName] = symbol
         self.cix_symbols(symbols)
-        #XXX <returns/> if one is defined
+        # XXX <returns/> if one is defined
         self.emit_end('scope')
 
     def getCIX(self, path):
@@ -425,7 +434,7 @@ class AST2CIXVisitor:
         if node.doc:
             summarylines = util.parseDocSummary(node.doc.splitlines(0))
             namespace["doc"] = "\n".join(summarylines)
-            
+
         if node.lineno:
             namespace["line"] = node.lineno
 
@@ -457,7 +466,7 @@ class AST2CIXVisitor:
             "nspath": nspath,
             "name": name,
             "types": {"class": 1},
-            #XXX Example of a base class that might surprise: the
+            # XXX Example of a base class that might surprise: the
             #    __metaclass__ class in
             #    c:\python22\lib\site-packages\ctypes\com\automation.py
             #    Should this be self._getCITDLExprRepr()???
@@ -466,11 +475,13 @@ class AST2CIXVisitor:
         }
         namespace["declaration"] = namespace
 
-        if node.lineno: namespace["line"] = node.lineno
+        if node.lineno:
+            namespace["line"] = node.lineno
         lastNode = node
         while lastNode.getChildNodes():
             lastNode = lastNode.getChildNodes()[-1]
-        if lastNode.lineno: namespace["lineend"] = lastNode.lineno
+        if lastNode.lineno:
+            namespace["lineend"] = lastNode.lineno
 
         attributes = []
         if name.startswith("__") and name.endswith("__"):
@@ -507,23 +518,25 @@ class AST2CIXVisitor:
                  self.lines and self.lines[node.lineno-1])
         parent = self.nsstack[-1]
         parentIsClass = _isclass(parent)
-        
+
         namespace = {
             "types": {"function": 1},
             "returns": {},
             "arguments": [],
             "symbols": {},
         }
-        
+
         namespace["declaration"] = namespace
-        if node.lineno: namespace["line"] = node.lineno
+        if node.lineno:
+            namespace["line"] = node.lineno
         lastNode = node
         while lastNode.getChildNodes():
             lastNode = lastNode.getChildNodes()[-1]
-        if lastNode.lineno: namespace["lineend"] = lastNode.lineno
+        if lastNode.lineno:
+            namespace["lineend"] = lastNode.lineno
 
         name = node.name
-        
+
         # Determine attributes
         attributes = []
         if name.startswith("__") and name.endswith("__"):
@@ -534,7 +547,7 @@ class AST2CIXVisitor:
             attributes.append("protected")
         if name == "__init__" and parentIsClass:
             attributes.append("__ctor__")
-            
+
         # process decorators
         prop_var = None
         if node.decorators:
@@ -546,7 +559,7 @@ class AST2CIXVisitor:
                                                                      'setter',
                                                                      'deleter'):
                     prop_mode = deco.attrname
-                    
+
                 if prop_mode:
                     if prop_mode == 'getter':
                         # it's a getter, create a pseudo-var
@@ -567,28 +580,28 @@ class AST2CIXVisitor:
                             prop_var["attributes"] = ' '.join(var_attrs)
                             prop_var["declaration"] = prop_var
                             parent["symbols"][name] = prop_var
-                        
+
                         if not "is-class-var" in prop_var:
                             prop_var["is-class-var"] = 1
-                            
-                    # hide the function  
+
+                    # hide the function
                     attributes += ['__hidden__']
                     name += " (property %s)" % prop_mode
-                    
+
                     # only one property decorator makes sense
                     break
-            
+
         namespace["attributes"] = ' '.join(attributes)
-        
+
         if parentIsClass and name == "__init__":
             fallbackSig = parent["name"]
         else:
             fallbackSig = name
         namespace["name"] = name
-        
+
         nspath = parent["nspath"] + (name,)
         namespace["nspath"] = nspath
-        
+
         # Handle arguments. The format of the relevant Function attributes
         # makes this a little bit of pain.
         defaultArgsBaseIndex = len(node.argnames) - len(node.defaults)
@@ -631,6 +644,7 @@ class AST2CIXVisitor:
                                 "nspath": nspath+(argName,),
                                 "doc": None,
                                 "types": {},
+                                "line": node.lineno,
                                 "symbols": {}}
                     arguments.append(argument)
             else:
@@ -639,6 +653,7 @@ class AST2CIXVisitor:
                             "nspath": nspath+(argName,),
                             "doc": None,
                             "types": {},
+                            "line": node.lineno,
                             "symbols": {}}
                 if i == kwargsIndex:
                     argument["attributes"] = "kwargs"
@@ -670,10 +685,11 @@ class AST2CIXVisitor:
                     argument["types"][className] = 1
                     argument["declaration"] = self.nsstack[-1]
                 arguments = [argument]
-                
+
             for argument in arguments:
                 if "declaration" not in argument:
-                    argument["declaration"] = argument # namespace dict of the declaration
+                    argument[
+                        "declaration"] = argument  # namespace dict of the declaration
                 namespace["arguments"].append(argument)
                 namespace["symbols"][argument["name"]] = argument
         # Drop first "self" argument from class method signatures.
@@ -694,7 +710,7 @@ class AST2CIXVisitor:
         self.nsstack.append(namespace)
         self.visit(node.code)
         self.nsstack.pop()
-        
+
         if prop_var:
             # this is a property getter function,
             # copy its return types to the corresponding property variable...
@@ -714,8 +730,10 @@ class AST2CIXVisitor:
         imports = self.nsstack[-1].setdefault("imports", [])
         for module, alias in node.names:
             import_ = {"module": module}
-            if node.lineno: import_["line"] = node.lineno
-            if alias: import_["alias"] = alias
+            if node.lineno:
+                import_["line"] = node.lineno
+            if alias:
+                import_["alias"] = alias
             imports.append(import_)
 
     def visitFrom(self, node):
@@ -733,17 +751,17 @@ class AST2CIXVisitor:
                 import_["alias"] = alias
             imports.append(import_)
 
-    #XXX
-    #def visitReturn(self, node):
+    # XXX
+    # def visitReturn(self, node):
     #    # set __rettypes__ on Functions
     #    pass
-    #def visitGlobal(self, node):
+    # def visitGlobal(self, node):
     #    # note for future visitAssign to control namespace
     #    pass
-    #def visitYield(self, node):
+    # def visitYield(self, node):
     #    # modify the Function into a generator??? what are the implications?
     #    pass
-    #def visitAssert(self, node):
+    # def visitAssert(self, node):
     #    # support the assert hints that Wing does
     #    pass
 
@@ -763,7 +781,7 @@ class AST2CIXVisitor:
                   "line, isClassVar=%r)", varName,
                   '.'.join(namespace["nspath"]), rhsNode, isClassVar)
         variable = namespace["symbols"].get(varName, None)
-        
+
         new_var = False
         if variable is None:
             new_var = True
@@ -787,9 +805,10 @@ class AST2CIXVisitor:
             variable["attributes"] = ' '.join(attributes)
 
             variable["declaration"] = variable
-            if line: variable["line"] = line
+            if line:
+                variable["line"] = line
             namespace["symbols"][varName] = variable
-            
+
         if isClassVar and not "is-class-var" in variable:
             variable["is-class-var"] = 1
             # line number of first class-level assignment wins
@@ -805,7 +824,7 @@ class AST2CIXVisitor:
             ):
             # a speial case for 2.4-styled decorators
             return
-                        
+
         varTypes = variable["types"]
         for t in self._guessTypes(rhsNode, namespace):
             log.info("guessed type: %s ::= %s", varName, t)
@@ -870,10 +889,11 @@ class AST2CIXVisitor:
             elif isinstance(rhsNode, ast.CallFunc):
                 for i in range(len(lhsNode.nodes)):
                     self._visitSimpleAssign(lhsNode.nodes[i],
-                                            None, # we don't have a good type.
+                                            None,  # we don't have a good type.
                                             node.lineno)
             else:
-                log.info("visitAssign:: skipping unknown rhsNode type: %r - %r",
+                log.info(
+                    "visitAssign:: skipping unknown rhsNode type: %r - %r",
                          type(rhsNode), rhsNode)
         elif isinstance(lhsNode, ast.Slice):
             # E.g.:  bar[1:2] = "foo"
@@ -889,11 +909,52 @@ class AST2CIXVisitor:
             raise PythonCILEError("unexpected type of LHS of assignment: %r"
                                   % lhsNode)
 
+    def _handleUnknownAssignment(self, assignNode, lineno):
+        if isinstance(assignNode, ast.AssName):
+            self._visitSimpleAssign(assignNode, None, lineno)
+        elif isinstance(assignNode, ast.AssTuple):
+            for anode in assignNode.nodes:
+                self._visitSimpleAssign(anode, None, lineno)
+
+    def visitFor(self, node):
+        log.info("visitFor:%d: %r", node.lineno,
+                 self.lines and self.lines[node.lineno-1])
+        # E.g.:
+        #   for foo in ...
+        # None: don't bother trying to resolve the type of the RHS
+        self._handleUnknownAssignment(node.assign, node.lineno)
+        self.visit(node.body)
+
+    def visitWith(self, node):
+        log.info("visitWith:%d: %r", node.lineno,
+                 self.lines and self.lines[node.lineno-1])
+        self._handleUnknownAssignment(node.vars, node.lineno)
+        self.visit(node.body)
+
+    def visitTryExcept(self, node):
+        log.info("visitTryExcept:%d: %r", node.lineno,
+                 self.lines and self.lines[node.lineno-1])
+        self.visit(node.body)
+        for handler in node.handlers:
+            try:
+                if handler[1]:
+                    try:
+                        lineno = handler[1].lineno
+                    except AttributeError:
+                        lineno = node.lineno
+                    self._handleUnknownAssignment(handler[1], lineno)
+                if handler[2]:
+                    self.visit(handler[2])
+            except IndexError:
+                pass
+        if node.else_:
+            self.visit(node.else_)
+
     def _resolveObjectRef(self, expr):
         """Try to resolve the given expression to a variable namespace.
-        
+
             "expr" is some kind of ast.Node instance.
-        
+
         Returns the following 2-tuple for the object:
             (<variable dict>, <CITDL string>)
         where,
@@ -914,12 +975,13 @@ class AST2CIXVisitor:
                 if name in ns["symbols"]:
                     return (ns["symbols"][name], None)
                 else:
-                    log.debug("_resolveObjectRef: %r not in namespace %r", name,
+                    log.debug(
+                        "_resolveObjectRef: %r not in namespace %r", name,
                               '.'.join(ns["nspath"]))
         elif isinstance(expr, ast.Getattr):
             obj, citdl = self._resolveObjectRef(expr.expr)
-            decl = obj and obj["declaration"] or None # want the declaration
-            if (decl #and "symbols" in decl #XXX this "and"-part necessary?
+            decl = obj and obj["declaration"] or None  # want the declaration
+            if (decl  # and "symbols" in decl #XXX this "and"-part necessary?
                 and expr.attrname in decl["symbols"]):
                 return (decl["symbols"][expr.attrname], None)
             elif isinstance(expr.expr, ast.Const):
@@ -929,13 +991,13 @@ class AST2CIXVisitor:
                 citdl = "__builtins__.%s.%s"\
                         % ((type(expr.expr.value).__name__), expr.attrname)
                 return (None, citdl)
-                #XXX Could optimize here for common built-in attributes. E.g.,
+                # XXX Could optimize here for common built-in attributes. E.g.,
                 #    we *know* that str.join() returns a string.
         elif isinstance(expr, ast.Const):
             # Special case: specifically refer to type object for constants.
             return (None, "__builtins__.%s" % type(expr.value).__name__)
         elif isinstance(expr, ast.CallFunc):
-            #XXX Would need flow analysis to have an object dict for whatever
+            # XXX Would need flow analysis to have an object dict for whatever
             #    a __call__ would return.
             pass
 
@@ -961,13 +1023,16 @@ class AST2CIXVisitor:
             ts = [tuple.__name__]
         elif isinstance(expr, (ast.List, ast.ListComp)):
             ts = [list.__name__]
+        elif hasattr(ast, 'Set') and isinstance(expr, ast.Set):
+            ts = [set.__name__]
         elif isinstance(expr, ast.Dict):
             ts = [dict.__name__]
         elif isinstance(expr, (ast.Add, ast.Sub, ast.Mul, ast.Div, ast.Mod,
                                ast.Power)):
             order = ["int", "bool", "long", "float", "complex", "string",
                      "unicode"]
-            possibles = self._guessTypes(expr.left)+self._guessTypes(expr.right)
+            possibles = self._guessTypes(
+                expr.left)+self._guessTypes(expr.right)
             ts = []
             highest = -1
             for possible in possibles:
@@ -987,7 +1052,7 @@ class AST2CIXVisitor:
                     if t not in ts:
                         ts.append(t)
         elif isinstance(expr, (ast.Compare, ast.Not)):
-            ts = [type(1==2).__name__]
+            ts = [type(1 == 2).__name__]
         elif isinstance(expr, (ast.UnaryAdd, ast.UnarySub, ast.Invert,
                                ast.Not)):
             ts = self._guessTypes(expr.expr)
@@ -1000,7 +1065,7 @@ class AST2CIXVisitor:
             variable, citdl = self._resolveObjectRef(expr)
             if variable:
                 if _isclass(variable) or _isfunction(variable):
-                    ts = [ '.'.join(variable["nspath"]) ]
+                    ts = ['.'.join(variable["nspath"])]
                 else:
                     ts = variable["types"].keys()
             elif citdl:
@@ -1008,7 +1073,7 @@ class AST2CIXVisitor:
         elif isinstance(expr, ast.CallFunc):
             variable, citdl = self._resolveObjectRef(expr.node)
             if variable:
-                #XXX When/if we support <returns/> and if we have that
+                # XXX When/if we support <returns/> and if we have that
                 #    info for this 'variable' we can return an actual
                 #    value here.
                 # Optmizing Shortcut: If the variable is a class then just
@@ -1025,7 +1090,7 @@ class AST2CIXVisitor:
                             break
                 scope = '.'.join(scope_parts)
                 if _isclass(variable):
-                    ts = [ scope ]
+                    ts = [scope]
                 else:
                     ts = [scope+"()"]
             elif citdl:
@@ -1064,7 +1129,7 @@ class AST2CIXVisitor:
 
     def _getExprRepr(self, node):
         """Return a string representation for this Python expression.
-        
+
         Raises PythonCILEError if can't do it.
         """
         s = None
@@ -1080,6 +1145,9 @@ class AST2CIXVisitor:
         elif isinstance(node, ast.Tuple):
             items = [self._getExprRepr(c) for c in node.getChildren()]
             s = "(%s)" % ", ".join(items)
+        elif hasattr(ast, 'Set') and isinstance(node, ast.Set):
+            items = [self._getExprRepr(c) for c in node.getChildren()]
+            s = "{%s}" % ", ".join(items)
         elif isinstance(node, ast.Dict):
             items = ["%s: %s" % (self._getExprRepr(k), self._getExprRepr(v))
                      for (k, v) in node.items]
@@ -1089,14 +1157,14 @@ class AST2CIXVisitor:
             s += "("
             allargs = []
             for arg in node.args:
-                allargs.append( self._getExprRepr(arg) )
+                allargs.append(self._getExprRepr(arg))
             if node.star_args:
                 for arg in node.star_args:
-                    allargs.append( "*" + self._getExprRepr(arg) )
+                    allargs.append("*" + self._getExprRepr(arg))
             if node.dstar_args:
                 for arg in node.dstar_args:
-                    allargs.append( "**" + self._getExprRepr(arg) )
-            s += ",".join( allargs )
+                    allargs.append("**" + self._getExprRepr(arg))
+            s += ",".join(allargs)
             s += ")"
         elif isinstance(node, ast.Subscript):
             s = "[%s]" % self._getExprRepr(node.expr)
@@ -1117,23 +1185,32 @@ class AST2CIXVisitor:
         elif isinstance(node, ast.UnaryAdd):
             s = "+" + self._getExprRepr(node.expr)
         elif isinstance(node, ast.Add):
-            s = self._getExprRepr(node.left) + "+" + self._getExprRepr(node.right)
+            s = self._getExprRepr(
+                node.left) + "+" + self._getExprRepr(node.right)
         elif isinstance(node, ast.Sub):
-            s = self._getExprRepr(node.left) + "-" + self._getExprRepr(node.right)
+            s = self._getExprRepr(
+                node.left) + "-" + self._getExprRepr(node.right)
         elif isinstance(node, ast.Mul):
-            s = self._getExprRepr(node.left) + "*" + self._getExprRepr(node.right)
+            s = self._getExprRepr(
+                node.left) + "*" + self._getExprRepr(node.right)
         elif isinstance(node, ast.Div):
-            s = self._getExprRepr(node.left) + "/" + self._getExprRepr(node.right)
+            s = self._getExprRepr(
+                node.left) + "/" + self._getExprRepr(node.right)
         elif isinstance(node, ast.FloorDiv):
-            s = self._getExprRepr(node.left) + "//" + self._getExprRepr(node.right)
+            s = self._getExprRepr(
+                node.left) + "//" + self._getExprRepr(node.right)
         elif isinstance(node, ast.Mod):
-            s = self._getExprRepr(node.left) + "%" + self._getExprRepr(node.right)
+            s = self._getExprRepr(
+                node.left) + "%" + self._getExprRepr(node.right)
         elif isinstance(node, ast.Power):
-            s = self._getExprRepr(node.left) + "**" + self._getExprRepr(node.right)
+            s = self._getExprRepr(
+                node.left) + "**" + self._getExprRepr(node.right)
         elif isinstance(node, ast.LeftShift):
-            s = self._getExprRepr(node.left) + "<<" + self._getExprRepr(node.right)
+            s = self._getExprRepr(
+                node.left) + "<<" + self._getExprRepr(node.right)
         elif isinstance(node, ast.RightShift):
-            s = self._getExprRepr(node.left) + ">>"+ self._getExprRepr(node.right)
+            s = self._getExprRepr(
+                node.left) + ">>" + self._getExprRepr(node.right)
         elif isinstance(node, ast.Keyword):
             s = node.name + "=" + self._getExprRepr(node.expr)
         elif isinstance(node, ast.Bitor):
@@ -1190,7 +1267,7 @@ class AST2CIXVisitor:
                         try:
                             arg += "="+self._getExprRepr(defaultNode)
                         except PythonCILEError:
-                            #XXX Work around some trouble cases.
+                            # XXX Work around some trouble cases.
                             arg += arg+"=..."
                 else:
                     argname = node.argnames[i]
@@ -1203,7 +1280,7 @@ class AST2CIXVisitor:
                         try:
                             arg = argname+"="+self._getExprRepr(defaultNode)
                         except PythonCILEError:
-                            #XXX Work around some trouble cases.
+                            # XXX Work around some trouble cases.
                             arg = argname+"=..."
                     else:
                         arg = argname
@@ -1213,7 +1290,7 @@ class AST2CIXVisitor:
             try:
                 s += ": " + self._getExprRepr(node.code)
             except PythonCILEError:
-                #XXX Work around some trouble cases.
+                # XXX Work around some trouble cases.
                 s += ":..."
         else:
             raise PythonCILEError("don't know how to get string repr "
@@ -1223,7 +1300,7 @@ class AST2CIXVisitor:
     def _getCITDLExprRepr(self, node, _level=0):
         """Return a string repr for this expression that CITDL processing
         can handle.
-        
+
         CITDL is no panacea -- it is meant to provide simple delayed type
         determination. As a result, many complicated expressions cannot
         be handled. If the expression is not with CITDL's scope, then None
@@ -1244,6 +1321,8 @@ class AST2CIXVisitor:
             s = "[]"
         elif isinstance(node, ast.Tuple):
             s = "()"
+        elif hasattr(ast, 'Set') and isinstance(node, ast.Set):
+            s = "set()"
         elif isinstance(node, ast.Dict):
             s = "{}"
         elif isinstance(node, ast.CallFunc):
@@ -1269,6 +1348,7 @@ def _quietCompilerParse(content):
     finally:
         sys.stderr = oldstderr
 
+
 def _quietCompile(source, filename, kind):
     oldstderr = sys.stderr
     sys.stderr = StringIO()
@@ -1280,7 +1360,7 @@ def _quietCompile(source, filename, kind):
 
 def _getAST(content):
     """Return an AST for the given Python content.
-    
+
     If cannot, raise an error describing the problem.
     """
     # EOL issues:
@@ -1292,7 +1372,7 @@ def _getAST(content):
     # Is this faster?
     #   content = content.replace('\r\n', '\n').replace('\r', '\n')
 
-    errlineno = None # line number of a SyntaxError
+    errlineno = None  # line number of a SyntaxError
     ast_ = None
     try:
         ast_ = _quietCompilerParse(content)
@@ -1311,7 +1391,7 @@ def _getAST(content):
         except:
             pass
         if errlineno is None:
-            raise # Does this re-raise 'ex' (as we want) or 'ex2'?
+            raise  # Does this re-raise 'ex' (as we want) or 'ex2'?
 
     if errlineno is not None:
         # There was a syntax error at this line: try to recover by effectively
@@ -1357,50 +1437,57 @@ def _getAST(content):
         else:
             raise ValueError("cannot recover from multiple syntax errors: "
                              "line %d and then %d" % (errlineno, errlineno2))
-    
+
     if ast_ is None:
         raise ValueError("could not generate AST")
-    
+
     return ast_
 
 
 _rx_cache = {}
+
 
 def _rx(pattern, flags=0):
     if pattern not in _rx_cache:
         _rx_cache[pattern] = re.compile(pattern, flags)
     return _rx_cache[pattern]
 
+
 def _convert3to2(src):
     # XXX: this might be much faster to do all this stuff by manipulating
     #      parse trees produced by tdparser
-    
+
     # except Foo as bar => except (Foo,) bar
-    src = _rx(r'(\bexcept\s*)(\S.+?)\s+as\s+(\w+)\s*:').sub(r'\1(\2,), \3:', src)
-    
+    src = _rx(r'(\bexcept\s*)(\S.+?)\s+as\s+(\w+)\s*:').sub(
+        r'\1(\2,), \3:', src)
+
     # 0o123 => 123
     src = _rx(r'\b0[oO](\d+)').sub(r'\1', src)
-    
+
     # print(foo) => print_(foo)
     src = _rx(r'\bprint\s*\(').sub(r'print_(', src)
-    
+
     # change forms of class Foo(metaclass=Cls3) to class Foo
-    src = _rx(r'(\bclass\s+\w+\s*)\(\s*\w+\s*=\s*\w+\s*\)\s*:').sub(r'\1:', src)
-    
-    # change forms of class Foo(..., arg=Base1, metaclass=Cls3) to class Foo(...)
-    src = _rx(r'(\bclass\s+\w+\s*\(.*?),?\s*\w+\s*=.+?\)\s*:').sub(r'\1):', src)
+    src = _rx(r'(\bclass\s+\w+\s*)\(\s*\w+\s*=\s*\w+\s*\)\s*:').sub(
+        r'\1:', src)
+
+    # change forms of class Foo(..., arg=Base1, metaclass=Cls3) to class
+    # Foo(...)
+    src = _rx(r'(\bclass\s+\w+\s*\(.*?),?\s*\w+\s*=.+?\)\s*:').sub(
+        r'\1):', src)
 
     # Remove return type annotations like def foo() -> int:
     src = _rx(r'(\bdef\s+\w+\s*\(.*?\))\s*->\s*\w+\s*:').sub(r'\1:', src)
 
     # def foo(foo:Bar, baz=lambda x: qoox): => def foo(bar, baz=_lambda(qoox)):
     src = _rx(r'(\bdef\s+\w+\s*\()(.+?)(\)\s*:)').sub(_clean_func_args, src)
-    
+
     return src
+
 
 def _clean_func_args(defn):
     argdef = defn.group(2)
-    
+
     parser = tdparser.PyExprParser()
     try:
         arglist = parser.parse_bare_arglist(argdef)
@@ -1430,12 +1517,12 @@ def _clean_func_args(defn):
                     break
                 else:
                     py2.append(arg)
-        
+
         cleared = tdparser.arg_list_py(py2)
     except tdparser.ParseError, ex:
         cleared = argdef
         log.exception("Couldn't parse (%r)" % argdef)
-    
+
     return defn.group(1) + cleared + defn.group(3)
 
 
@@ -1444,7 +1531,7 @@ def _clean_func_args(defn):
 def scan_cix(content, filename, md5sum=None, mtime=None, lang="Python"):
     """Scan the given Python content and return Code Intelligence data
     conforming the the Code Intelligence XML format.
-    
+
         "content" is the Python content to scan. This should be an
             encoded string: must be a string for `md5` and
             `compiler.parse` -- see bug 73461.
@@ -1463,7 +1550,7 @@ def scan_cix(content, filename, md5sum=None, mtime=None, lang="Python"):
             other documents.
         XXX Add an optional 'eoltype' so that it need not be
             re-calculated if already known.
-    
+
     This can raise one of SyntaxError, PythonCILEError or parser.ParserError
     if there was an error processing. Currently this implementation uses the
     Python 'compiler' package for processing, therefore the given Python
@@ -1476,21 +1563,21 @@ def scan_cix(content, filename, md5sum=None, mtime=None, lang="Python"):
 
     # this is against the W3C spec, but ElementTree wants it lowercase
     tree.write(stream, "utf-8")
-    
+
     raw_cix = stream.getvalue()
-    
+
     # XXX: why this 0xA -> &#xA; conversion is necessary?
     #      It makes no sense, but some tests break without it
     #      (like cile/scaninputs/path:cdata_close.py)
     cix = raw_cix.replace('\x0a', '&#xA;')
-    
+
     return cix
 
 
 def scan_et(content, filename, md5sum=None, mtime=None, lang="Python"):
     """Scan the given Python content and return Code Intelligence data
     conforming the the Code Intelligence XML format.
-    
+
         "content" is the Python content to scan. This should be an
             encoded string: must be a string for `md5` and
             `compiler.parse` -- see bug 73461.
@@ -1509,7 +1596,7 @@ def scan_et(content, filename, md5sum=None, mtime=None, lang="Python"):
             other documents.
         XXX Add an optional 'eoltype' so that it need not be
             re-calculated if already known.
-    
+
     This can raise one of SyntaxError, PythonCILEError or parser.ParserError
     if there was an error processing. Currently this implementation uses the
     Python 'compiler' package for processing, therefore the given Python
@@ -1520,7 +1607,7 @@ def scan_et(content, filename, md5sum=None, mtime=None, lang="Python"):
         md5sum = md5(content).hexdigest()
     if mtime is None:
         mtime = int(time.time())
-        
+
     # 'compiler' both (1) wants a newline at the end and (2) can fail on
     # funky *whitespace* at the end of the file.
     content = content.rstrip() + '\n'
@@ -1529,8 +1616,8 @@ def scan_et(content, filename, md5sum=None, mtime=None, lang="Python"):
         # Make Python3 code as compatible with pythoncile's Python2
         # parser as neessary for codeintel purposes.
         content = _convert3to2(content)
-    
-    if type(filename) == types.UnicodeType:
+
+    if isinstance(filename, types.UnicodeType):
         filename = filename.encode('utf-8')
     # The 'path' attribute must use normalized dir separators.
     if sys.platform.startswith("win"):
@@ -1555,27 +1642,26 @@ def scan_et(content, filename, md5sum=None, mtime=None, lang="Python"):
         else:
             walker = None
         compiler.walk(ast_, visitor, walker)
-        if _gClockIt: sys.stdout.write(" (walk:%.3fs)" % (_gClock()-_gStartTime))
+        if _gClockIt:
+            sys.stdout.write(" (walk:%.3fs)" % (_gClock()-_gStartTime))
         if log.isEnabledFor(logging.INFO):
             # Dump a repr of the gathering info for debugging
             # - We only have to dump the module namespace because
             #   everything else should be linked from it.
             for nspath, namespace in visitor.st.items():
-                if len(nspath) == 0: # this is the module namespace
+                if len(nspath) == 0:  # this is the module namespace
                     pprint.pprint(namespace)
-        
+
         file = visitor.getCIX(path)
-        if _gClockIt: sys.stdout.write(" (getCIX:%.3fs)" % (_gClock()-_gStartTime))
+        if _gClockIt:
+            sys.stdout.write(" (getCIX:%.3fs)" % (_gClock()-_gStartTime))
 
     codeintel = et.Element('codeintel', _et_attrs(dict(version="2.0")))
     codeintel.append(file)
     return codeintel
 
 
-
-
 #---- mainline
-
 def main(argv):
     logging.basicConfig()
 
@@ -1683,5 +1769,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit( main(sys.argv) )
-    
+    sys.exit(main(sys.argv))

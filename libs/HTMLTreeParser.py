@@ -1,25 +1,25 @@
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -31,75 +31,84 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 
-#import htmlentitydefs
-import re, string, sys
-import mimetools, StringIO
+# import htmlentitydefs
+import re
+import string
+import sys
+import mimetools
+import StringIO
 from elementtree import ElementTree
+
 
 class recollector:
     def __init__(self):
         self.res = {}
         self.regs = {}
-        
-    def add(self, name, reg, mods=None ):
+
+    def add(self, name, reg, mods=None):
         self.regs[name] = reg % self.regs
-        #print "%s = %s" % (name, self.regs[name])
+        # print "%s = %s" % (name, self.regs[name])
         if mods:
-            self.res[name] = re.compile(self.regs[name], mods) # check that it is valid
+            self.res[name] = re.compile(self.regs[
+                                        name], mods)  # check that it is valid
         else:
-            self.res[name] = re.compile(self.regs[name]) # check that it is valid
+            self.res[name] = re.compile(self.regs[
+                                        name])  # check that it is valid
 
 collector = recollector()
 a = collector.add
 
-a("TextSE" , "[^<]+")
-a("UntilHyphen" , "[^-]*-")
-a("Until2Hyphens" , "%(UntilHyphen)s(?:[^-]%(UntilHyphen)s)*-")
-a("CommentCE" , "%(Until2Hyphens)s>?") 
-a("UntilRSBs" , "[^\\]]*](?:[^\\]]+])*]+")
-a("CDATA_CE" , "%(UntilRSBs)s(?:[^\\]>]%(UntilRSBs)s)*>" )
-a("S" , "[ \\n\\t\\r]+")
-a("NameStrt" , "[A-Za-z_:]|[^\\x00-\\x7F]")
-a("NameChar" , "[A-Za-z0-9_:.-]|[^\\x00-\\x7F]")
-a("Name" , "(?:%(NameStrt)s)(?:%(NameChar)s)*")
-a("QuoteSE" , "\"[^\"]*\"|'[^']*'")
-a("DT_IdentSE" , "%(S)s%(Name)s(?:%(S)s(?:%(Name)s|%(QuoteSE)s))*" )
+a("TextSE", "[^<]+")
+a("UntilHyphen", "[^-]*-")
+a("Until2Hyphens", "%(UntilHyphen)s(?:[^-]%(UntilHyphen)s)*-")
+a("CommentCE", "%(Until2Hyphens)s>?")
+a("UntilRSBs", "[^\\]]*](?:[^\\]]+])*]+")
+a("CDATA_CE", "%(UntilRSBs)s(?:[^\\]>]%(UntilRSBs)s)*>")
+a("S", "[ \\n\\t\\r]+")
+a("NameStrt", "[A-Za-z_:]|[^\\x00-\\x7F]")
+a("NameChar", "[A-Za-z0-9_:.-]|[^\\x00-\\x7F]")
+a("Name", "(?:%(NameStrt)s)(?:%(NameChar)s)*")
+a("QuoteSE", "\"[^\"]*\"|'[^']*'")
+a("DT_IdentSE", "%(S)s%(Name)s(?:%(S)s(?:%(Name)s|%(QuoteSE)s))*")
 
 # http://bugs.activestate.com/show_bug.cgi?id=28765
-#a("MarkupDeclCE" , "(?:[^\\]\"'><]+|%(QuoteSE)s)*>" )
-a("MarkupDeclCE" , "(?:[^\\]\"'> \\n\\t\\r<]+|%(QuoteSE)s)*>" )
+# a("MarkupDeclCE" , "(?:[^\\]\"'><]+|%(QuoteSE)s)*>" )
+a("MarkupDeclCE", "(?:[^\\]\"'> \\n\\t\\r<]+|%(QuoteSE)s)*>")
 
-a("S1" , "[\\n\\r\\t ]")
-a("UntilQMs" , "[^?]*\\?+")
-a("PI_Tail" , "\\?>|%(S1)s%(UntilQMs)s(?:[^>?]%(UntilQMs)s)*>" )
-a("DT_ItemSE" ,
+a("S1", "[\\n\\r\\t ]")
+a("UntilQMs", "[^?]*\\?+")
+a("PI_Tail", "\\?>|%(S1)s%(UntilQMs)s(?:[^>?]%(UntilQMs)s)*>")
+a("DT_ItemSE",
     "<(?:!(?:--%(Until2Hyphens)s>|[^-]%(MarkupDeclCE)s)|\\?%(Name)s(?:%(PI_Tail)s))|%%%(Name)s;|%(S)s"
-)
-a("DocTypeCE" ,
-"%(DT_IdentSE)s(?:%(S)s)?(?:\\[(?:%(DT_ItemSE)s)*](?:%(S)s)?)?>?" )
-a("DeclCE" ,
+  )
+a("DocTypeCE",
+  "%(DT_IdentSE)s(?:%(S)s)?(?:\\[(?:%(DT_ItemSE)s)*](?:%(S)s)?)?>?")
+a("DeclCE",
     "--(?:%(CommentCE)s)?|\\[CDATA\\[(?:%(CDATA_CE)s)?|DOCTYPE(?:%(DocTypeCE)s)?")
-a("PI_CE" , "%(Name)s(?:%(PI_Tail)s)?")
-a("EndTagCE" , "(?P<endtag>%(Name)s)(?:%(S)s)?>?")
-a("AttValSE" , "\"[^<\"]*\"|'[^<']*'")
-a("ElemTagCE" ,
+a("PI_CE", "%(Name)s(?:%(PI_Tail)s)?")
+a("EndTagCE", "(?P<endtag>%(Name)s)(?:%(S)s)?>?")
+a("AttValSE", "\"[^<\"]*\"|'[^<']*'")
+a("ElemTagCE",
     "(?P<tag>%(Name)s)(?P<attrs>(?:%(S)s%(Name)s(?:%(S)s)?=(?:%(S)s)?(?:%(AttValSE)s))*)(?:%(S)s)?/?>?")
 
-a("MarkupSPE" ,
+a("MarkupSPE",
     "<(?:!(?:%(DeclCE)s)?|\\?(?:%(PI_CE)s)?|/(?:%(EndTagCE)s)?|(?:%(ElemTagCE)s)?)")
-a("XML_SPE" , "%(TextSE)s|%(MarkupSPE)s")
-a("XML_MARKUP_ONLY_SPE" , "%(MarkupSPE)s")
+a("XML_SPE", "%(TextSE)s|%(MarkupSPE)s")
+a("XML_MARKUP_ONLY_SPE", "%(MarkupSPE)s")
 
-a("DOCTYPE",        r'<!DOCTYPE\s+(?P<type>\S+)\s+(?P<ident>PUBLIC|SYSTEM)\s+(?P<data1>%(QuoteSE)s)\s*(?P<data2>%(QuoteSE)s)?\s*(?:\[|>)', re.S)
+a("DOCTYPE",
+  r'<!DOCTYPE\s+(?P<type>\S+)\s+(?P<ident>PUBLIC|SYSTEM)\s+(?P<data1>%(QuoteSE)s)\s*(?P<data2>%(QuoteSE)s)?\s*(?:\[|>)', re.S)
 
-a("attrfinderRE" , "(?:[\n \t]*)(%(Name)s)(?:%(S)s)?=(?:%(S)s)?(%(AttValSE)s)", re.S|re.U)
+a("attrfinderRE",
+  "(?:[\n \t]*)(%(Name)s)(?:%(S)s)?=(?:%(S)s)?(%(AttValSE)s)", re.S | re.U)
 attrfinder = collector.res["attrfinderRE"]
 
 is_not_ascii = re.compile(eval(r'u"[\u0080-\uffff]"')).search
+
 
 def parseiter(data, markuponly=0):
     if markuponly:
@@ -109,10 +118,11 @@ def parseiter(data, markuponly=0):
     regex = collector.res[reg]
     return regex.finditer(data)
 
+
 def strip_quotes(str):
     if not str:
         return None
-    if str[0] in ["'",'"']:
+    if str[0] in ["'", '"']:
         return str[1:-1]
     return str
 
@@ -134,7 +144,7 @@ html_optional_close_tags = set([
 ])
 
 html_block_tags = set([
-    "p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "pre", "dl", "div", "noscript", 
+    "p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "pre", "dl", "div", "noscript",
     "blockquote", "form", "hr", "table", "fieldset", "address"
 ])
 
@@ -145,20 +155,21 @@ html_cannot_contain_block_tags = set([
 
 html_close_tag_unnecessary = html_no_close_tags.union(html_optional_close_tags)
 
+
 class HTMLTreeBuilder(ElementTree.TreeBuilder):
 
     def __init__(self, encoding="iso-8859-1"):
         ElementTree.TreeBuilder.__init__(self)
         self.encoding = encoding
         self.nodes = []
-        self.nodemap = {} # {child_elem: parent_elem, ... }
+        self.nodemap = {}  # {child_elem: parent_elem, ... }
         self._rootnodes = []
         self.current = None
 
     def start(self, tag, attrs, loc_start, loc_end):
         if not tag:
             return
-        #print loc
+        # print loc
         if tag == "meta":
             # look for encoding directives
             http_equiv = content = None
@@ -171,7 +182,7 @@ class HTMLTreeBuilder(ElementTree.TreeBuilder):
                 # use mimetools to parse the http header
                 header = mimetools.Message(
                     StringIO.StringIO("%s: %s\n\n" % (http_equiv, content))
-                    )
+                )
                 encoding = header.getparam("charset")
                 if encoding:
                     self.encoding = encoding
@@ -184,7 +195,7 @@ class HTMLTreeBuilder(ElementTree.TreeBuilder):
                 self.end(tag)
             # special case table tags that should be autoclosed only when
             # hitting a new table row
-            elif p_tag in ("td","th") and l_tag == "tr":
+            elif p_tag in ("td", "th") and l_tag == "tr":
                 self.end_tag(p_tag)
             # if the parent and child are block tags, close the parent
             elif p_tag in html_cannot_contain_block_tags and l_tag in html_block_tags:
@@ -234,7 +245,8 @@ class HTMLTreeBuilder(ElementTree.TreeBuilder):
         return self.end_tag(tag, loc)
 
     def end_tag(self, tag, loc=None):
-        if not tag: return None
+        if not tag:
+            return None
         self._flush()
         # find this tag:
         tags = [e.localName for e in self._elem]
@@ -264,7 +276,8 @@ class HTMLTreeBuilder(ElementTree.TreeBuilder):
         if self._elem:
             return self._elem[0]
         return self._last
-        
+
+
 class Parser:
     def __init__(self, builder=None):
         if not builder:
@@ -296,16 +309,16 @@ class Parser:
         if self._lastloc:
             pos = self._lastloc
             last_lines = self.locator[pos][0]
-        lines = last_lines + self.data.count("\n",pos,loc)
-        col =  0
+        lines = last_lines + self.data.count("\n", pos, loc)
+        col = 0
         if lines > last_lines:
-            col = loc - self.data.rfind("\n",pos,loc) - 1
+            col = loc - self.data.rfind("\n", pos, loc) - 1
         elif pos in self.locator:
             col = loc - pos + self.locator[pos][1]
         self.locator[loc] = [lines, col]
         self._lastloc = loc
         return (lines + 1, col, loc)
-        
+
     def feed(self, data, markuponly=0):
         no_close_tag = []
         opt_close_tag = []
@@ -322,7 +335,8 @@ class Parser:
                 # processing tag
                 continue
             elif x.startswith("</"):
-                self._builder.end(m["endtag"], self.getLocation(matchObj.end(0)))
+                self._builder.end(m[
+                                  "endtag"], self.getLocation(matchObj.end(0)))
             elif x.startswith("<"):
                 # get the tag and attrs
                 attrs = []
@@ -342,6 +356,7 @@ class Parser:
 try:
     import sgmlop
     ReParser = Parser
+
     class SgmlopParser(ReParser):
         def __init__(self, builder=None):
             ReParser.__init__(self, builder)
@@ -351,18 +366,19 @@ try:
         def finish_starttag(self, tag, attrib, loc_start, loc_end):
             # builder expects a list of tuples
             attrs = list(attrib.items())
-            self._builder.start(tag, attrs, self.getLocation(loc_start), self.getLocation(loc_end))
-    
+            self._builder.start(tag, attrs, self.getLocation(
+                loc_start), self.getLocation(loc_end))
+
         def finish_endtag(self, tag, loc):
             self._builder.end(tag, self.getLocation(loc))
-    
+
         def handle_data(self, data):
             self._builder.data(data)
-            
+
         def handle_special(self, data, token_type=None):
             # here's where we figure out if we've got a doctype
-            if (token_type == 0x105 or # from sgmlop.c
-                data and data.startswith("DOCTYPE")):
+            if (token_type == 0x105 or  # from sgmlop.c
+                    data and data.startswith("DOCTYPE")):
                 # we get everything inside <!...>
                 self.parse_doctype("<!%s>" % data)
 
@@ -380,14 +396,15 @@ try:
 except:
     pass
 
+
 def HTML(data, ParserClass=Parser):
     p = ParserClass(HTMLTreeBuilder())
     p.feed(data)
     return p.close()
 
-if __name__=="__main__":
+if __name__ == "__main__":
     import sys
-    
+
     if len(sys.argv) > 1:
         import time
         # read the file and parse it to get a time.
@@ -403,7 +420,7 @@ if __name__=="__main__":
         t2 = time.time()
         print "sgmlop parsing took %s" % (t2-t1)
         sys.exit(0)
-    
+
     data = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
@@ -418,7 +435,6 @@ if __name__=="__main__":
     tree = HTML(data)
     print ElementTree.tostring(tree)
     sys.exit(0)
-    
 
     data = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
@@ -592,12 +608,12 @@ under:</p>
 
 """
     tree = HTML(data)
-    #print ElementTree.tostring(tree)
+    # print ElementTree.tostring(tree)
 
     data = """<html>
 <HEAD>
 <?php print $javascript->link('calendar') ?>
-    
+
     <?php $othAuth->init($othAuth->data);?>
 <!--[if lte IE 6]-->
     <?php echo $html->css{'hack'};?>
@@ -612,7 +628,7 @@ function fadeTableRow(rowid, opts) {
 </head>
 <body>"""
     tree = HTML(data)
-    #print ElementTree.tostring(tree)
+    # print ElementTree.tostring(tree)
 
     data = """<%= error_messages_for 'product' %>
 
@@ -639,4 +655,3 @@ function fadeTableRow(rowid, opts) {
     p = Parser(HTMLTreeBuilder())
     p.feed(data)
     p.close()
-   

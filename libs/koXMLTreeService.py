@@ -1,25 +1,25 @@
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -31,44 +31,51 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 import time
 import re
-from ciElementTree import TreeBuilder, XMLParser, Element
+from cElementTree import TreeBuilder, XMLParser, Element
 import logging
 log = logging.getLogger("koXMLTreeService")
-#log.setLevel(logging.INFO)
+# log.setLevel(logging.INFO)
+
 
 class recollector:
     def __init__(self):
         self.res = {}
         self.regs = {}
-        
-    def add(self, name, reg, mods=None ):
+
+    def add(self, name, reg, mods=None):
         self.regs[name] = reg % self.regs
-        #print "%s = %s" % (name, self.regs[name])
+        # print "%s = %s" % (name, self.regs[name])
         if mods:
-            self.res[name] = re.compile(self.regs[name], mods) # check that it is valid
+            self.res[name] = re.compile(self.regs[
+                                        name], mods)  # check that it is valid
         else:
-            self.res[name] = re.compile(self.regs[name]) # check that it is valid
+            self.res[name] = re.compile(self.regs[
+                                        name])  # check that it is valid
 
 collector = recollector()
 a = collector.add
 
-a("S" , "[ \\n\\t\\r]+")
-a("NameStrt" , "[A-Za-z_:]|[^\\x00-\\x7F]")
-a("NameChar" , "[A-Za-z0-9_:.-]|[^\\x00-\\x7F]")
-a("Name" , "(?:%(NameStrt)s)(?:%(NameChar)s)*")
-a("AttValSE" , "\"[^<\"]*\"|'[^<']*'")
-a("attrfinderRE" , "(?:[\n \t]*)(%(Name)s)(?:%(S)s)?=(?:%(S)s)?(%(AttValSE)s)")
-a("namespaces", 'xmlns(?::(?P<prefix>\w+))?=(?P<ns>(?:")([^"]*?)(?:")|(?:\')([^\']*?)(?:\'))', re.S|re.U)
-a("tagpart", '(?:<(?![?!-/>\s]))((?:(?P<prefix>[^\s/>]+):)?(?P<name>[^:\s/>]+)?)(?:\s+(?P<data>[^/<>]*))?', re.S|re.U)
-a("tags", '<!--.*?-->|%(tagpart)s(?:/)?>', re.S|re.U)
-a("alltags", '<!--.*?-->|(<[^\[!>?-].*?>)', re.S|re.U)
-a("QuoteSE" , "\"[^\"]*\"|'[^']*'")
-a("DOCTYPE",        r'<!DOCTYPE\s+(?P<type>\S+)\s+(?P<ident>PUBLIC|SYSTEM)\s+(?P<data1>%(QuoteSE)s)\s*(?P<data2>%(QuoteSE)s)?\s*(?:\[|>)', re.S)
+a("S", "[ \\n\\t\\r]+")
+a("NameStrt", "[A-Za-z_:]|[^\\x00-\\x7F]")
+a("NameChar", "[A-Za-z0-9_:.-]|[^\\x00-\\x7F]")
+a("Name", "(?:%(NameStrt)s)(?:%(NameChar)s)*")
+a("AttValSE", "\"[^<\"]*\"|'[^<']*'")
+a("attrfinderRE", "(?:[\n \t]*)(%(Name)s)(?:%(S)s)?=(?:%(S)s)?(%(AttValSE)s)")
+a("namespaces",
+  'xmlns(?::(?P<prefix>\w+))?=(?P<ns>(?:")([^"]*?)(?:")|(?:\')([^\']*?)(?:\'))', re.S | re.U)
+a("tagpart",
+  '(?:<(?![?!-/>\s]))((?:(?P<prefix>[^\s/>]+):)?(?P<name>[^:\s/>]+)?)(?:\s+(?P<data>[^/<>]*))?', re.S | re.U)
+a("tags", '<!--.*?-->|%(tagpart)s(?:/)?>', re.S | re.U)
+a("alltags", '<!--.*?-->|(<[^\[!>?-].*?>)', re.S | re.U)
+a("QuoteSE", "\"[^\"]*\"|'[^']*'")
+a("DOCTYPE",
+  r'<!DOCTYPE\s+(?P<type>\S+)\s+(?P<ident>PUBLIC|SYSTEM)\s+(?P<data1>%(QuoteSE)s)\s*(?P<data2>%(QuoteSE)s)?\s*(?:\[|>)', re.S)
+
 
 def getdoctype(text):
     doctype = None
@@ -87,25 +94,29 @@ def getdoctype(text):
             doctype = (m['type'], m['ident'], "", m['data1'])
     return doctype
 
+
 def getattrs(text):
     attrs = {}
     regex = collector.res["attrfinderRE"]
     match = regex.findall(text)
     for a in match:
         if a[1]:
-            attrs[a[0]]=a[1][1:-1]
+            attrs[a[0]] = a[1][1:-1]
         else:
-            attrs[a[0]]=""
+            attrs[a[0]] = ""
     return attrs
+
 
 def currentTag(text):
     m = collector.res["tagpart"].search(text)
-    if not m: return None
+    if not m:
+        return None
     td = m.groupdict()
     ad = {}
     if td['data']:
         ad.update(getattrs(td['data']))
-    return (td['prefix'],td['name'],ad, m.start(0))
+    return (td['prefix'], td['name'], ad, m.start(0))
+
 
 def elementFromTag(tree, tag, parent=None):
     tagName = tag[1]
@@ -116,7 +127,7 @@ def elementFromTag(tree, tag, parent=None):
         if tag[0] in tree.prefixmap:
             ns = tree.prefixmap[tag[0]]
         else:
-            nsattr = "xmlns:%s"%tag[0]
+            nsattr = "xmlns:%s" % tag[0]
             if nsattr in tag[2]:
                 ns = tag[2][nsattr]
                 del tag[2][nsattr]
@@ -136,7 +147,7 @@ def elementFromTag(tree, tag, parent=None):
     except:
         # will happen when parsing with cElementTree
         pass
-    #print elem.localName
+    # print elem.localName
     if parent is not None:
         parent.append(elem)
     tree.nodemap[elem] = parent
@@ -144,14 +155,16 @@ def elementFromTag(tree, tag, parent=None):
     if elem.ns is not None:
         if elem.ns not in tree.tags:
             tree.tags[elem.ns] = {}
-        tree.tags[elem.ns][elem.localName]=elem
+        tree.tags[elem.ns][elem.localName] = elem
     return elem
+
 
 def elementFromText(tree, text, parent=None):
     current = currentTag(text)
     if current:
         return elementFromTag(tree, current, parent)
     return None
+
 
 class iterparse:
     """iterparse that catches syntax errors so we can still handle any
@@ -172,7 +185,8 @@ class iterparse:
             p.feed(self.content)
         except SyntaxError, e:
             self.err = e
-            self.err_info = (p.CurrentLineNumber, p.CurrentColumnNumber, p.CurrentByteIndex)
+            self.err_info = (
+                p.CurrentLineNumber, p.CurrentColumnNumber, p.CurrentByteIndex)
 
         for event in events:
             yield event
@@ -183,9 +197,11 @@ class iterparse:
             # if we had a previous syntax error, keep it
             if not self.err:
                 self.err = e
-                self.err_info = (p.CurrentLineNumber, p.CurrentColumnNumber, p.CurrentByteIndex)
+                self.err_info = (
+                    p.CurrentLineNumber, p.CurrentColumnNumber, p.CurrentByteIndex)
         for event in events:
             yield event
+
 
 def bisect_left_nodes_start(a, x, lo=0, hi=None):
     """A version of bisect.bisect_left which compares nodes based on their start position.
@@ -194,15 +210,18 @@ def bisect_left_nodes_start(a, x, lo=0, hi=None):
         hi = len(a)
     while lo < hi:
         mid = (lo+hi)//2
-        #print "comparing", a[mid].start[:2], "and", x
-        if a[mid].start is None: return mid
+        # print "comparing", a[mid].start[:2], "and", x
+        if a[mid].start is None:
+            return mid
         if a[mid].start[:2] == x: return mid
         if a[mid].start[:2] < x: lo = mid+1
-        else: hi = mid
+        else:
+            hi = mid
     return lo
 
+
 class XMLDocument(object):
-    
+
     def __init__(self, content=None):
         self.content = content
         self.reset()
@@ -225,21 +244,22 @@ class XMLDocument(object):
         self.current = None
 
         self._rootnodes = []
-        self.nodes = [] # flat list of all nodes
-        self.tags = {} # { namespace_uri: { tag_local_name: elem, ...} , ...}
-        self.nodemap = {} # {child_elem: parent_elem, ... }
-        self.namespaces = [] # flat list of namespace uri's
-        self.nsmap = {} # { "http:/...": "xslt", ... }
-        self.prefixmap = {} # { "xslt": "http://.....", ... }
+        self.nodes = []  # flat list of all nodes
+        self.tags = {}  # { namespace_uri: { tag_local_name: elem, ...} , ...}
+        self.nodemap = {}  # {child_elem: parent_elem, ... }
+        self.namespaces = []  # flat list of namespace uri's
+        self.nsmap = {}  # { "http:/...": "xslt", ... }
+        self.prefixmap = {}  # { "xslt": "http://.....", ... }
 
     def getRoots(self):
         # return a list of all nodes that have no parent
         if not self._rootnodes:
-            self._rootnodes = [node for node in self.nodemap if self.nodemap[node] is None]
+            self._rootnodes = [
+                node for node in self.nodemap if self.nodemap[node] is None]
         return self._rootnodes
 
     def namespace(self, elem):
-        #print "%s:%s xmlns[%s]"%(self.prefix(elem),elem.localName,elem.ns)
+        # print "%s:%s xmlns[%s]"%(self.prefix(elem),elem.localName,elem.ns)
         if hasattr(elem, "ns") and elem.ns:
             return elem.ns
         return self.nsmap.get("")
@@ -258,15 +278,15 @@ class XMLDocument(object):
 
     def isAncestorOf(self, node, child):
         """ Return true if child is a descendant of node """
-        #print "asking if %r is an ancestor of %r" %( node, child)
+        # print "asking if %r is an ancestor of %r" %( node, child)
         currentParent = self.parent(child)
         while currentParent != child and currentParent is not None:
-            #print "\tparent =", currentParent
+            # print "\tparent =", currentParent
             if node == currentParent:
-                #print "-->is a parent"
+                # print "-->is a parent"
                 return True
             currentParent = self.parent(currentParent)
-        #print "-->isn't a parent"
+        # print "-->isn't a parent"
         return False
 
     def locateNode(self, line, col):
@@ -291,7 +311,7 @@ class XMLDocument(object):
             return node
         if startPos[:2] == (line, col):  # if it's an exact match, that's it
             return node
-        #if idx == 0: return node # if we're at the toplevel, so be it
+        # if idx == 0: return node # if we're at the toplevel, so be it
         while node is not None:
             while node.end:
                 # move up the parent chain until you get a parent
@@ -299,7 +319,8 @@ class XMLDocument(object):
                 last_line, last_col = node.end[:2]
                 if (last_line, last_col) < (line, col):
                     node = self.parent(node)
-                    if node is None: return node
+                    if node is None:
+                        return node
                     continue
                 break
 
@@ -316,7 +337,7 @@ class XMLDocument(object):
                 if node.end:
                     continue
             break
-                
+
         return node
 
     def prefixFromNS(self, ns):
@@ -326,7 +347,7 @@ class XMLDocument(object):
         if not prefix:
             prefix = self.nsmap.get(self.root.ns)
         return prefix
-        
+
     def prefix(self, elem):
         if not hasattr(elem, "ns") or not elem.ns:
             return ""
@@ -339,6 +360,7 @@ class XMLDocument(object):
         return elem.localName
 
     _endtagRe = re.compile(r"(</(\w+:)?\w+>)", re.U)
+
     def parse(self, content=None):
         self.reset()
         self.content = content
@@ -347,7 +369,7 @@ class XMLDocument(object):
             self.getDoctype()
         elif not self.content:
             raise Exception("no content to parse")
-        
+
         elstack = [None]
         self.current = None
         tags = {}
@@ -355,28 +377,30 @@ class XMLDocument(object):
         iter = iterparse(self.content)
         for event, elem in iter:
             if event == "start":
-                #print "%r %r %d %d %d" % (event, elem, elem.start[0], elem.start[1], elem.start[2])
+                # print "%r %r %d %d %d" % (event, elem, elem.start[0],
+                # elem.start[1], elem.start[2])
                 self.nodemap[elem] = self.current
                 self.nodes.append(elem)
                 if elem.ns not in self.tags:
                     self.tags[elem.ns] = {}
-                self.tags[elem.ns][elem.localName]=elem
+                self.tags[elem.ns][elem.localName] = elem
                 elstack.append(elem)
                 self.current = elem
             elif event == "end":
-                #print "%r %r %r %r" % (event, elem, elem.start, elem.end)
+                # print "%r %r %r %r" % (event, elem, elem.start, elem.end)
                 if elem.end:
                     try:
                         pos = elem.end[2]
-                        #print "  len %d pos %d" % (len(self.content), pos)
+                        # print "  len %d pos %d" % (len(self.content), pos)
                         # put the end location at the end of the end tag
                         m = self._endtagRe.match(self.content[pos:])
                         if m and m.groups():
                             pos = pos + m.end(1)
                             if pos > 0:
                                 # we want to be after the ">"
-                                diff = pos - elem.end[2] + 1 
-                                elem.end = (elem.end[0], elem.end[1] + diff, pos)
+                                diff = pos - elem.end[2] + 1
+                                elem.end = (elem.end[
+                                            0], elem.end[1] + diff, pos)
                     except IndexError, e:
                         # XXX FIXME BUG 56337
                         log.exception(e)
@@ -416,7 +440,7 @@ class XMLDocument(object):
             start = self.err_info[2]
         else:
             # slower
-            #print self.err_info
+            # print self.err_info
             p = 0
             for i in range(self.err_info[0] - 1):
                 # use re.search("\r|\n|\r\n")
@@ -429,39 +453,41 @@ class XMLDocument(object):
         start = content.rfind(">", 0, start) + 1
         if start >= end:
             return
-        #print self.err_info
-        #print content[start:end]
+        # print self.err_info
+        # print content[start:end]
         current = currentTag(content[start:end])
         if not current:
             return
 
-        #print "%s:%s %r %d" % current
+        # print "%s:%s %r %d" % current
         # fix error info
         start = start+current[3]
         line = content.count('\n', 0, start)
         col = start - content.rfind('\n', 0, start)
         self.err_info = (line, col, start)
         self.current = elem = elementFromTag(self, current, parent)
-    
+
     def dump(self):
-        print "error ",self.err
-        print "error_info ",self.err_info
+        print "error ", self.err
+        print "error_info ", self.err_info
         print "%d nodes created" % len(self.nodemap)
-        print "doctype ",self.doctype
-        print "publicId ",self.publicId
-        print "systemId ",self.systemId
+        print "doctype ", self.doctype
+        print "publicId ", self.publicId
+        print "systemId ", self.systemId
         print self.prefixmap
         print self.nsmap
-        print "root ",self.root
+        print "root ", self.root
         if self.root:
-            print "root tag ",self.root.tag
-            print "root ns ",self.root.ns
-            print "root localName ",self.root.localName
-            print "root start ",self.root.start
-            print "root end ",self.root.end
-        print "tree.current ",self.current
+            print "root tag ", self.root.tag
+            print "root ns ", self.root.ns
+            print "root localName ", self.root.localName
+            print "root start ", self.root.start
+            print "root end ", self.root.end
+        print "tree.current ", self.current
 
 import HTMLTreeParser
+
+
 class HTMLDocument(XMLDocument):
 
     def parse(self, content=None):
@@ -481,24 +507,26 @@ class HTMLDocument(XMLDocument):
         self._rootnodes = p._builder._rootnodes
         self.current = p._builder.current
 
+
 class TreeService:
-    __treeMap = {} # map uri to elementtree
+    __treeMap = {}  # map uri to elementtree
+
     def __init__(self):
         pass
 
     def treeFromCache(self, uri):
         if uri in self.__treeMap:
-            #print "tree cache hit for [%s]"%uri
+            # print "tree cache hit for [%s]"%uri
             return self.__treeMap[uri]
         return None
-    
+
     def getTreeForURI(self, uri, content=None):
         if not uri and not content:
             return None
         tree = None
         if uri and uri in self.__treeMap:
             tree = self.__treeMap[uri]
-            #if tree is not None:
+            # if tree is not None:
             #    print "tree cache hit for [%s]"%uri
             if not content:
                 return tree
@@ -517,18 +545,20 @@ class TreeService:
                 tree = HTMLDocument()
             if not tree:
                 tree = XMLDocument()
-                #raise Exception("NOT IMPLEMENTED YET")
+                # raise Exception("NOT IMPLEMENTED YET")
         if content:
             tree.parse(content)
         if uri:
             self.__treeMap[uri] = tree
         return tree
-    
+
     def getTreeForContent(self, content):
         return self.getTreeForURI(None, content)
-        
+
 
 __treeservice = None
+
+
 def getService():
     global __treeservice
     if not __treeservice:
@@ -550,15 +580,16 @@ if __name__ == "__main__":
     bigfile = "/Users/shanec/main/Apps/Komodo-devel/test/bigfile.xml"
     fn = "/Users/shanec/main/Apps/Komodo-devel/src/samples/xslt_sample.xsl"
     from elementtree.ElementTree import tostring
-    
+
     if 0:
-        #fn = "/Users/shanec/main/Apps/Komodo-devel/src/install/wix/feature-core.wxs"
+        # fn = "/Users/shanec/main/Apps/Komodo-devel/src/install/wix/feature-
+        # core.wxs"
         t1 = time.clock()
         tree = getService().getTreeForURI(bigfile)
         t2 = time.clock()
-        print "cElementTree took ",(t2-t1)
+        print "cElementTree took ", (t2-t1)
         tree.dump()
-    
+
     if 0:
         f = open(bigfile, 'r')
         content = f.read(-1)
@@ -567,14 +598,14 @@ if __name__ == "__main__":
         tree = HTMLDocument()
         tree.parse(content)
         t2 = time.clock()
-        print "HTMLBuilder took ",(t2-t1)
-        
+        print "HTMLBuilder took ", (t2-t1)
+
     if 0:
         print currentTag("<xsl")
         print currentTag("<xsl:")
         print currentTag("<xsl:tag")
         print currentTag("text><xsl:tag")
-        #print nodemap
+        # print nodemap
 
     html = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
@@ -595,7 +626,7 @@ if __name__ == "__main__":
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0">
   <tr>
-    <td> 
+    <td>
       <table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
           <td width="145"><a href=http://www.activestate.com/index.html><img src=http://www.activestate.com/img/Main_Logo_Border.gif width="167" height="66" border="0" alt="ActiveState Tool Corp."></a></td>
@@ -603,10 +634,10 @@ if __name__ == "__main__":
         </tr>
       </table>
       <table width="100%" bgcolor="#000000" border="0" cellpadding="0" cellspacing="0">
- <tr> 
-  <td width="600"> 
+ <tr>
+  <td width="600">
     <table width="600" border="0" cellpadding="0" cellspacing="3">
-     <tr> 
+     <tr>
        <td class="mainnav" bgcolor="#C2B266" width="100" align="center"><a href=http://www.activestate.com/Products/index.html>Products</a></td>
        <td class="mainnav" bgcolor="#C2B266" width="100" align="center"><a href=http://www.activestate.com/Support/index.html>Support</a></td>
        <td class="mainnav" bgcolor="#C2B266" width="100" align="center"><a href=http://www.activestate.com/Corporate/index.html>About Us</a></td>
@@ -615,9 +646,9 @@ if __name__ == "__main__":
      </tr>
     </table>
    </td>
-   <td class="mainnav" width="100%"> 
+   <td class="mainnav" width="100%">
      <table width="100%" border="0" cellpadding="0" cellspacing="0">
-       <tr> 
+       <tr>
          <td class="mainnav" bgcolor="#C2B266" width="100%">&nbsp;</td>
          <td class="mainnav" bgcolor="#000000" width="3">&nbsp;</td>
        </tr>
@@ -640,11 +671,10 @@ if __name__ == "__main__":
 <HTML>
     <BODY>
 
-        <FORM><FIELDSET ><SELECT class=""><OPTGROUP >            
+        <FORM><FIELDSET ><SELECT class=""><OPTGROUP >
 
 """
     tree = getService().getTreeForContent(html)
-    
 
     tree = getService().getTreeForURI("newfile.txt", "")
     tree = getService().getTreeForURI("newfile.txt", "<html>")
@@ -658,14 +688,14 @@ if __name__ == "__main__":
     node = tree.locateNode(0, 7)
     assert node is not None, "locateNode returned incorrect node"
     sys.exit(0)
-    
+
     xml = """
 <c1><c2 a1="1" a2='1' a3='val'><e1 /><e2 f1="1" f2 = '33' /><c3 a='1'>blah</c3></c2  >  </"""
     tree = getService().getTreeForContent(xml)
     node = tree.locateNode(tree.current.start[0], tree.current.start[1])
     assert node == tree.current, "locateNode returned incorrect node"
-    
-    xml = """<?xml version="1.0"?> 
+
+    xml = """<?xml version="1.0"?>
 <xsl:stylesheet xxmlns="xyz" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:output method="xml" indent="yes"/>
 <xsl:template match="Class">
@@ -708,19 +738,19 @@ if __name__ == "__main__":
 """
     tree = getService().getTreeForContent(xml)
     assert tree.current.localName == "popupset", "current element is incorrect"
-        
-    xml = """<?xml version="1.0"?> 
+
+    xml = """<?xml version="1.0"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:output method="xml" indent="yes"/>
   <
-  
+
   <xsl:template/>
 """
     tree = getService().getTreeForContent(xml)
     assert tree.current == tree.root, "current element is incorrect"
     assert tree.current.localName == "stylesheet", "current element is incorrect"
 
-    xml = """<?xml version="1.0"?> 
+    xml = """<?xml version="1.0"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:output method="xml" indent="yes"/>
   <xsl:"""
@@ -728,8 +758,7 @@ if __name__ == "__main__":
     assert tree.current.tag == "{http://www.w3.org/1999/XSL/Transform}", "current element is incorrect"
     assert tree.current.localName == "", "current element is incorrect"
 
-
-    xml = """<?xml version="1.0"?> 
+    xml = """<?xml version="1.0"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:output method="xml" indent="yes"/>
 """
@@ -743,7 +772,7 @@ if __name__ == "__main__":
     tree = getService().getTreeForContent(xml)
     assert tree.current.localName == "html", "current element is incorrect"
 
-    xml = """<?xml version="1.0"?> 
+    xml = """<?xml version="1.0"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:output method="xml" indent="yes"/>
   <xsl:template
@@ -751,42 +780,42 @@ if __name__ == "__main__":
     tree = getService().getTreeForContent(xml)
     assert tree.current.localName == "template", "current element is incorrect"
 
-    xml = """<?xml version="1.0"?> 
+    xml = """<?xml version="1.0"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:output method="xml" indent="yes"/><xsl:template"""
     tree = getService().getTreeForContent(xml)
     assert tree.current.localName == "template", "current element is incorrect"
 
-    xml = u"""<?xml version="1.0"?> 
+    xml = u"""<?xml version="1.0"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:output method="xml" indent="yes"/>
   <xsl:
-  
+
   <xsl:template/>
 """
     tree = getService().getTreeForContent(xml)
     assert tree.current.localName == "", "current element is incorrect"
     assert tree.current.tag == "{http://www.w3.org/1999/XSL/Transform}", "current element is incorrect"
-    
-    html="""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+    html = """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
 <html><body><p><ul><li><li><li></ul></body>
 """
     tree = getService().getTreeForContent(html)
-    #print tostring(tree.root)
+    # print tostring(tree.root)
     assert tree.current.localName == "html", "current element is incorrect"
 
     html = """<!DOCTYPE h:html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <h:html xmlns:h='urn:test'"""
     tree = getService().getTreeForContent(html)
-    #print tostring(tree.root)
+    # print tostring(tree.root)
     assert tree.current.localName == "html", "current element is incorrect"
 
-    #from cElementTree import Element
-    #tag = u"{urn:test}test"
-    #print tag
-    #e = Element(tag, {})
-    #print e.localName
-    #print e.tag
+    # from cElementTree import Element
+    # tag = u"{urn:test}test"
+    # print tag
+    # e = Element(tag, {})
+    # print e.localName
+    # print e.tag
 
     xml = """<?xml version="1.0" encoding="UTF-8"?>
 <!-- This sample XML file shows you ... -->
@@ -802,7 +831,7 @@ if __name__ == "__main__":
     </Order>
 """
     tree = getService().getTreeForContent(xml)
-    #print tostring(tree.root)
+    # print tostring(tree.root)
     assert len(tree.root[0][0][0]) == 0, "bad parent/child relationship"
 
     xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -816,9 +845,10 @@ if __name__ == "__main__":
 """
 
     tree = getService().getTreeForContent(xml)
-    #print tostring(tree.root)
+    # print tostring(tree.root)
     assert tree.current.localName == "body", "current element is incorrect"
-    assert tree.parent(tree.current).localName == "html", "current element is incorrect"
+    assert tree.parent(
+        tree.current).localName == "html", "current element is incorrect"
 
     xml = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -827,5 +857,5 @@ if __name__ == "__main__":
 """
 
     tree = getService().getTreeForContent(xml)
-    #print tostring(tree.root)
+    # print tostring(tree.root)
     assert tree.current.localName == "html", "current element is incorrect"

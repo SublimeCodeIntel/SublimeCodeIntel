@@ -1,0 +1,22 @@
+SublimeCodeIntel 1.2.0 changelog
+
+Please restart Sublime Text 2 after reading this.
+
+NEW FEATURES
+
++ Added palette commands to disable/enable the plugin in many ways.
+
++ Added ``codeintel_live_disabled_languages`` and fixed ``codeintel_live`` to disable SublimeCodeIntel live autocomplete mode.
+
++ Support for new completion settings in Sublime Text 2 Build 2148.
+
+
+CHANGES/FIXES
+
++ JavaScript support improved (it's now much nicer with the CPU).
+
++ CSS files support much improved (thanks to Jon's new features in autocomplete).
+
++ Smarter language detection and fallbacks.
+
++ Improved autocomplete triggering, should now respond better.

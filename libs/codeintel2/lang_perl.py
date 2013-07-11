@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """Perl support for CodeIntel"""
@@ -72,30 +72,28 @@ if _xpcom_:
     from xpcom.server import UnwrapObject
 
 
-
 #---- globals
-
 line_end_re = re.compile("(?:\r\n|\r)")
 
 lang = "Perl"
 log = logging.getLogger("codeintel.perl")
-#log.setLevel(logging.DEBUG)
-
+# log.setLevel(logging.DEBUG)
 
 
 #---- language support
-
 class PerlLexer(Lexer):
     lang = "Perl"
+
     def __init__(self):
         self._properties = SilverCity.PropertySet()
-        self._lexer = SilverCity.find_lexer_module_by_id(ScintillaConstants.SCLEX_PERL)
+        self._lexer = SilverCity.find_lexer_module_by_id(
+            ScintillaConstants.SCLEX_PERL)
         self._keyword_lists = [
             SilverCity.WordList(SilverCity.Keywords.perl_keywords)
         ]
 
 
-#TODO: Merge handling of perl-complete-module-exports in with this one.
+# TODO: Merge handling of perl-complete-module-exports in with this one.
 #      Will just need a boolean flag (on the trigger) indicating that
 #      submodules should NOT be included.
 class PerlImportsEvaluator(Evaluator):
@@ -116,7 +114,7 @@ class PerlImportsEvaluator(Evaluator):
             for lib in self.buf.libs:
                 # Reminder: A codeintel "blob" corresponds to a Perl module.
                 all_imports.update(lib.get_blob_imports(prefix_tuple))
-            
+
             if all_imports:
                 cplns = [((is_dir_import and "directory" or "module"), name)
                          for name, is_dir_import in all_imports]
@@ -138,27 +136,27 @@ class PerlLangIntel(CitadelLangIntel,
     #     `-- calltip triggers here
     # Because Perl doesn't have keywords args to functions this can work.
     calltip_region_terminators = tuple(']});=')
-    preceding_trg_terminators = {';':None, '=':None}
+    preceding_trg_terminators = {';': None, '=': None}
 
-    #XXX This cog regen is out-of-date. Re-write to parse perl.cix?
+    # XXX This cog regen is out-of-date. Re-write to parse perl.cix?
     # To regenerate this block:
     # - install the cog Python tool:
     #   http://www.nedbatchelder.com/code/cog/index.html
     # - run "cog -r lang_perl.py"
     #[[[cog
-    #import cog
-    #import os, sys
-    #sys.path.insert(0, os.path.join(os.pardir, "codeintel"))
-    #import cidb
-    #dbpath = cidb.find_komodo_cidb_path()
-    #sql = """SELECT symbol.name FROM file,scan,module,symbol
+    # import cog
+    # import os, sys
+    # sys.path.insert(0, os.path.join(os.pardir, "codeintel"))
+    # import cidb
+    # dbpath = cidb.find_komodo_cidb_path()
+    # sql = """SELECT symbol.name FROM file,scan,module,symbol
     #          WHERE file.compare_path LIKE '%perl.cix'
     #            AND scan.file_id=file.id AND module.scan_id=scan.id
     #            AND symbol.module_id=module.id AND symbol.type=0"""
-    #cog.outl('_allow_trg_on_space_from_identifier = {')
-    #for line in cidb.query(dbpath, 3, sql, "csv"):
+    # cog.outl('_allow_trg_on_space_from_identifier = {')
+    # for line in cidb.query(dbpath, 3, sql, "csv"):
     #    cog.outl('    "%s": 1,' % line.strip())
-    #cog.outl('}')
+    # cog.outl('}')
     #]]]
     _allow_trg_on_space_from_identifier = {
         "-r": 1,
@@ -437,48 +435,48 @@ class PerlLangIntel(CitadelLangIntel,
         if DEBUG:
             print banner("trg_from_pos(pos=%r, implicit=%r)"
                          % (pos, implicit))
-    
+
         accessor = buf.accessor
         last_pos = pos - 1
         last_ch = accessor.char_at_pos(last_pos)
         if DEBUG:
             print "  last_pos: %s" % last_pos
             print "  last_ch: %r" % last_ch
-    
+
         # All Perl trigger points occur at one of the trg_chars.
         if last_ch not in self.trg_chars:
             if DEBUG:
                 print "no: %r is not in %r" % (last_ch, self.trg_chars)
             return None
         elif last_ch == ':' \
-             and not (last_pos > 0
-                      and accessor.char_at_pos(last_pos-1) == ':'):
+            and not (last_pos > 0
+                     and accessor.char_at_pos(last_pos-1) == ':'):
             if DEBUG:
                 penultimate_ch = (last_pos > 0
                                   and accessor.char_at_pos(last_pos-1) or '')
                 print "no: %r is not '::'" % (penultimate_ch+last_ch)
             return None
         elif last_ch == '>' \
-             and not (last_pos > 0 and accessor.char_at_pos(last_pos-1) == '-'):
+                and not (last_pos > 0 and accessor.char_at_pos(last_pos-1) == '-'):
             if DEBUG:
                 penultimate_ch = (last_pos > 0
                                   and accessor.char_at_pos(last_pos-1) or '')
                 print "no: %r is not '->'" % (penultimate_ch+last_ch)
             return None
-    
+
         # We should never trigger in some styles (strings, comments, etc.).
         last_style = accessor.style_at_pos(last_pos)
         if DEBUG:
             last_style_names = buf.style_names_from_style_num(last_style)
             print "  style: %s %s" % (last_style, last_style_names)
         if (implicit and last_style in buf.implicit_completion_skip_styles
-            or last_style in buf.completion_skip_styles):
+                or last_style in buf.completion_skip_styles):
             if DEBUG:
                 print "no: completion is suppressed "\
                       "in style at %s: %s %s"\
                       % (last_pos, last_style, last_style_names)
             return None
-    
+
         WHITESPACE = tuple(' \t\n\r')
         if last_ch == ' ':
             # This can be either "calltip-space-call-signature",
@@ -494,26 +492,28 @@ class PerlLangIntel(CitadelLangIntel,
             #   Komodo will maintain an explicit list of such function names
             #   for which a calltip with trigger without parentheses.
             #   XXX May want to make this a user-configurable list.
-            # 
+            #
             # complete-available-imports:
             #   After 'use', 'require' or 'no' by itself on a line.
             #
             LIMIT = 50
-            text = accessor.text_range(max(0,last_pos-LIMIT), last_pos) # working text
-            if DEBUG: print "  working text: %r" % text
+            text = accessor.text_range(max(
+                0, last_pos-LIMIT), last_pos)  # working text
+            if DEBUG:
+                print "  working text: %r" % text
             i = len(text)-1
             if i >= 0 and not (isident(text[i]) or isdigit(text[i])):
                 if DEBUG:
                     print "no: two before trigger point is not "\
                           "an ident char: '%s'" % text[i]
                 return None
-            while i >= 0: # parse out the preceding identifier
+            while i >= 0:  # parse out the preceding identifier
                 if not isident(text[i]):
                     identifier = text[i+1:]
                     # Whitespace is allowed between a Perl variable special
                     # char and the variable name, e.g.: "$ myvar", "@  mylist"
                     j = i
-                    while j >= 0 and text[j] in WHITESPACE: # parse off whitespace
+                    while j >= 0 and text[j] in WHITESPACE:  # parse off whitespace
                         j -= 1
                     if j >= 0:
                         preceding_ch = text[j]
@@ -524,16 +524,18 @@ class PerlLangIntel(CitadelLangIntel,
             else:
                 preceding_ch = None
                 identifier = text
-            if DEBUG: print "  identifier: %r" % identifier
+            if DEBUG:
+                print "  identifier: %r" % identifier
             if not identifier:
                 if DEBUG:
                     print "no: no identifier preceding trigger point"
                 return None
-            if DEBUG: print "  preceding char: %r" % preceding_ch
+            if DEBUG:
+                print "  preceding char: %r" % preceding_ch
             if identifier in ("use", "require", "no"):
                 return Trigger("Perl", TRG_FORM_CPLN,
                                "available-imports", pos, implicit, prefix="")
-            if preceding_ch and preceding_ch in "$@&%\\*": # indicating a Perl variable
+            if preceding_ch and preceding_ch in "$@&%\\*":  # indicating a Perl variable
                 if DEBUG:
                     print "no: triggering on space after Perl "\
                           "variables not supported"
@@ -552,18 +554,21 @@ class PerlLangIntel(CitadelLangIntel,
                 if DEBUG:
                     print "no: do not trigger in sub definition"
                 return None
-            if DEBUG: print "calltip-space-call-signature"
+            if DEBUG:
+                print "calltip-space-call-signature"
             return Trigger("Perl", TRG_FORM_CALLTIP,
                            "space-call-signature", pos, implicit)
-    
+
         elif last_ch == '(':
             # This can be either "calltip-call-signature" or None (or
             # "complete-module-exports" when that is implemented).
             LIMIT = 100
-            text = accessor.text_range(max(0,last_pos-LIMIT), last_pos) # working text
-            if DEBUG: print "  working text: %r" % text
+            text = accessor.text_range(max(
+                0, last_pos-LIMIT), last_pos)  # working text
+            if DEBUG:
+                print "  working text: %r" % text
             i = len(text)-1
-            while i >= 0 and text[i] in WHITESPACE: # parse off whitespace
+            while i >= 0 and text[i] in WHITESPACE:  # parse off whitespace
                 i -= 1
             if i >= 0 and not (isident(text[i]) or isdigit(text[i])):
                 if DEBUG:
@@ -571,13 +576,13 @@ class PerlLangIntel(CitadelLangIntel,
                           "trigger point is not an ident char: '%s'" % text[i]
                 return None
             end = i+1
-            while i >= 0: # parse out the preceding identifier
+            while i >= 0:  # parse out the preceding identifier
                 if not isident(text[i]):
                     identifier = text[i+1:end]
                     # Whitespace is allowed between a Perl variable special
                     # char and the variable name, e.g.: "$ myvar", "@  mylist"
                     j = i
-                    while j >= 0 and text[j] in WHITESPACE: # parse off whitespace
+                    while j >= 0 and text[j] in WHITESPACE:  # parse off whitespace
                         j -= 1
                     if j >= 0:
                         preceding_ch = text[j]
@@ -588,14 +593,16 @@ class PerlLangIntel(CitadelLangIntel,
             else:
                 preceding_ch = None
                 identifier = text[:end]
-            if DEBUG: print "  identifier: %r" % identifier
+            if DEBUG:
+                print "  identifier: %r" % identifier
             if DEBUG:
                 assert ' ' not in identifier, "parse error: space in identifier: %r" % identifier
             if not identifier:
                 if DEBUG:
                     print "no: no identifier preceding trigger point"
                 return None
-            if DEBUG: print "  preceding char: %r" % preceding_ch
+            if DEBUG:
+                print "  preceding char: %r" % preceding_ch
             if preceding_ch and preceding_ch in "$@%\\*":
                 # '&foo(' *is* a trigger point, but the others -- '$foo(',
                 # '&$foo(', etc. -- are not because current CodeIntel wouldn't
@@ -618,17 +625,18 @@ class PerlLangIntel(CitadelLangIntel,
             line = text[:end].splitlines(0)[-1]
             if DEBUG:
                 print "  trigger line: %r" % line
-            if "sub " in line: # only use regex if "sub " on that line
+            if "sub " in line:  # only use regex if "sub " on that line
                 if DEBUG:
                     print "  *could* be a subroutine definition"
                 if self._sub_pat.search(line):
                     if DEBUG:
                         print "no: no trigger on Perl sub definition"
                     return None
-            if DEBUG: print "calltip-call-signature"
+            if DEBUG:
+                print "calltip-call-signature"
             return Trigger("Perl", TRG_FORM_CALLTIP, "call-signature",
                            pos, implicit)
-    
+
         elif last_ch == '>':
             # Must be "complete-package-subs", "complete-object-subs"
             # or None. Note that we have already checked (above) that the
@@ -636,10 +644,12 @@ class PerlLangIntel(CitadelLangIntel,
             # non-whitespace char preceding the '->' is an identifier char,
             # then this is a trigger point.
             LIMIT = 50
-            text = accessor.text_range(max(0,last_pos-1-LIMIT), last_pos-1) # working text
-            if DEBUG: print "  working text: %r" % text
+            text = accessor.text_range(max(
+                0, last_pos-1-LIMIT), last_pos-1)  # working text
+            if DEBUG:
+                print "  working text: %r" % text
             i = len(text)-1
-            while i >= 0 and text[i] in WHITESPACE: # parse off whitespace
+            while i >= 0 and text[i] in WHITESPACE:  # parse off whitespace
                 i -= 1
             if i < 0:
                 if DEBUG:
@@ -653,11 +663,12 @@ class PerlLangIntel(CitadelLangIntel,
             # At this point we know it is either "complete-package-subs"
             # or "complete-object-subs". We don't really care to take
             # the time to distinguish now -- trg_from_pos is supposed to be
-            # quick -- and we don't have to. 
-            if DEBUG: print "complete-*-subs"
+            # quick -- and we don't have to.
+            if DEBUG:
+                print "complete-*-subs"
             return Trigger("Perl", TRG_FORM_CPLN, "*-subs", pos, implicit,
                            length=2)
-    
+
         elif last_ch == ':':
             # Must be "complete-package-members" or
             # "complete-available-imports" or None. Note that we have
@@ -666,8 +677,10 @@ class PerlLangIntel(CitadelLangIntel,
             # an identifier char or one of Perl's funny variable
             # identifying characters, then this is a trigger point.
             LIMIT = 50
-            text = accessor.text_range(max(0,last_pos-1-LIMIT), last_pos-1) # working text
-            if DEBUG: print "  working text: %r" % text
+            text = accessor.text_range(max(
+                0, last_pos-1-LIMIT), last_pos-1)  # working text
+            if DEBUG:
+                print "  working text: %r" % text
             i = len(text)-1
             if i < 0:
                 if DEBUG:
@@ -683,10 +696,10 @@ class PerlLangIntel(CitadelLangIntel,
                           "point is not an ident char or '$': '%s'" % ch
                 return None
             # Check if this is in a 'use' or 'require' statement.
-            while i > 0 and text[i-1] not in WHITESPACE: # skip to whitespace
+            while i > 0 and text[i-1] not in WHITESPACE:  # skip to whitespace
                 i -= 1
             prefix = text[i:pos-2]
-            while i > 0 and text[i-1]     in WHITESPACE: # skip over whitespace
+            while i > 0 and text[i-1] in WHITESPACE:  # skip over whitespace
                 i -= 1
             start_idx = end_idx = i
             while start_idx > 0 and (isident(text[start_idx-1])
@@ -698,33 +711,34 @@ class PerlLangIntel(CitadelLangIntel,
                     print "complete-available-imports (prefix=%r)" % prefix
                 return Trigger("Perl", TRG_FORM_CPLN, "available-imports",
                                pos, implicit, length=2, prefix=prefix)
-            if DEBUG: print "complete-package-members (prefix=%r)" % prefix
+            if DEBUG:
+                print "complete-package-members (prefix=%r)" % prefix
             return Trigger("Perl", TRG_FORM_CPLN, "package-members", pos,
                            implicit, length=2, prefix=prefix)
-    
-        return None
 
+        return None
 
     _perl_var_pat = re.compile(
         r"((?P<prefix>[$@%\\*&]+)\s*)?(?P<scope>(::)?\b((?!\d)\w*?(::|'))*)(?P<name>(?!\d)\w+)$")
+
     def citdl_expr_and_prefix_filter_from_trg(self, buf, trg):
         """Parse out the Perl expression at the given trigger and return
         a CITDL expression for it (and possibly a variable prefixj
         filter).
-        
+
         Returns a 2-tuple:
             (<CITDL-expression>, <variable-prefix-filter>)
-    
+
         For all triggers except TRG_FORM_DEFN, we parse out the Perl
         expression preceding the trigger position, simplify the
         expression (by removing whitespace, etc.) and translate that to
         an appropriate CITDL (*) expression. Set to None if there is no
         appropriate such expression. For TRG_FORM_DEFN triggers we first
         move forward to the end of the current word.
-        
+
         As well, a variable prefix filter may be returned, useful for
         post-processing of completions. For example:
-        
+
             Perl code           CITDL expression    prefix filter
             ---------           ----------------    -------------
             Foo::Bar<|>::       Foo::Bar            None
@@ -747,9 +761,9 @@ class PerlLangIntel(CitadelLangIntel,
           useful later if this algorithm is beefed up.
         - Ignore ampersand, e.g. &foo. This is just an old way to call perl
           functions - bug 87870, we can just ignore it for codeintel.
-        
+
         Examples:
-       
+
             GIVEN                       LEADING EXPR            CITDL EXPR
             -----                       ------------            ----------
             split <|>                   split                   split
@@ -760,11 +774,11 @@ class PerlLangIntel(CitadelLangIntel,
             Win32::OLE->GetObject(<|>   Win32::OLE->GetObject   Win32::OLE.GetObject
             split join <|>              join                    join
             foo->bar(<|>                foo->bar                foo.bar
-    
+
         Note that the trigger character is sometimes necessary to resolve
         ambiguity. Given "Foo::Bar" without the trailing trigger char, we
         cannot know if the CITDL should be "Foo.Bar" or "Foo::Bar":
-    
+
             GIVEN               CITDL EXPR
             -----               ----------
             Foo::Bar::<|>       Foo::Bar
@@ -775,7 +789,7 @@ class PerlLangIntel(CitadelLangIntel,
             $Foo::Bar-><|>      Foo.$Bar
             $Foo::Bar(<|>       Foo.$Bar
             $Foo::Bar <|>       Foo.$Bar
-    
+
         * http://specs.tl.activestate.com/kd/kd-0100.html#citdl
         """
         DEBUG = False
@@ -793,7 +807,7 @@ class PerlLangIntel(CitadelLangIntel,
         filter, citdl = None, []
 
         accessor = buf.accessor
-        LIMIT = max(0, trg.pos-100) # working text area
+        LIMIT = max(0, trg.pos-100)  # working text area
         if trg.form == TRG_FORM_DEFN:
             # "Go to Definition" triggers can be in the middle of an
             # expression. If so we want to move forward to the end of
@@ -851,7 +865,7 @@ class PerlLangIntel(CitadelLangIntel,
 
             trg_ch = None
             try:
-                #TODO:PERF: Use the available faster accessor methods here.
+                # TODO:PERF: Use the available faster accessor methods here.
                 trg_ch = accessor.char_at_pos(p+1)
             except IndexError, ex:
                 if trg.form != TRG_FORM_DEFN:
@@ -859,20 +873,20 @@ class PerlLangIntel(CitadelLangIntel,
                              "char to resolve possible ambiguities in '%s'",
                              match.group(0))
             if trg_ch == ':':
-                #XXX fix off-by-one here
+                # XXX fix off-by-one here
                 # Foo::Bar<|>::       Foo::Bar
                 # $Foo::Bar<|>::      Foo::Bar
-                citdl.insert(0, scope+name) # intentionally drop prefix
+                citdl.insert(0, scope+name)  # intentionally drop prefix
                 # The prefix string is relevant for filtering the list of
                 # members for AutoComplete. E.g. if the prefix char is '&' then
                 # only subs should be shown. If '%', then only hashes.
                 filter = prefix
             elif trg_ch == '-' and not prefix:
-                #XXX fix off-by-one here
+                # XXX fix off-by-one here
                 # Foo::Bar<|>->       Foo::Bar
                 citdl.insert(0, scope+name)
             else:
-                #XXX fix off-by-one here
+                # XXX fix off-by-one here
                 # Foo::Bar<|>(        Foo.Bar
                 # Foo::Bar<|>         Foo.Bar         # trigger char is a space here
                 # $Foo::Bar<|>->      Foo.$Bar
@@ -880,7 +894,7 @@ class PerlLangIntel(CitadelLangIntel,
                 # $Foo::Bar<|>        Foo.$Bar        # trigger char is a space here
                 citdl.insert(0, prefix+name)
                 if scope:
-                    scope = scope[:-2] # drop trailing '::'
+                    scope = scope[:-2]  # drop trailing '::'
                     if scope:
                         citdl.insert(0, scope)
             p -= len(match.group(0))
@@ -888,11 +902,11 @@ class PerlLangIntel(CitadelLangIntel,
                 print "parse out Perl var: %r (prefix=%r, scope=%r, "\
                       "name=%r): %r" % (match.group(0), prefix, scope,
                                         name, citdl)
-    
+
             # Preceding characters will determine if we stop or continue.
             WHITESPACE = tuple(" \t\n\r\v\f")
             while p >= LIMIT and accessor.char_at_pos(p) in WHITESPACE:
-                #if DEBUG: print "drop whitespace: %r" % text[p]
+                # if DEBUG: print "drop whitespace: %r" % text[p]
                 p -= 1
             if p >= LIMIT and accessor.style_at_pos(p) in skip_styles:
                 if DEBUG:
@@ -902,15 +916,16 @@ class PerlLangIntel(CitadelLangIntel,
                           % (accessor.char_at_pos(p), style, style_names)
                 break
             elif p >= LIMIT+1 and accessor.text_range(p-1, p+1) == '->':
-                if DEBUG: print "parse out '->'"
+                if DEBUG:
+                    print "parse out '->'"
                 p -= 2
                 while p >= LIMIT and accessor.char_at_pos(p) in WHITESPACE:
-                    #if DEBUG: print "drop whitespace: %r" % text[p]
+                    # if DEBUG: print "drop whitespace: %r" % text[p]
                     p -= 1
                 continue
             else:
                 break
-    
+
         if citdl:
             retval = ('.'.join(citdl), filter)
         else:
@@ -943,7 +958,7 @@ class PerlLangIntel(CitadelLangIntel,
             ctlr.done("error")
             return
 
-        # Perl's trg_from_pos doesn't distinguish btwn "package-subs" 
+        # Perl's trg_from_pos doesn't distinguish btwn "package-subs"
         # and "object-subs" trigger type -- calling them both "*-subs".
         # Let's do so here.
         if trg.type == "*-subs":
@@ -966,19 +981,29 @@ class PerlLangIntel(CitadelLangIntel,
             assert not filter, "shouldn't be Perl filter prefix for " \
                 "'complete-package-subs': %r" % filter
             line = buf.accessor.line_from_pos(trg.pos)
-            evalr = PerlPackageSubsTreeEvaluator(ctlr, buf, trg, citdl_expr, line)
+            evalr = PerlPackageSubsTreeEvaluator(
+                ctlr, buf, trg, citdl_expr, line)
             buf.mgr.request_eval(evalr)
-        #TODO: Might want to handle TRG_FORM_DEFN differently.
+        # TODO: Might want to handle TRG_FORM_DEFN differently.
         else:
             if citdl_expr is None:
                 ctlr.info("no CITDL expression found for %s" % trg)
                 ctlr.done("no trigger")
                 return
             line = buf.accessor.line_from_pos(trg.pos)
+            if trg.id[1] == TRG_FORM_DEFN and citdl_expr[0] == '$':
+                current_pos = trg.pos
+                lim = buf.accessor.length
+                while buf.accessor.style_at_pos(current_pos) == ScintillaConstants.SCE_PL_SCALAR and current_pos < lim:
+                    current_pos += 1
+                c = buf.accessor.char_at_pos(current_pos)
+                if c == '[':
+                    citdl_expr = '@' + citdl_expr[1:]
+                elif c == '{':
+                    citdl_expr = '%' + citdl_expr[1:]
             evalr = PerlTreeEvaluator(ctlr, buf, trg, citdl_expr,
                                       line, filter)
             buf.mgr.request_eval(evalr)
-
 
     def libs_from_buf(self, buf):
         env = buf.env
@@ -987,7 +1012,7 @@ class PerlLangIntel(CitadelLangIntel,
         # we cache it on the env and key off the buffer.
         if "perl-buf-libs" not in env.cache:
             env.cache["perl-buf-libs"] = weakref.WeakKeyDictionary()
-        cache = env.cache["perl-buf-libs"] # <buf-weak-ref> -> <libs>
+        cache = env.cache["perl-buf-libs"]  # <buf-weak-ref> -> <libs>
 
         if buf not in cache:
             # - curdirlib
@@ -997,7 +1022,7 @@ class PerlLangIntel(CitadelLangIntel,
             if cwd == "<Unsaved>":
                 libs = []
             else:
-                libs = [ self.mgr.db.get_lang_lib("Perl", "curdirlib", [cwd]) ]
+                libs = [self.mgr.db.get_lang_lib("Perl", "curdirlib", [cwd])]
 
             libs += self._buf_indep_libs_from_env(env)
             cache[buf] = libs
@@ -1020,11 +1045,11 @@ class PerlLangIntel(CitadelLangIntel,
 
     def _perl_from_env(self, env):
         import which
-        path = [d.strip() 
+        path = [d.strip()
                 for d in env.get_envvar("PATH", "").split(os.pathsep)
                 if d.strip()]
         try:
-            return which.which("perl", path=path) 
+            return which.which("perl", path=path)
         except which.WhichError:
             return None
 
@@ -1061,11 +1086,11 @@ class PerlLangIntel(CitadelLangIntel,
 
         perl_ver = stdout_lines[0].split(':', 1)[1]
         config_dirs = dict(
-            siteprefix = stdout_lines[1].split(':', 1)[1],
-            archlib    = stdout_lines[2].split(':', 1)[1],
-            privlib    = stdout_lines[3].split(':', 1)[1],
-            vendorarch = stdout_lines[4].split(':', 1)[1],
-            vendorlib  = stdout_lines[5].split(':', 1)[1],
+            siteprefix=stdout_lines[1].split(':', 1)[1],
+            archlib=stdout_lines[2].split(':', 1)[1],
+            privlib=stdout_lines[3].split(':', 1)[1],
+            vendorarch=stdout_lines[4].split(':', 1)[1],
+            vendorlib=stdout_lines[5].split(':', 1)[1],
         )
         import_path = stdout_lines[6:]
 
@@ -1074,7 +1099,8 @@ class PerlLangIntel(CitadelLangIntel,
     def _extra_dirs_from_env(self, env):
         extra_dirs = set()
         for pref in env.get_all_prefs("perlExtraPaths"):
-            if not pref: continue
+            if not pref:
+                continue
             extra_dirs.update(d.strip() for d in pref.split(os.pathsep)
                               if exists(d.strip()))
         return tuple(extra_dirs)
@@ -1103,16 +1129,16 @@ class PerlLangIntel(CitadelLangIntel,
             else:
                 perl_ver, config_dirs, import_path \
                     = self._perl_info_from_perl(perl, env)
-                
+
             libs = []
 
             # - extradirslib
             extra_dirs = self._extra_dirs_from_env(env)
             if extra_dirs:
                 log.debug("Perl extra lib dirs: %r", extra_dirs)
-                libs.append( db.get_lang_lib("Perl", "extradirslib",
-                                extra_dirs) )
-            
+                libs.append(db.get_lang_lib("Perl", "extradirslib",
+                                            extra_dirs))
+
             # Figuring out where the lib and sitelib dirs are is hard --
             # or at least complex from my P.O.V.
             # - For ActivePerl (on Linux, at least):
@@ -1135,7 +1161,7 @@ class PerlLangIntel(CitadelLangIntel,
             paths_from_libname = {"sitelib": [], "envlib": [], "stdlib": []}
             for dir in import_path:
                 dir = normpath(dir)
-                if dir == ".": # -> curdirlib (handled separately)
+                if dir == ".":  # -> curdirlib (handled separately)
                     continue
                 if islink(dir):
                     # Note: this doesn't handle multiple levels of
@@ -1158,7 +1184,7 @@ class PerlLangIntel(CitadelLangIntel,
                         break
                 else:
                     if config_dirs["siteprefix"] \
-                         and dir.startswith(config_dirs["siteprefix"]):
+                            and dir.startswith(config_dirs["siteprefix"]):
                         paths_from_libname["sitelib"].append(dir)
                     else:
                         paths_from_libname["envlib"].append(dir)
@@ -1167,11 +1193,11 @@ class PerlLangIntel(CitadelLangIntel,
 
             # - envlib, sitelib, cataloglib, stdlib
             if paths_from_libname["envlib"]:
-                libs.append( db.get_lang_lib("Perl", "envlib", 
-                                paths_from_libname["envlib"]) )
+                libs.append(db.get_lang_lib("Perl", "envlib",
+                                            paths_from_libname["envlib"]))
             if paths_from_libname["sitelib"]:
-                libs.append( db.get_lang_lib("Perl", "sitelib", 
-                                paths_from_libname["sitelib"]) )
+                libs.append(db.get_lang_lib("Perl", "sitelib",
+                                            paths_from_libname["sitelib"]))
             catalog_selections = env.get_pref("codeintel_selected_catalogs")
             libs += [
                 db.get_catalog_lib("Perl", catalog_selections),
@@ -1197,7 +1223,7 @@ class PerlLangIntel(CitadelLangIntel,
             self.mgr.idxr.stage_request(request, 1.0)
 
     #---- code browser integration
-    cb_import_group_title = "Uses and Requires"   
+    cb_import_group_title = "Uses and Requires"
 
     def cb_import_data_from_elem(self, elem):
         alias = elem.get("alias")
@@ -1264,8 +1290,10 @@ class PerlImportHandler(ImportHandler):
         sep = "--WomBa-woMbA--"
         argv = [compiler, "-e", "print join('%s', @INC);" % sep]
         env = dict(os.environ)
-        if "PERL5LIB" in env: del env["PERL5LIB"]
-        if "PERLLIB" in env: del env["PERLLIB"]
+        if "PERL5LIB" in env:
+            del env["PERL5LIB"]
+        if "PERLLIB" in env:
+            del env["PERLLIB"]
 
         p = process.ProcessOpen(argv, env=env, stdin=None)
         output, error = p.communicate()
@@ -1285,7 +1313,8 @@ class PerlImportHandler(ImportHandler):
         self.corePath = self._shellOutForPath(compiler)
 
     def _findScannableFiles(self,
-                            (files, searchedDirs, skipTheseDirs, skipRareImports),
+                            (files, searchedDirs,
+                             skipTheseDirs, skipRareImports),
                             dirname, names):
         if sys.platform.startswith("win"):
             cpath = dirname.lower()
@@ -1302,7 +1331,7 @@ class PerlImportHandler(ImportHandler):
             scannableExts = (".pm",)
         else:
             scannableExts = (".pl", ".pm")
-        for i in range(len(names)-1, -1, -1): # backward so can del from list
+        for i in range(len(names)-1, -1, -1):  # backward so can del from list
             path = join(dirname, names[i])
             if isdir(path):
                 if normcase(path) in skipTheseDirs:
@@ -1313,10 +1342,10 @@ class PerlImportHandler(ImportHandler):
                     # that start with a lower case.
                     del names[i]
             elif splitext(names[i])[1] in scannableExts:
-                #XXX The list of extensions should be settable on
+                # XXX The list of extensions should be settable on
                 #    the ImportHandler and Komodo should set whatever is
                 #    set in prefs.
-                #XXX This check for files should probably include
+                # XXX This check for files should probably include
                 #    scripts, which might likely not have the
                 #    extension: need to grow filetype-from-content smarts.
                 files.append(path)
@@ -1338,10 +1367,10 @@ class PerlImportHandler(ImportHandler):
         from os.path import join, isdir, splitext
 
         if dir == "<Unsaved>":
-            #TODO: stop these getting in here.
+            # TODO: stop these getting in here.
             return {}
 
-        #TODO: log the fs-stat'ing a la codeintel.db logging.
+        # TODO: log the fs-stat'ing a la codeintel.db logging.
         try:
             names = os.listdir(dir)
         except OSError, ex:
@@ -1374,23 +1403,28 @@ class PerlCILEDriver(CILEDriver):
     lang = lang
 
     def scan_purelang(self, buf):
+        log.info("scan_purelang: path: %r lang: %s", buf.path, buf.lang)
         return perlcile.scan_purelang(buf)
-    
+
     def scan_multilang(self, buf, csl_cile_driver=None):
         """Scan the given multilang (UDL-based) buffer and return a CIX
         element tree, and shuffle any CSL tokens to the CSL CileDriver.
         """
+        log.info("scan_multilang: path: %r lang: %s", buf.path, buf.lang)
         tree = Element("codeintel", version="2.0")
         path = buf.path
         if sys.platform == "win32":
             path = path.replace('\\', '/')
         file_node = SubElement(tree, "file", lang=buf.lang, path=path)
-        # module = SubElement(file_node, "scope", ilk="blob", lang="Perl", name=basename(path))
-        csl_tokens, has_perl_code = perlcile.scan_multilang(buf.accessor.gen_tokens(), file_node)
+        # module = SubElement(file_node, "scope", ilk="blob", lang="Perl",
+        # name=basename(path))
+        csl_tokens, has_perl_code = perlcile.scan_multilang(
+            buf.accessor.gen_tokens(), file_node)
         blob_node = file_node.getchildren()[0]
         if not has_perl_code:
             assert len(blob_node) == 0
-            # The CILE clients don't want to hear there's no perl code in the buffer
+            # The CILE clients don't want to hear there's no perl code in the
+            # buffer
             file_node.remove(blob_node)
         else:
             blob_node.set('name', basename(path))
@@ -1400,17 +1434,13 @@ class PerlCILEDriver(CILEDriver):
         return tree
 
 
-
 #---- internal support stuff
-
 def _is_perl_var_char(char):
-    return "a" <= char <= "z" or "A" <= char <= "Z" \
+    return "a" <= char <= "z" or "A" <= char <= "Z" or "0" <= char <= "9" \
            or char in "_:$%@"
 
 
-
 #---- registration
-
 def register(mgr):
     """Register language support with the Manager."""
     mgr.set_lang_info(lang,
@@ -1420,4 +1450,3 @@ def register(mgr):
                       import_handler_class=PerlImportHandler,
                       cile_driver_class=PerlCILEDriver,
                       is_cpln_lang=True)
-

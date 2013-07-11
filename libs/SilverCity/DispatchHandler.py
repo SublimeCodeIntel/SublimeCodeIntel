@@ -1,9 +1,11 @@
 import ScintillaConstants
 import Utils
 
+
 def generate_handler_name(state):
     return 'handle_' + state[4:].lower()
-    
+
+
 class DispatchHandler:
     def __init__(self, state_prefix):
         self.handlers = {}
@@ -13,7 +15,7 @@ class DispatchHandler:
                     generate_handler_name(constant)
 
     def event_handler(self, style, **kwargs):
-        kwargs.update({'style' : style})
+        kwargs.update({'style': style})
         handler = self.handlers.get(style, None)
 
         if handler is None:

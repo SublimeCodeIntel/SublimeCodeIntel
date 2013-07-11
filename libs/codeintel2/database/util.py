@@ -1,26 +1,26 @@
 #!python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 import os
@@ -41,15 +41,13 @@ import logging
 import shutil
 
 
-
 log = logging.getLogger("codeintel.db")
-
 
 
 def filter_blobnames_for_prefix(candidates, prefix, sep):
     """Given a iterator of candidate blob names, return a set of
     2-tuples indicating each match:
-    
+
         (<sub-name>, <is-partial-match>)
 
     where,
@@ -76,16 +74,18 @@ def filter_blobnames_for_prefix(candidates, prefix, sep):
     matches = set()
     if not prefix:
         for name in candidates:
-            if name == "*": continue  # skip "built-in" blob
+            if name == "*":
+                continue  # skip "built-in" blob
             if sep in name:
-                matches.add( (name[:name.index(sep)], True) )
+                matches.add((name[:name.index(sep)], True))
             else:
-                matches.add( (name, False) )
+                matches.add((name, False))
     else:
         sep_len = len(sep)
         sepped_prefix = sep.join(prefix)
         for name in candidates:
-            if name == "*": continue  # skip "built-in" blob
+            if name == "*":
+                continue  # skip "built-in" blob
             if name.startswith(sepped_prefix + sep):
                 # e.g. prefix is "xml", and we see "xml.sax" and "xml.bar.foo"
                 subname = name[len(sepped_prefix)+sep_len:]
@@ -96,7 +96,7 @@ def filter_blobnames_for_prefix(candidates, prefix, sep):
                     is_partial_match = True
                 else:
                     is_partial_match = False
-                matches.add( (subname, is_partial_match) )
+                matches.add((subname, is_partial_match))
     return matches
 
 
@@ -110,6 +110,7 @@ def rmdir(dir):
     else:
         run('rm -rf "%s"' % dir)
 
+
 def _rmtree_onerror(rm_func, path, exc_info):
     if exc_info[0] == OSError:
         # presuming because file is read-only
@@ -117,11 +118,11 @@ def _rmtree_onerror(rm_func, path, exc_info):
         rm_func(path)
 
 
-
 #---- internal support routines
-
 # Recipe: run (0.5.3) in /home/trentm/tm/recipes/cookbook
 _RUN_DEFAULT_LOGSTREAM = ("RUN", "DEFAULT", "LOGSTREAM")
+
+
 def __run_log(logstream, msg, *args, **kwargs):
     if not logstream:
         pass
@@ -136,13 +137,14 @@ def __run_log(logstream, msg, *args, **kwargs):
     else:
         logstream(msg, *args, **kwargs)
 
+
 def run(cmd, logstream=_RUN_DEFAULT_LOGSTREAM):
     """Run the given command.
 
         "cmd" is the command to run
-        "logstream" is an optional logging stream on which to log the 
-            command. If None, no logging is done. If unspecifed, this 
-            looks for a Logger instance named 'log' and logs the command 
+        "logstream" is an optional logging stream on which to log the
+            command. If None, no logging is done. If unspecifed, this
+            looks for a Logger instance named 'log' and logs the command
             on log.debug().
 
     Raises OSError is the command returns a non-zero exit status.
@@ -164,17 +166,18 @@ def run(cmd, logstream=_RUN_DEFAULT_LOGSTREAM):
     else:
         status = retval
     if status:
-        #TODO: add std OSError attributes or pick more approp. exception
+        # TODO: add std OSError attributes or pick more approp. exception
         raise OSError("error running '%s': %r" % (cmd, status))
+
 
 def run_in_dir(cmd, cwd, logstream=_RUN_DEFAULT_LOGSTREAM):
     """Run the given command in the given working directory.
 
         "cmd" is the command to run
         "cwd" is the directory in which the commmand is run.
-        "logstream" is an optional logging stream on which to log the 
-            command. If None, no logging is done. If unspecifed, this 
-            looks for a Logger instance named 'log' and logs the command 
+        "logstream" is an optional logging stream on which to log the
+            command. If None, no logging is done. If unspecifed, this
+            looks for a Logger instance named 'log' and logs the command
             on log.debug().
 
     Raises OSError is the command returns a non-zero exit status.
@@ -186,4 +189,3 @@ def run_in_dir(cmd, cwd, logstream=_RUN_DEFAULT_LOGSTREAM):
         run(cmd, logstream=None)
     finally:
         os.chdir(old_dir)
-

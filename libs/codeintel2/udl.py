@@ -1,26 +1,26 @@
 #!python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """UDL (User-Defined Language) support for codeintel."""
@@ -49,12 +49,13 @@ from pprint import pprint, pformat
 
 import SilverCity
 from SilverCity import ScintillaConstants
-from SilverCity.ScintillaConstants import * #XXX import only what we need
+from SilverCity.ScintillaConstants import *  # XXX import only what we need
 from SilverCity.Lexer import Lexer
 
 from codeintel2.common import *
 from codeintel2.citadel import CitadelBuffer
-#from codeintel2.javascript_common import trg_from_pos as javascript_trg_from_pos
+# from codeintel2.javascript_common import trg_from_pos as
+# javascript_trg_from_pos
 
 if _xpcom_:
     from xpcom import components
@@ -62,9 +63,9 @@ if _xpcom_:
     import directoryServiceUtils
 
 log = logging.getLogger("codeintel.udl")
-#log.setLevel(logging.DEBUG)
+# log.setLevel(logging.DEBUG)
 
-#XXX We need to have a better mechanism for rationalizing and sharing
+# XXX We need to have a better mechanism for rationalizing and sharing
 #    common lexer style classes. For now we'll just HACKily grab from
 #    Komodo's styles.py. Some of this is duplicating logic in
 #    KoLanguageServiceBase.py.
@@ -77,45 +78,58 @@ finally:
     del _ko_src_dir
 
 
-
-
 #---- module interface
-
 # Test 'udl/general/is_udl_x_style' tests these.
 def is_udl_m_style(style):
     return (ScintillaConstants.SCE_UDL_M_DEFAULT <= style
             <= ScintillaConstants.SCE_UDL_M_COMMENT)
+
+
 def is_udl_css_style(style):
     return (ScintillaConstants.SCE_UDL_CSS_DEFAULT <= style
             <= ScintillaConstants.SCE_UDL_CSS_OPERATOR)
+
+
 def is_udl_csl_style(style):
     return (ScintillaConstants.SCE_UDL_CSL_DEFAULT <= style
             <= ScintillaConstants.SCE_UDL_CSL_REGEX)
+
+
 def is_udl_ssl_style(style):
     return (ScintillaConstants.SCE_UDL_SSL_DEFAULT <= style
             <= ScintillaConstants.SCE_UDL_SSL_VARIABLE)
+
+
 def is_udl_tpl_style(style):
     return (ScintillaConstants.SCE_UDL_TPL_DEFAULT <= style
             <= ScintillaConstants.SCE_UDL_TPL_VARIABLE)
 
-#XXX Redundant code from koUDLLanguageBase.py::KoUDLLanguage
+# XXX Redundant code from koUDLLanguageBase.py::KoUDLLanguage
 # Necessary because SilverCity.WordList splits input on white-space
 
 _re_bad_filename_char = re.compile(r'([% 	\x80-\xff])')
+
+
 def _lexudl_path_escape(m):
     return '%%%02X' % ord(m.group(1))
+
+
 def _urlescape(s):
     return _re_bad_filename_char.sub(_lexudl_path_escape, s)
+
 
 class UDLLexer(Lexer):
     """LexUDL wants the path to the .lexres file as the first element of
     the first keywords list.
     """
     _lock = threading.Lock()
+    _lexresfile_from_lang = None
+    _extra_lexer_dirs = set()
 
     def __init__(self):
         self._properties = SilverCity.PropertySet()
-        self._lexer = SilverCity.find_lexer_module_by_id(ScintillaConstants.SCLEX_UDL)
+        self._lexer = SilverCity.find_lexer_module_by_id(
+            ScintillaConstants.SCLEX_UDL)
         lexres_path = _urlescape(self._get_lexres_path())
         log.debug("escaped lexres_path: %r", lexres_path)
         self._keyword_lists = [
@@ -130,54 +144,94 @@ class UDLLexer(Lexer):
         finally:
             self._lock.release()
 
+    @staticmethod
+    def add_extra_lexer_dirs(dirs):
+        UDLLexer._extra_lexer_dirs.update(dirs)
+        UDLLexer._lexresfile_from_lang = None
+
     if _xpcom_:
         # Presume we are running under Komodo. Look in the available
         # lexres dirs from extensions.
 
-        def _gen_lexer_dirs(self):
-            """Return all possible lexer resource directories (i.e. those ones
-            that can include compiled UDL .lexres files).
-    
+        @staticmethod
+        def _generate_lexer_mapping():
+            """Return dict {name > filename} of all lexer resource files (i.e.
+            those ones that can include compiled UDL .lexres files).
+
             It yields directories that should "win" first.
-    
-            This doesn't filter out non-existant directories.
             """
+            from glob import glob
+            lexresfile_from_lang = {}
             koDirs = components.classes["@activestate.com/koDirs;1"] \
                 .getService(components.interfaces.koIDirs)
-    
-            yield join(koDirs.userDataDir, "lexers")    # user
+
+            # Find all possible lexer dirs.
+            lexer_dirs = []
+            lexer_dirs.append(join(koDirs.userDataDir, "lexers"))    # user
             for extensionDir in directoryServiceUtils.getExtensionDirectories():
-                yield join(extensionDir, "lexers")      # user-install extensions
-            yield join(koDirs.commonDataDir, "lexers")  # site/common
-            yield join(koDirs.supportDir, "lexers")     # factory
+                lexer_dirs.append(join(
+                    extensionDir, "lexers"))      # user-install extensions
+            lexer_dirs.append(join(
+                koDirs.commonDataDir, "lexers"))  # site/common
+            lexer_dirs.append(join(koDirs.supportDir, "lexers"))     # factory
+            for extra_dir in UDLLexer._extra_lexer_dirs:
+                lexer_dirs.append(extra_dir)
 
-        def _get_lexres_path(self):
-            for lexer_dir in self._gen_lexer_dirs():
-                if not exists(lexer_dir):
-                    continue
-                candidate = join(lexer_dir, self.lang+".lexres")
-                if exists(candidate):
-                    return candidate
-            else:
-                raise CodeIntelError("could not find lexres file for %s: "
-                                     "`%s.lexres' does not exist in any "
-                                     "of the lexer dirs"
-                                     % (self.lang, self.lang))
+            # Find all .lexeres files in these lexer dirs.
+            for d in reversed(lexer_dirs):  # first come, first served
+                lexer_files = glob(join(d, "*.lexres"))
+                for f in lexer_files:
+                    # Get lowered name without the ".lexres" extension.
+                    name = basename(f).lower().rsplit(".", 1)[0]
+                    lexresfile_from_lang[name] = f
+            return lexresfile_from_lang
+
     else:
-        def _get_lexres_path(self):
-            candidate = join(dirname(__file__), "lexers", self.lang+".lexres")
-            if not exists(candidate):
-                raise CodeIntelError("could not find lexres file for %s: "
-                                     "`%s' does not exist"
-                                     % (self.lang, candidate))
-            return candidate
+        @staticmethod
+        def _generate_lexer_mapping():
+            """Return dict {name > filename} of all lexer resource files (i.e.
+            those ones that can include compiled UDL .lexres files).
 
+            It yields directories that should "win" first.
+            """
+            from glob import glob
+            lexresfile_from_lang = {}
+
+            # Find all possible lexer dirs.
+            lexer_dirs = []
+            lexer_dirs.append(join(dirname(__file__), "lexers"))
+            for extra_dir in UDLLexer._extra_lexer_dirs:
+                lexer_dirs.append(extra_dir)
+
+            # Find all .lexeres files in these lexer dirs.
+            for d in reversed(lexer_dirs):  # first come, first served
+                lexer_files = glob(join(d, "*.lexres"))
+                for f in lexer_files:
+                    # Get lowered name without the ".lexres" extension.
+                    name = basename(f).lower().rsplit(".", 1)[0]
+                    lexresfile_from_lang[name] = f
+            return lexresfile_from_lang
+
+    def _get_lexres_path(self):
+        lexresfile_from_lang = UDLLexer._lexresfile_from_lang
+        if lexresfile_from_lang is None:
+            # Generate and cache it.
+            lexresfile_from_lang = self._generate_lexer_mapping()
+            UDLLexer._lexresfile_from_lang = lexresfile_from_lang
+
+        lexres_file = lexresfile_from_lang.get(self.lang.lower())
+        if lexres_file is None:
+            raise CodeIntelError("could not find lexres file for %s: "
+                                 "`%s.lexres' does not exist in any "
+                                 "of the lexer dirs"
+                                 % (self.lang, self.lang))
+        return lexres_file
 
 
 class UDLBuffer(CitadelBuffer):
     """A CodeIntel Buffer for a UDL-lexer-based language."""
     sce_prefixes = ["SCE_UDL_"]
-    #XXX Not sure that this indirection will be useful, but we'll see.
+    # XXX Not sure that this indirection will be useful, but we'll see.
 
     # Sub-classes must set the following of these that are appropriate:
     m_lang = None
@@ -188,7 +242,7 @@ class UDLBuffer(CitadelBuffer):
 
     def lang_from_style(self, style):
         if (ScintillaConstants.SCE_UDL_M_DEFAULT <= style
-              <= ScintillaConstants.SCE_UDL_M_COMMENT):
+           <= ScintillaConstants.SCE_UDL_M_COMMENT):
             return self.m_lang
         elif (ScintillaConstants.SCE_UDL_CSS_DEFAULT <= style
               <= ScintillaConstants.SCE_UDL_CSS_OPERATOR):
@@ -210,6 +264,7 @@ class UDLBuffer(CitadelBuffer):
         return self.lang_from_style(style)
 
     _udl_family_from_lang_cache = None
+
     @property
     def udl_family_from_lang(self):
         if self._udl_family_from_lang_cache is None:
@@ -220,7 +275,7 @@ class UDLBuffer(CitadelBuffer):
                     (self.csl_lang, "CSL"),
                     (self.ssl_lang, "SSL"),
                     (self.tpl_lang, "TPL"),
-                    ]
+                ]
                 if L is not None
             )
         return self._udl_family_from_lang_cache
@@ -241,7 +296,7 @@ class UDLBuffer(CitadelBuffer):
             pass
         elif hasattr(self.accessor, "udl_family_chunk_ranges"):
             udl_family = self.udl_family_from_lang[lang]
-            text = self.accessor.text  #Note: assuming here that `text` is in *bytes*
+            text = self.accessor.text  # Note: assuming here that `text` is in *bytes*
             for u, start, end in self.accessor.udl_family_chunk_ranges:
                 if u == udl_family:
                     yield start, text[start:end]
@@ -266,7 +321,7 @@ class UDLBuffer(CitadelBuffer):
                 if in_chunk:
                     if not (min_style <= token["style"] <= max_style):
                         # SilverCity indeces are inclusive at the end.
-                        end_index = token["end_index"] + 1 
+                        end_index = token["end_index"] + 1
                         yield pos_offset, text[pos_offset:end_index]
                         in_chunk = False
                 else:
@@ -284,7 +339,7 @@ class UDLBuffer(CitadelBuffer):
         where <blob> is the ciElementTree blob for the buffer content
         and <lpath> is an ordered list of names into the blob
         identifying the scope.
-        
+
         If no relevant scope is found (e.g. for example, in markup
         content in PHP) then None is returned.
 
@@ -295,7 +350,7 @@ class UDLBuffer(CitadelBuffer):
             blob = self.blob_from_lang[lang]
         except KeyError:
             return None
-        line = self.accessor.line_from_pos(pos) + 1 # convert to 1-based
+        line = self.accessor.line_from_pos(pos) + 1  # convert to 1-based
         return self.scoperef_from_blob_and_line(blob, line)
 
     def trg_from_pos(self, pos, implicit=True):
@@ -363,7 +418,7 @@ class UDLBuffer(CitadelBuffer):
                            "directly")
 
     def style_names_from_style_num(self, style_num):
-        #XXX Would like to have python-foo instead of p_foo or SCE_P_FOO, but
+        # XXX Would like to have python-foo instead of p_foo or SCE_P_FOO, but
         #    that requires a more comprehensive solution for all langs and
         #    multi-langs.
         style_names = []
@@ -385,7 +440,7 @@ class UDLBuffer(CitadelBuffer):
                 = self._style_name_from_style_num_from_lang["UDL"]
         const_name = name_from_num[style_num]
         style_names.append(const_name)
-        
+
         # Get a style group from styles.py.
         if "UDL" in styles.StateMap:
             for style_group, const_names in styles.StateMap["UDL"].items():
@@ -395,10 +450,11 @@ class UDLBuffer(CitadelBuffer):
         else:
             log.warn("lang '%s' not in styles.StateMap: won't have "
                      "common style groups in HTML output" % "UDL")
-        
+
         return style_names
 
     __string_styles = None
+
     def string_styles(self):
         if self.__string_styles is None:
             state_map = styles.StateMap["UDL"]
@@ -410,6 +466,7 @@ class UDLBuffer(CitadelBuffer):
         return self.__string_styles
 
     __comment_styles = None
+
     def comment_styles(self):
         if self.__comment_styles is None:
             state_map = styles.StateMap["UDL"]
@@ -422,6 +479,7 @@ class UDLBuffer(CitadelBuffer):
         return self.__comment_styles
 
     __number_styles = None
+
     def number_styles(self):
         if self.__number_styles is None:
             state_map = styles.StateMap["UDL"]
@@ -445,6 +503,7 @@ class XMLParsingBufferMixin(object):
     """
     _xml_tree_cache = None
     _xml_default_dataset_info = None
+
     @property
     def xml_tree(self):
         if self._xml_tree_cache is None:
@@ -466,15 +525,16 @@ class XMLParsingBufferMixin(object):
         if self._xml_default_dataset_info is None:
             import koXMLDatasetInfo
             datasetSvc = koXMLDatasetInfo.getService()
-            self._xml_default_dataset_info = (datasetSvc.getDefaultPublicId(self.m_lang, self.env),
-                                            None,
-                                            datasetSvc.getDefaultNamespace(self.m_lang, self.env))
+            self._xml_default_dataset_info = (
+                datasetSvc.getDefaultPublicId(self.m_lang, self.env),
+                None,
+                datasetSvc.getDefaultNamespace(self.m_lang, self.env))
         return self._xml_default_dataset_info
 
     def xml_tree_handler(self, node=None):
         import koXMLDatasetInfo
         return koXMLDatasetInfo.get_tree_handler(self._xml_tree_cache, node, self.xml_default_dataset_info(node))
-    
+
     def xml_node_at_pos(self, pos):
         import koXMLTreeService
         self.xml_parse()
@@ -487,29 +547,34 @@ class XMLParsingBufferMixin(object):
         last_start = self.accessor.text.rfind('<', 0, pos)
         last_end = self.accessor.text.find('>', last_start, pos)
         if node is None and last_start >= 0:
-            node = koXMLTreeService.elementFromText(tree, self.accessor.text[last_start:last_end], node)
+            node = koXMLTreeService.elementFromText(
+                tree, self.accessor.text[last_start:last_end], node)
         if node is None or node.start is None:
             return node
         # elementtree line numbers are 1 based, convert to zero based
-        node_pos = self.accessor.pos_from_line_and_col(node.start[0]-1, node.start[1])
+        node_pos = self.accessor.pos_from_line_and_col(
+            node.start[0]-1, node.start[1])
         if last_end == -1 and last_start != node_pos:
-            #print "try parse ls %d le %d np %d pos %d %r" % (last_start, last_end, node_pos, pos, accessor.text[last_start:pos])
+            # print "try parse ls %d le %d np %d pos %d %r" % (last_start, last_end, node_pos, pos, accessor.text[last_start:pos])
             # we have a dirty tree, need to create a current node and add it
-            newnode = koXMLTreeService.elementFromText(tree, self.accessor.text[last_start:pos], node)
+            newnode = koXMLTreeService.elementFromText(
+                tree, self.accessor.text[last_start:pos], node)
             if newnode is not None:
                 return newnode
         return node
+
 
 class _NotYetSet(object):
     # Used below to distinguish from None.
     pass
 
+
 class UDLCILEDriver(CILEDriver):
     ssl_lang = None   # Sub-classes must set one or both of these for
-    csl_lang = None   #    citadel-scanning support.
+    csl_lang = None  # citadel-scanning support.
 
     _master_cile_driver = None
-    slave_csl_cile_driver = _NotYetSet # to distinguish from None
+    slave_csl_cile_driver = _NotYetSet  # to distinguish from None
 
     @property
     def master_cile_driver(self):
@@ -535,8 +600,6 @@ class UDLCILEDriver(CILEDriver):
         return self._master_cile_driver
 
     def scan_purelang(self, buf):
+        log.info("scan_purelang: path: %r lang: %s", buf.path, buf.lang)
         return self.master_cile_driver.scan_multilang(
-                        buf, self.slave_csl_cile_driver)
-
-
-
+            buf, self.slave_csl_cile_driver)

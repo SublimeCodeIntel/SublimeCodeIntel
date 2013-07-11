@@ -13,9 +13,11 @@ from codeintel2.common import *
 
 #---- globals
 log = logging.getLogger("codeintel.db")
-#log.setLevel(logging.DEBUG)
+# log.setLevel(logging.DEBUG)
 
 #---- Base lang lib implementation
+
+
 class LangDirsLibBase(object):
     def __init__(self):
         self._have_ensured_scanned_from_dir_cache = set()
@@ -27,8 +29,10 @@ class LangDirsLibBase(object):
         # filter out directories we've already scanned, so that we don't need
         # to report them (this also filters out quite a few spurious
         # notifications)
-        dirs = frozenset(filter(lambda d: d not in self._have_ensured_scanned_from_dir_cache,
-                                self.dirs))
+        dirs = frozenset(
+            filter(
+                lambda d: d not in self._have_ensured_scanned_from_dir_cache,
+                self.dirs))
         if not dirs:
             # all directories have already been scanned; nothing to do.
             log.debug("Skipping scanning dirs %r - all scanned",
@@ -55,13 +59,15 @@ class LangDirsLibBase(object):
                         break
                 try:
                     if reporter and hasattr(reporter, "onScanDirectory"):
-                        reporter.onScanDirectory("Scanning %s files in '%s'" % (self.lang, dir),
-                                                 dir,
-                                                 len(scanned),
-                                                 len(dirs))
+                        reporter.onScanDirectory(
+                            "Scanning %s files in '%s'" % (self.lang, dir),
+                            dir,
+                            len(scanned),
+                            len(dirs))
                 except:
-                    pass # eat any errors about reporting progress
-                self.ensure_dir_scanned(dir, ctlr=ctlr, reporter=lambda msg: None)
+                    pass  # eat any errors about reporting progress
+                self.ensure_dir_scanned(
+                    dir, ctlr=ctlr, reporter=lambda msg: None)
                 scanned.add(dir)
         finally:
             # report that we have stopped scanning
@@ -74,7 +80,7 @@ class LangDirsLibBase(object):
         """Ensure that all importables in this dir have been scanned
         into the db at least once.
         """
-        #TODO: should "self.lang" in this function be "self.sublang" for
+        # TODO: should "self.lang" in this function be "self.sublang" for
         # the MultiLangDirsLib case?
         if dir not in self._have_ensured_scanned_from_dir_cache:
             if reporter is None:
@@ -91,8 +97,9 @@ class LangDirsLibBase(object):
                     return
                 if base not in res_index:
                     if reporter:
-                        reporter("scanning %s files in '%s'" % (self.lang, dir))
-                        reporter = None # don't report again
+                        reporter("scanning %s files in '%s'" % (
+                            self.lang, dir))
+                        reporter = None  # don't report again
                     try:
                         buf = self.mgr.buf_from_path(join(dir, base),
                                                      lang=self.lang)
@@ -106,14 +113,15 @@ class LangDirsLibBase(object):
                     buf.scan_if_necessary()
 
             # Remove scanned paths that don't exist anymore.
-            removed_values = set(res_index.keys()).difference(importable_values)
+            removed_values = set(
+                res_index.keys()).difference(importable_values)
             for base in removed_values:
                 if ctlr and ctlr.is_aborted():
                     log.debug("ctlr aborted")
                     return
                 if reporter:
                     reporter("scanning %s files in '%s'" % (self.lang, dir))
-                    reporter = None # don't report again
+                    reporter = None  # don't report again
                 basename = join(dir, base)
                 self.lang_zone.remove_path(basename)
 

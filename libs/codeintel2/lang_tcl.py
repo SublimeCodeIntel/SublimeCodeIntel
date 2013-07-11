@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """Tcl support for CodeIntel"""
@@ -95,6 +95,21 @@ keywords = ["after", "append", "apply", "array", "auto_execok",
             "ttk::scrollbar", "ttk::separator", "ttk::sizegrip",
             "ttk::style", "ttk::treeview", "ttk::style", "winfo", "wm"]
 
+# Codeintel will assume we're running v 8.6+
+# Other clients can pick and choose the keywords they want.
+v8_6_keywords = ["coroutine",
+                 "finally"
+                 "lmap"
+                 "on"
+                 "tailcall",
+                 "throw",
+                 "trap"
+                 "try",
+                 "yield",
+                 "yieldto",
+                 "zlib",
+                 ]
+
 
 line_end_re = re.compile("(?:\r\n|\r)")
 
@@ -103,11 +118,13 @@ line_end_re = re.compile("(?:\r\n|\r)")
 
 class TclLexer(Lexer):
     lang = "Tcl"
+
     def __init__(self):
         self._properties = SilverCity.PropertySet()
-        self._lexer = SilverCity.find_lexer_module_by_id(ScintillaConstants.SCLEX_TCL)
+        self._lexer = SilverCity.find_lexer_module_by_id(
+            ScintillaConstants.SCLEX_TCL)
         self._keyword_lists = [
-            SilverCity.WordList(' '.join(keywords))
+            SilverCity.WordList(' '.join(sorted(keywords + v8_6_keywords)))
         ]
 
 
@@ -120,10 +137,10 @@ class TclLangIntel(CitadelLangIntel):
     lang = "Tcl"
 
     def cb_import_data_from_elem(self, elem):
-        #XXX Not handling symbol and alias
+        # XXX Not handling symbol and alias
         module = elem.get("module")
         detail = "package require %s" % module
-        return {"name": module, "detail": detail}    
+        return {"name": module, "detail": detail}
 
 
 class TclImportHandler(ImportHandler):
@@ -141,7 +158,7 @@ class TclImportHandler(ImportHandler):
         retval = p.returncode
         path = [os.path.normpath(line) for line in output.splitlines(0)]
         if path and (path[0] == "" or path[0] == os.getcwd()):
-            del path[0] # cwd handled separately
+            del path[0]  # cwd handled separately
         return path
 
     def setCorePath(self, compiler=None, extra=None):
@@ -162,15 +179,15 @@ class TclImportHandler(ImportHandler):
             return
         else:
             searchedDirs[cpath] = 1
-        for i in range(len(names)-1, -1, -1): # backward so can del from list
+        for i in range(len(names)-1, -1, -1):  # backward so can del from list
             path = os.path.join(dirname, names[i])
             if os.path.isdir(path):
                 pass
             elif os.path.splitext(names[i])[1] in (".tcl",):
-                #XXX The list of extensions should be settable on
+                # XXX The list of extensions should be settable on
                 #    the ImportHandler and Komodo should set whatever is
                 #    set in prefs.
-                #XXX This check for files should probably include
+                # XXX This check for files should probably include
                 #    scripts, which might likely not have the
                 #    extension: need to grow filetype-from-content smarts.
                 if skipRareImports and names[i] == "pkgIndex.tcl":
@@ -180,6 +197,7 @@ class TclImportHandler(ImportHandler):
 
 class TclCILEDriver(CILEDriver):
     lang = lang
+
     def __init__(self, *args):
         CILEDriver.__init__(self, *args)
         # We have circular imports here, so load it at runtime
@@ -189,19 +207,15 @@ class TclCILEDriver(CILEDriver):
     def scan(self, request):
         request.calculateMD5()
         return self.tclcile.scan(request.content, request.path,
-                             request.md5sum, request.mtime)
+                                 request.md5sum, request.mtime)
 
     def scan_purelang(self, buf):
+        log.info("scan_purelang: path: %r lang: %s", buf.path, buf.lang)
         return self.tclcile.scan_purelang(buf.accessor.text, buf.path)
 
 
-
 #---- internal support stuff
-
-
-
 #---- registration
-
 def register(mgr):
     """Register language support with the Manager."""
     mgr.set_lang_info(lang,
@@ -210,4 +224,3 @@ def register(mgr):
                       langintel_class=TclLangIntel,
                       import_handler_class=TclImportHandler,
                       cile_driver_class=TclCILEDriver)
-

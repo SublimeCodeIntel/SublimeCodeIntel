@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 #
 # Contributors:
@@ -45,7 +45,7 @@
         from rubycile import scan_purelang
         content = open("foo.rb", "r").read()
         scan_purelang(content, "foo.rb")
-    
+
     Command-line Usage:
         rubycile.py [<options>...] [<Ruby files>...]
 
@@ -70,7 +70,7 @@
     This is a Language Engine for the Code Intelligence (codeintel) system.
     Code Intelligence XML format. See:
         http://specs.tl.activestate.com/kd/kd-0100.html
-    
+
     The command-line interface will return non-zero iff the scan failed.
 """
 
@@ -102,18 +102,19 @@ class RubyCILEError(CILEError):
 
 _version_ = (0, 1, 0)
 log = logging.getLogger("rubycile")
-#log.setLevel(logging.DEBUG)
+# log.setLevel(logging.DEBUG)
 
 dcLog = logging.getLogger("rubycile.dircache")
-#dcLog.setLevel(logging.DEBUG)
+# dcLog.setLevel(logging.DEBUG)
 
 _gClockIt = 0   # if true then we are gathering timing data
 _gClock = None  # if gathering timing data this is set to time retrieval fn
 _gStartTime = None   # start time of current file being scanned
 
-gProduceOldCIX = False  #XXX Temporary -- the old format should be pulled out.
+gProduceOldCIX = False  # XXX Temporary -- the old format should be pulled out.
 
 # from codeintel2.util import hotshotit
+
 
 class _DirInfo:
     """
@@ -129,7 +130,7 @@ class _DirInfo:
         self._ptn = ptn
 
     def get_files(self, dirname):
-        if not self._data.has_key(dirname):
+        if dirname not in self._data:
             self._create(dirname)
         else:
             new_time = self._changed(dirname)
@@ -145,8 +146,8 @@ class _DirInfo:
         return 0
 
     def _create(self, dirname):
-        self._data[dirname] = {'mtime' : self._mtime(dirname),
-                               'flist' : self._files(dirname),
+        self._data[dirname] = {'mtime': self._mtime(dirname),
+                               'flist': self._files(dirname),
                                }
 
     def _files(self, dirname):
@@ -164,6 +165,7 @@ class _DirInfo:
 
 _modelDirInfo = _DirInfo("*.rb")
 
+
 def rails_role_from_path(path):
     apath = abspath(path)
     aplist = apath.split(os.path.sep)
@@ -171,9 +173,9 @@ def rails_role_from_path(path):
     if len(aplist) < 3:
         return None
     elif (aplist[-3] == "app" and
-        (aplist[-2] == "controllers" and aplist[-1].endswith(".rb")
-         or aplist[-2] == "helpers" and aplist[-1].endswith("_helper.rb")
-         or aplist[-2] == "models" and aplist[-1].endswith(".rb"))):
+         (aplist[-2] == "controllers" and aplist[-1].endswith(".rb")
+          or aplist[-2] == "helpers" and aplist[-1].endswith("_helper.rb")
+          or aplist[-2] == "models" and aplist[-1].endswith(".rb"))):
         role_parts = aplist[-3:]
     elif (len(aplist) >= 4
           and aplist[-4] == "app" and aplist[-3] == "views"
@@ -192,6 +194,7 @@ def rails_role_from_path(path):
         return None
     return role_parts
 
+
 def check_insert_rails_env(path, blob_scope):
     role_parts = rails_role_from_path(path)
     if role_parts is None:
@@ -206,7 +209,8 @@ def check_insert_rails_env(path, blob_scope):
             if role_parts[1] in ("controllers", "models"):
                 if role_parts[1] == "controllers":
                     if role_parts[2] != "application.rb":
-                        blob_scope.insert(0, Element("import", module="./application", symbol='*'))
+                        blob_scope.insert(0, Element(
+                            "import", module="./application", symbol='*'))
                     # For loading models
                     apath = abspath(path)
                     add_models = True
@@ -219,23 +223,28 @@ def check_insert_rails_env(path, blob_scope):
                     # Here's how it works:
                     # If the file is app/models/my_thing.rb,
                     # For each file foo in ../../db/migrate/*.rb,
-                    # Try to load module=foo, symbol=inflector.camelcase(drop_ext(basename(filename)))
-                    modelName = ruby_parser.get_inflector().camelize(splitext(basename(path))[0])
+                    # Try to load module=foo,
+                    # symbol=inflector.camelcase(drop_ext(basename(filename)))
+                    modelName = ruby_parser.get_inflector().camelize(
+                        splitext(basename(path))[0])
                 # Load the migration modules
                 apath = abspath(path)
-                migration_dir = join(dirname(dirname(dirname(apath))), "db", "migrate")
+                migration_dir = join(dirname(dirname(
+                    dirname(apath))), "db", "migrate")
                 migration_files = _modelDirInfo.get_files(migration_dir)
                 idx = 0
                 for migration_file in migration_files:
                     idx += 1
-                    base_part = "../../db/migrate/" + splitext(basename(migration_file))[0]
+                    base_part = "../../db/migrate/" + \
+                        splitext(basename(migration_file))[0]
                     blob_class = blob_scope.find("scope")
                     assert blob_class.get('ilk') == 'class'
-                    blob_class.insert(idx, Element("import", module=base_part, symbol=modelName))
+                    blob_class.insert(idx, Element(
+                        "import", module=base_part, symbol=modelName))
     elif (len(role_parts) > 2
           and ((role_parts[0] == "db" and role_parts[1] == "migrate"
                 and role_parts[2][0].isdigit())
-                or role_parts[0] == "test")):
+               or role_parts[0] == "test")):
         apath = abspath(path)
         add_models = True
         models_dir = join(dirname(dirname(dirname(apath))), "app", "models")
@@ -245,21 +254,27 @@ def check_insert_rails_env(path, blob_scope):
             # require 'foo'
             # but codeintel won't know where to look for this foo, so we'll tell it explicitly
             # Use 'index' to throw an exception because
-            # RubyCommonBufferMixin.check_for_rails_app_path specified this pattern.
+            # RubyCommonBufferMixin.check_for_rails_app_path specified this
+            # pattern.
             end_part = role_parts[2].index("_test.rb")
-            controller_file = rel_part + "controllers/" + role_parts[2][0:end_part]
-            blob_scope.insert(0, Element("import", module=controller_file, symbol='*'))
+            controller_file = rel_part + \
+                "controllers/" + role_parts[2][0:end_part]
+            blob_scope.insert(0, Element(
+                "import", module=controller_file, symbol='*'))
             modelName = '*'
-        #XXX - tests can't see migration dirs yet.
-        #migration_dir = join(dirname(dirname(dirname(apath))), "db", "migrate")
+        # XXX - tests can't see migration dirs yet.
+        # migration_dir = join(dirname(dirname(dirname(apath))), "db",
+        # "migrate")
 
     if add_models:
         model_files = _modelDirInfo.get_files(models_dir)
         idx = 0
         for model_file in model_files:
             idx += 1
-            base_part = rel_part + "models/" + splitext(basename(model_file))[0]
-            blob_scope.insert(idx, Element("import", module=base_part, symbol='*'))
+            base_part = rel_part + "models/" + \
+                splitext(basename(model_file))[0]
+            blob_scope.insert(idx, Element(
+                "import", module=base_part, symbol='*'))
 
 
 # @hotshotit
@@ -275,7 +290,8 @@ def scan_purelang(content, filename):
         blob_node = tree.getchildren()[0].getchildren()[0]
         for parse_tree_node in rails_migration_class_nodes:
             assert parse_tree_node.class_name == "Class"
-            parser_cix.common_module_class_cix(parse_tree_node, blob_node, class_ref_fn=None, attributes="__fabricated__")
+            parser_cix.common_module_class_cix(
+                parse_tree_node, blob_node, class_ref_fn=None, attributes="__fabricated__")
             # parser_cix.class_etree_cix(rails_migration_class_tree, blob_node)
     return tree
 
@@ -292,7 +308,7 @@ def scan_multilang(tokens, module_elem):
     * the list of the CSL tokens in the token stream,
     * whether or not the document contains any Ruby tokens (style UDL_SSL...)
     """
-        
+
     tokenizer = ruby_lexer.RubyMultiLangLexer(tokens)
     parser = ruby_parser.Parser(tokenizer, "RHTML")
     parse_tree = parser.parse()
@@ -308,8 +324,8 @@ def main(argv):
     # Parse options.
     try:
         opts, args = getopt.getopt(argv[1:], "Vvhf:cL:",
-            ["version", "verbose", "help", "filename=", "md5=", "mtime=",
-             "clock", "language="])
+                                   ["version", "verbose", "help", "filename=", "md5=", "mtime=",
+                                    "clock", "language="])
     except getopt.GetoptError, ex:
         log.error(str(ex))
         log.error("Try `rubycile --help'.")
@@ -394,7 +410,7 @@ def main(argv):
     except KeyboardInterrupt:
         log.debug("user abort")
         return 1
-    if 0: #except Exception, ex:
+    if 0:  # except Exception, ex:
         log.error(str(ex))
         if log.isEnabledFor(logging.DEBUG):
             print
@@ -404,4 +420,3 @@ def main(argv):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
-

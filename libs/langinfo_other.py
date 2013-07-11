@@ -1,25 +1,25 @@
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -31,7 +31,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """LangInfo definitions for languages that don't fit in the other
@@ -42,12 +42,12 @@ import re
 from langinfo import LangInfo
 
 
-
 class MakefileLangInfo(LangInfo):
     name = "Makefile"
     conforms_to_bases = ["Text"]
     exts = [".mak"]
     filename_patterns = [re.compile(r'^[Mm]akefile.*$')]
+
 
 class _CSSLangInfoCommon(LangInfo):
     conforms_to_bases = ["Text"]
@@ -55,23 +55,34 @@ class _CSSLangInfoCommon(LangInfo):
     default_encoding = "utf-8"
     # http://www.w3.org/International/questions/qa-css-charset
     # http://www.w3.org/TR/CSS21/syndata.html#charset
-    # http://www.w3.org/TR/CSS2/syndata.html#q23            
+    # http://www.w3.org/TR/CSS2/syndata.html#q23
     # I.e., look for:
     #   @charset "<IANA defined charset name>";
     # at the start of the CSS document.
     encoding_decl_pattern = re.compile(r'\A@charset "(?P<encoding>[\w-]+)";')
 
+
 class CSSLangInfo(_CSSLangInfoCommon):
     name = "CSS"
     exts = [".css"]
 
+
 class SCSSLangInfo(_CSSLangInfoCommon):
     name = "SCSS"
-    exts = [".scss"]
+    exts = [".scss", ".css.scss"]
+
 
 class LessLangInfo(_CSSLangInfoCommon):
     name = "Less"
-    exts = [".less"]
+    exts = [".less", ".css.less"]
+
+
+class SassLangInfo(_CSSLangInfoCommon):
+    name = "Sass"
+    exts = [".sass", ".css.sass"]
+    section_regexes = [
+        ("production", re.compile(r"^(\w\S+?),?", re.M)),
+    ]
 
 
 class CIXLangInfo(LangInfo):
@@ -84,17 +95,20 @@ class CIXLangInfo(LangInfo):
     conforms_to_bases = ["XML"]
     exts = [".cix"]
 
+
 class DiffLangInfo(LangInfo):
     name = "Diff"
     conforms_to_bases = ["Text"]
     exts = [".patch", ".diff"]
     has_significant_trailing_ws = True
 
+
 class IDLLangInfo(LangInfo):
-    #TODO: clarify if this is the math thing or the COM-IDL thing
+    # TODO: clarify if this is the math thing or the COM-IDL thing
     name = "IDL"
     conforms_to_bases = ["Text"]
     exts = [".idl"]
+
 
 class ApacheConfigLangInfo(LangInfo):
     name = "Apache Config"
@@ -102,6 +116,7 @@ class ApacheConfigLangInfo(LangInfo):
     conforms_to_bases = ["Text"]
     exts = [".conf"]
     filename_patterns = [".htaccess"]
+
 
 class APDLLangInfo(LangInfo):
     """ANSYS Parametric Design Language
@@ -112,10 +127,12 @@ class APDLLangInfo(LangInfo):
     conforms_to_bases = ["Text"]
     exts = [".mac"]
 
+
 class IniLangInfo(LangInfo):
     name = "Ini"
     conforms_to_bases = ["Text"]
     exts = [".ini"]
+
 
 class POVRayLangInfo(LangInfo):
     """The "Persistence of Vision Raytracer"
@@ -125,6 +142,13 @@ class POVRayLangInfo(LangInfo):
     conforms_to_bases = ["Text"]
     exts = [".pov"]
 
+
+class PORayLangInfo(LangInfo):
+    name = "GetText"
+    conforms_to_bases = ["Text"]
+    exts = [".po"]
+
+
 class MatlabLangInfo(LangInfo):
     """A high-performance language for technical computing.
     http://www.mathworks.com/
@@ -132,6 +156,7 @@ class MatlabLangInfo(LangInfo):
     name = "Matlab"
     conforms_to_bases = ["Text"]
     exts = [".m", ".mat"]
+
 
 class ForthLangInfo(LangInfo):
     """Forth is a structured, imperative, stack-based, computer programming
@@ -153,24 +178,28 @@ class FlagshipLangInfo(LangInfo):
     conforms_to_bases = ["Text"]
     exts = [".prg"]
 
+
 class SQLLangInfo(LangInfo):
-    #TODO: describe: what SQL spec does this conform to?
-    #TODO: should we have other SQL langs? E.g. for PostgreSQL, etc.?
+    # TODO: describe: what SQL spec does this conform to?
+    # TODO: should we have other SQL langs? E.g. for PostgreSQL, etc.?
     name = "SQL"
     conforms_to_bases = ["Text"]
     exts = [".sql"]
 
+
 class PLSQLLangInfo(LangInfo):
-    #TODO: describe how different from SQLLangInfo
+    # TODO: describe how different from SQLLangInfo
     name = "PL-SQL"
     conforms_to_bases = ["Text"]
-    #exts = [".sql"]
+    # exts = [".sql"]
     is_minor_variant = SQLLangInfo
 
+
 class MSSQLLangInfo(LangInfo):
-    #TODO: describe how diff from SQLLangInfo
+    # TODO: describe how diff from SQLLangInfo
     name = "MSSQL"
     conforms_to_bases = ["Text"]
+
 
 class MySQLLangInfo(LangInfo):
     name = "MySQL"
@@ -196,43 +225,52 @@ class VimLangInfo(LangInfo):
     exts = [".vim"]
     filename_patterns = [".vimrc"]
 
+
 class INILangInfo(LangInfo):
     name = "INI"
     conforms_to_bases = ["Text"]
     exts = [".ini"]
+
 
 class LogLangInfo(LangInfo):
     name = "log"
     conforms_to_bases = ["Text"]
     exts = [".log"]
 
+
 class CobolLangInfo(LangInfo):
     name = "COBOL"
     conforms_to_bases = ["Text"]
     exts = [".cbl"]
+
 
 class NimrodLangInfo(LangInfo):
     name = "Nimrod"
     conforms_to_bases = ["Text"]
     exts = [".nim"]
 
+
 class PowerProLangInfo(LangInfo):
     name = "PowerPro"
     conforms_to_bases = ["Text"]
+
 
 class SMLLangInfo(LangInfo):
     name = "SML"
     conforms_to_bases = ["Text"]
     exts = [".sml"]
 
+
 class SorcusLangInfo(LangInfo):
     name = "Sorcus"
     conforms_to_bases = ["Text"]
+
 
 class TACLLangInfo(LangInfo):
     name = "TACL"
     conforms_to_bases = ["Text"]
     exts = [".tacl"]
+
 
 class TALLangInfo(LangInfo):
     name = "TAL"

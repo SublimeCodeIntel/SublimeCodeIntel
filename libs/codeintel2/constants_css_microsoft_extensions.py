@@ -135,8 +135,6 @@ CSS_MICROSOFT_DATA = {
 ### END: Auto generated
 
 
-
-
 CSS_MICROSOFT_SPECIFIC_ATTRS_DICT = {}
 CSS_MICROSOFT_SPECIFIC_CALLTIP_DICT = {}
 for attr, details in CSS_MICROSOFT_DATA.items():
@@ -162,4 +160,5 @@ for attr, details in CSS_MICROSOFT_DATA.items():
                     if i > 0:
                         attr_line = "        " + attr_line
                     desc_lines.append(attr_line)
-        CSS_MICROSOFT_SPECIFIC_CALLTIP_DICT[attr] = "\n".join(desc_lines).encode("ascii", 'replace')
+        CSS_MICROSOFT_SPECIFIC_CALLTIP_DICT[attr] = "\n".join(
+            desc_lines).encode("ascii", 'replace')

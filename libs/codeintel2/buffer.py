@@ -1,26 +1,26 @@
 #!python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 import os
@@ -50,7 +50,7 @@ import time
 
 import SilverCity
 from SilverCity import ScintillaConstants
-#XXX Import only what we need
+# XXX Import only what we need
 from SilverCity.ScintillaConstants import *
 
 from codeintel2.common import *
@@ -60,7 +60,7 @@ if _xpcom_:
     from xpcom import components
     from xpcom.server import UnwrapObject
 
-#XXX We need to have a better mechanism for rationalizing and sharing
+# XXX We need to have a better mechanism for rationalizing and sharing
 #    common lexer style classes. For now we'll just HACKily grab from
 #    Komodo's styles.py. Some of this is duplicating logic in
 #    KoLanguageServiceBase.py.
@@ -76,9 +76,7 @@ finally:
 log = logging.getLogger("codeintel.buffer")
 
 
-
 #---- module interface
-
 class Buffer(object):
     if _xpcom_:
         _com_interfaces_ = [components.interfaces.koICodeIntelBuffer]
@@ -93,8 +91,8 @@ class Buffer(object):
     # We don't use the default, ' ', because so of our languages have
     # completions with spaces in them (e.g. Tcl).
     scintilla_cpln_sep = '\n'
-    scintilla_cpln_sep_ord = ord(scintilla_cpln_sep) 
-    
+    scintilla_cpln_sep_ord = ord(scintilla_cpln_sep)
+
     # <prefix><stylename>, scintilla style constants prefix for this
     # language. Most languages just have one prefix (e.g. "SCE_P_" for
     # Python), but HTML, for example, has many.
@@ -102,7 +100,7 @@ class Buffer(object):
 
     # Code Browser control. (Note: most code browser control is on the
     # relevant LangIntel).
-    # 
+    #
     # Show a row for this buffer even if empty of code browser data.
     cb_show_if_empty = False
 
@@ -112,9 +110,9 @@ class Buffer(object):
 
     def __init__(self, mgr, accessor, env=None, path=None, encoding=None, lang=None):
         self.mgr = mgr
-        self.accessor = accessor # an Accessor instance
+        self.accessor = accessor  # an Accessor instance
         self._env = env
-        self.path = path
+        self.path = path if path is not None else "<Unsaved>"
         self.encoding = encoding
         if lang is not None:
             self.lang = lang
@@ -125,7 +123,8 @@ class Buffer(object):
             (s, True) for s in self.number_styles())
 
     def __repr__(self):
-        return "<%s buf '%s'>" % (self.lang, basename(self.path))
+        return "<%s buf '%s'>" % (self.lang,
+                                  basename(self.path) if self.path is not None else "(no file)")
 
     @property
     def env(self):
@@ -133,6 +132,7 @@ class Buffer(object):
         return self._env or self.mgr.env
 
     _langintel_cache = None
+
     @property
     def langintel(self):
         if self._langintel_cache is None:
@@ -140,6 +140,7 @@ class Buffer(object):
         return self._langintel_cache
 
     _langinfo_cache = None
+
     @property
     def langinfo(self):
         if self._langinfo_cache is None:
@@ -156,7 +157,7 @@ class Buffer(object):
     def trg_from_pos(self, pos, implicit=True):
         """If the given position is a _likely_ trigger point, return a
         relevant Trigger instance. Otherwise return the None.
-        
+
             "pos" is the position at which to check for a trigger point.
             "implicit" (optional) is a boolean indicating if this trigger
                 is being implicitly checked (i.e. as a side-effect of
@@ -174,7 +175,7 @@ class Buffer(object):
     def preceding_trg_from_pos(self, pos, curr_pos):
         """Look back from the given position for a trigger point within
         range.
-        
+
             "pos" is the position at which to begin backtracking. (I.e. for
                 the first Ctrl+J this is the cursor position, for the next
                 Ctrl+J it is the position of the current
@@ -182,7 +183,7 @@ class Buffer(object):
             "curr_pos" is the current position -- the one to use to
                 determine if within range of a found trigger. (I.e. this is
                 the cursor position in Komodo.)
-        
+
         Here "within range" depends on the language and the trigger. This
         is the main determinant for the "Ctrl+J" (explicitly trigger
         completion now) functionality in Komodo, for example, and the
@@ -194,10 +195,10 @@ class Buffer(object):
                 os.path.join("<|>   # do not consider the `os.path.' trigger
         - Only consider a calltip trigger point inside the argument
           region.
-          
+
         I.e., "within range" means, we could show the UI for that completion
         in scintilla without having to move the cursor.
-        
+
         The default implementation defers to the langintel for this buffer.
 
         Returns a Trigger instance or None.
@@ -207,15 +208,15 @@ class Buffer(object):
     def async_eval_at_trg(self, trg, ctlr):
         """Asynchronously determine completion/calltip info for the given
         trigger.
-        
+
             "trg" is the trigger at which to evaluate (a Trigger instance).
             "ctlr" is the controller (a EvalController instance) used to
                 relay results and status and to receive control signals.
-        
+
         Rules for implementation:
         - Must call ctlr.start(buf, trg) at start.
         - Should call ctlr.set_desc(desc) near the start to provide a
-          short description of the evaluation. 
+          short description of the evaluation.
         - Should log eval errors via ctlr.error(msg, args...).
         - Should log other events via ctlr.{debug|info|warn}.
         - Should respond to ctlr.abort() in a timely manner.
@@ -240,7 +241,7 @@ class Buffer(object):
         Returns no value. All interaction is on the controller. This may
         raise CodeIntelError on an unexpected error condition.
         """
-        #XXX xpcom UnwrapObject here?
+        # XXX xpcom UnwrapObject here?
         self.langintel.async_eval_at_trg(self, trg, ctlr)
 
     def cplns_from_trg(self, trg, timeout=None, ctlr=None):
@@ -255,7 +256,7 @@ class Buffer(object):
 
         This is a convenience synchronous wrapper around async_eval_at_trg().
         Use the async version for any more interesting interaction.
-        
+
         A "completion" is a 2-tuple -- (<type>, <completion-string>) -- where
         <type> is currently just a string like "variable", "class", etc.
         """
@@ -299,7 +300,7 @@ class Buffer(object):
     def curr_calltip_arg_range(self, trg_pos, calltip, curr_pos, DEBUG=False):
         """Return that range in the calltip of the "current" arg.
         I.e. what argument is currently being entered.
-        
+
             "trg_pos" is the trigger position.
             "calltip" is the full calltip text.
             "curr_pos" is the current position in the buffer.
@@ -329,7 +330,7 @@ class Buffer(object):
     def libs(self):
         """Return the ordered list libraries in which to search for blob
         imports in this buffer.
-        
+
         Each "library" is an instance of a database *Lib class that
         provides the has_blob()/get_blob() API. See the
         database/database.py module docstring for details.
@@ -349,7 +350,7 @@ class Buffer(object):
     def to_html(self, include_styling=False, include_html=False, title=None,
                 do_trg=False, do_eval=False):
         """Return a styled HTML snippet for the current buffer.
-        
+
             "include_styling" (optional, default False) is a boolean
                 indicating if the CSS/JS/informational-HTML should be
                 included.
@@ -365,7 +366,7 @@ class Buffer(object):
         """
         from cStringIO import StringIO
         html = StringIO()
-        
+
         if include_html:
             html.write('''\
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -462,7 +463,7 @@ div.code .tags        { color: red; }
 <div id="infobox"></div>
 ''')
 
-        #XXX escape lang name for CSS class
+        # XXX escape lang name for CSS class
         html.write('<div class="code %s">\n' % self.lang.lower())
 
         curr_udl_region = None
@@ -493,7 +494,7 @@ div.code .tags        { color: red; }
                         if trg is not None:
                             html.write(self._html_from_trg(trg,
                                                            do_eval=do_eval))
-                #XXX Need to do tab expansion.
+                # XXX Need to do tab expansion.
                 html.write(_htmlescape(ch, quote=True, whitespace=True))
                 last_ch = ch
             html.write('</span>')
@@ -521,7 +522,7 @@ div.code .tags        { color: red; }
     def _html_from_trg(self, trg, do_eval=False):
         marker = "&curren;"
         classes = ["trg"]
-        
+
         try:
             eval_log_stream = StringIO()
             hdlr = logging.StreamHandler(eval_log_stream)
@@ -543,7 +544,7 @@ div.code .tags        { color: red; }
             classes.append("trg-notatrg")
             result = "(not a trigger point, false alarm by trg_from_pos())"
         except (EvalError, NotImplementedError,
-                #XXX Eventually citdl evaluation shouldn't use
+                # XXX Eventually citdl evaluation shouldn't use
                 #    codeintel2.CodeIntelError.
                 CodeIntelError), ex:
             classes.append("trg-evalerror")
@@ -580,10 +581,9 @@ div.code .tags        { color: red; }
         return '<span class="%s">%s<span class="trg-info">%s</span></span>' \
                % (' '.join(classes), marker, info_html)
 
-
     #---- Scintilla style helpers.
     def style_names_from_style_num(self, style_num):
-        #XXX Would like to have python-foo instead of p_foo or SCE_P_FOO, but
+        # XXX Would like to have python-foo instead of p_foo or SCE_P_FOO, but
         #    that requires a more comprehensive solution for all langs and
         #    multi-langs.
         style_names = []
@@ -606,9 +606,10 @@ div.code .tags        { color: red; }
         else:
             name_from_num \
                 = self._style_name_from_style_num_from_lang[self.lang]
-        const_name = self._style_name_from_style_num_from_lang[self.lang].get(style_num, "Unknown style")
+        const_name = self._style_name_from_style_num_from_lang[
+            self.lang].get(style_num, "Unknown style")
         style_names.append("%d - %s" % (style_num, const_name))
-        
+
         # Get a style group from styles.py.
         if self.lang in styles.StateMap:
             for style_group, const_names in styles.StateMap[self.lang].items():
@@ -618,10 +619,11 @@ div.code .tags        { color: red; }
         else:
             log.warn("lang '%s' not in styles.StateMap: won't have "
                      "common style groups in HTML output" % self.lang)
-        
+
         return style_names
 
     __string_styles = None
+
     def string_styles(self):
         if self.__string_styles is None:
             state_map = styles.StateMap[self.lang]
@@ -633,6 +635,7 @@ div.code .tags        { color: red; }
         return self.__string_styles
 
     __comment_styles = None
+
     def comment_styles(self):
         if self.__comment_styles is None:
             state_map = styles.StateMap[self.lang]
@@ -645,6 +648,7 @@ div.code .tags        { color: red; }
         return self.__comment_styles
 
     __number_styles = None
+
     def number_styles(self):
         if self.__number_styles is None:
             state_map = styles.StateMap[self.lang]
@@ -666,42 +670,40 @@ class ImplicitBuffer(Buffer):
         Buffer.__init__(self, mgr, accessor, env=env, path=path,
                         encoding=encoding)
 
-    #TODO: Is there a need/use in possibly determining scintilla styles
+    # TODO: Is there a need/use in possibly determining scintilla styles
     #      for this language?
     def string_styles(self):
         return []
+
     def comment_styles(self):
         return []
+
     def number_styles(self):
         return []
 
 
-
 #---- internal support stuff
-
 # Recipe: htmlescape (1.0+) in C:\trentm\tm\recipes\cookbook
 #         + whitespace option
 def _htmlescape(s, quote=False, whitespace=False):
     """Replace special characters '&', '<' and '>' by SGML entities.
-    
+
     Also optionally replace quotes and whitespace with entities and <br/>
     as appropriate.
     """
-    s = s.replace("&", "&amp;") # Must be done first!
+    s = s.replace("&", "&amp;")  # Must be done first!
     s = s.replace("<", "&lt;")
     s = s.replace(">", "&gt;")
     if quote:
         s = s.replace('"', "&quot;")
     if whitespace:
         s = s.replace(' ', "&nbsp;")
-        #XXX Adding that '\n' might be controversial.
+        # XXX Adding that '\n' might be controversial.
         s = re.sub(r"(\r\n|\r|\n)", "<br />\n", s)
     return s
 
 
-
 #---- self-test
-
 def _doctest():
     import doctest
     doctest.testmod()

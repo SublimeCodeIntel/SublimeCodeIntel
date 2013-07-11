@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 r"""Handling for citadel parts of CodeIntel.
@@ -65,16 +65,12 @@ from codeintel2.indexer import ScanRequest
 from codeintel2.langintel import LangIntel
 
 
-
 #---- globals
-
 log = logging.getLogger("codeintel.citadel")
-#log.setLevel(logging.INFO)
-
+# log.setLevel(logging.INFO)
 
 
 #---- module interface
-
 class CitadelLangIntel(LangIntel):
     """Shared smarts for "citadel"-language content.
 
@@ -127,10 +123,12 @@ class CitadelBuffer(Buffer):
     # must be guarded.
     def acquire_lock(self):
         self._scan_lock.acquire()
+
     def release_lock(self):
         self._scan_lock.release()
 
     _have_checked_db = False
+
     def _load_buf_data_once(self, skip_once_check=False):
         """Get persisted data for this buffer from the db.
         Raises NotFoundInDatabase is not there.
@@ -155,12 +153,12 @@ class CitadelBuffer(Buffer):
             ctlr.done("timed out")
             ctlr.abort()
             raise EvalTimeout("eval for %s timed-out" % trg)
-        return ctlr.defns # -> list of Definition's
+        return ctlr.defns  # -> list of Definition's
 
     @property
     def scan_time(self):
-        """The time of the last scan data. 
-        
+        """The time of the last scan data.
+
         This may be the time of the scan or the modification time of the
         buffer content at the last scan.  Typically this is set via the
         'mtime' optional argument to scan().
@@ -257,7 +255,7 @@ class CitadelBuffer(Buffer):
         if mtime is None:
             mtime = time.time()
 
-        #TODO: Eventually would like the CILEDriver scan methods to have
+        # TODO: Eventually would like the CILEDriver scan methods to have
         #      a signature more inline with
         #      blob_from_lang/scan_time/scan_error. I.e. drop
         #      <file error="..."> mechanism in favour of just raising
@@ -269,7 +267,8 @@ class CitadelBuffer(Buffer):
             exc_info = sys.exc_info()
             exc_class, exc, tb = sys.exc_info()
             tb_path, tb_lineno, tb_func = traceback.extract_tb(tb)[-1][:3]
-            scan_error = "%s (%s:%s in %s)" % (exc, tb_path, tb_lineno, tb_func)
+            scan_error = "%s (%s:%s in %s)" % (
+                exc, tb_path, tb_lineno, tb_func)
         except Exception, ex:
             msg = "unexpected error scanning `%s'" % basename(self.path)
             log.exception(msg)
@@ -301,7 +300,7 @@ class CitadelBuffer(Buffer):
         where <blob> is the ciElementTree blob for the buffer content
         and <lpath> is an ordered list of names into the blob
         identifying the scope.
-        
+
         For example, given this "foo.py":
 
             class Foo:
@@ -320,10 +319,10 @@ class CitadelBuffer(Buffer):
             blob = self.blob_from_lang[self.lang]
         except KeyError:
             return None
-        line = self.accessor.line_from_pos(pos) + 1 # convert to 1-based
+        line = self.accessor.line_from_pos(pos) + 1  # convert to 1-based
         return self.scoperef_from_blob_and_line(blob, line)
 
-    def scoperef_from_blob_and_line(self, blob, line): # line is 1-based
+    def scoperef_from_blob_and_line(self, blob, line):  # line is 1-based
         lpath = []
         scope = blob
         while True:
@@ -335,7 +334,7 @@ class CitadelBuffer(Buffer):
                 if line < start:
                     break
                 end = subscope.get("lineend") and int(subscope.get("lineend"))
-                
+
                 if end is not None:
                     if end < line:
                         next_scope_could_be = None
@@ -358,15 +357,15 @@ class CitadelBuffer(Buffer):
         """Remove this buffer from the database."""
         self.mgr.db.remove_buf_data(self)
 
-    #XXX Move citdl_expr_from_trg() here (see PythonBuffer)?
+    # XXX Move citdl_expr_from_trg() here (see PythonBuffer)?
 
 
 class BinaryBuffer(CitadelBuffer):
     def __init__(self, lang, mgr, env, path):
-                                          #mgr, accessor, env, path, encoding
+                                          # mgr, accessor, env, path, encoding
         self.lang = lang
         super(BinaryBuffer, self).__init__(mgr, None, env, path, None)
-        
+
     def scan(self, mtime=None, skip_scan_time_check=False):
         if self.path is None:
             raise CodeIntelError("cannot scan %s buffer: 'path' is not set (setting "
@@ -384,7 +383,8 @@ class BinaryBuffer(CitadelBuffer):
             exc_info = sys.exc_info()
             exc_class, exc, tb = sys.exc_info()
             tb_path, tb_lineno, tb_func = traceback.extract_tb(tb)[-1][:3]
-            scan_error = "%s (%s:%s in %s)" % (exc, tb_path, tb_lineno, tb_func)
+            scan_error = "%s (%s:%s in %s)" % (
+                exc, tb_path, tb_lineno, tb_func)
         except Exception, ex:
             msg = "unexpected error scanning `%s'" % basename(self.path)
             log.exception(msg)
@@ -407,27 +407,27 @@ class BinaryBuffer(CitadelBuffer):
         self.mgr.db.update_buf_data(self, scan_tree, mtime, scan_error,
                                     skip_scan_time_check=skip_scan_time_check)
         self._load_buf_data_once(True)
-        
-        #TODO: potential race condition here with Buffer.cached_sections().
+
+        # TODO: potential race condition here with Buffer.cached_sections().
         self._sections_cache = None
 
     def string_styles(self):
         return []
-        
+
     def comment_styles(self):
         return []
-        
+
     def number_styles(self):
         return []
-        
+
 
 class ImportHandler:
     """Virtual base class for language-specific "import"-statement handlers.
-    
+
     The basic job of an import handler is to convert an import statement (i.e.
     a row in the 'import' table) into a row in the CIDB 'module' table. Doing
     this depends on language-specific import semantics.
-    
+
     A fundamental part of import resolution is the search path. Here the
     search path is broken into three parts:
         - "core" path: built-in to the interpreter/compiler, generally
@@ -435,13 +435,13 @@ class ImportHandler:
         - "env" path: additional directories specified in a special
           environment variable, e.g. PYTHONPATH, PERL5LIB
         - "custom" path: additional "out-of-band" directories
-    
+
     Each language-specific ImportHandler is a singleton as doled out by
     Citadel.import_handler_from_lang().
     """
     lang = None
 
-    #DEPRECATED
+    # DEPRECATED
     PATH_ENV_VAR = None
     corePath = None
     envPath = None
@@ -450,15 +450,15 @@ class ImportHandler:
     def __init__(self, mgr):
         self.mgr = mgr
 
-    #DEPRECATED
+    # DEPRECATED
     def setCustomPath(self, path):
         """Specify some custom search directories."""
         self.customPath = path
 
-    #DEPRECATED
+    # DEPRECATED
     def setEnvPath(self, value=None):
         """Specify the value of the PATH-style environment variable.
-        
+
             "value" is the appropriate environment variable value, e.g.:
                 "C:\trentm\mylib;C:\shared\lib-python". If value is None then
                 the value will be retrieved from os.environ.
@@ -473,10 +473,10 @@ class ImportHandler:
             path = value.split(os.pathsep)
         self.envPath = path
 
-    #DEPRECATED
+    # DEPRECATED
     def setCorePath(self, compiler=None, extra=None):
         """Specify the data needed to determine the core search path.
-        
+
             "compiler" is the path to the language compiler/interpreter.
                 If not specified then the first appropriate
                 compiler/interpreter on the path is used.
@@ -491,16 +491,18 @@ class ImportHandler:
         # result (to [] if it could not be determined).
         raise NotImplementedError("setCorePath: pure virtual method call")
 
-    #DEPRECATED: still used by `genScannableFiles` implementations.
+    # DEPRECATED: still used by `genScannableFiles` implementations.
     def _getPath(self, cwd=None):
         """Put all the path pieces together and return that list.
-        
+
         If "cwd" is specified, it is prepended to the list. (In many languages
         the directory of the file with the import statement is first on the
         module search path.)
         """
-        if self.corePath is None: self.setCorePath()
-        if self.envPath is None: self.setEnvPath()
+        if self.corePath is None:
+            self.setCorePath()
+        if self.envPath is None:
+            self.setEnvPath()
         if cwd is not None:
             path = [cwd]
         else:
@@ -517,13 +519,13 @@ class ImportHandler:
     # this would be '.' for Python (import foo.bar), '::' for Perl
     # (use Foo::Bar;), '/' for Ruby, etc. Must be set for each language.
     sep = None
-    
+
     def find_importables_in_dir(self, dir):
         """Return a mapping of
             import-name -> (path, subdir-import-name, is-dir-import)
         for all possible importable "things" in the given dir. Each part
         is explained below.
-        
+
         The "import-name" is the string that you'd use in the particular
         language's import statement:
                         import statement        import-name     path
@@ -533,7 +535,7 @@ class ImportHandler:
             Ruby:       require 'foo'           foo             foo.rb
             PHP:        require("foo.php")      foo.php         foo.php
                         require("foo.inc")      foo.inc         foo.inc
-        
+
         For the simple case of a directly imported file in this dir, the
         "subdir-import-name" isn't relevant so None is used:
             Python:     "foo": ("foo.py", None, ...)
@@ -558,7 +560,7 @@ class ImportHandler:
             Ruby:       "bar": (None, None, True)
             PHP:        "bar": (None, None, True)
 
-        Some of these latter languages occassionally have an importable
+        Some of these latter languages occasionally have an importable
         file *and* a sub-directory of the same name.
             Perl:       LWP.pm and LWP/... in the stdlib
             Ruby:       shell.rb and shell/... in the stdlib
@@ -568,7 +570,7 @@ class ImportHandler:
 
         """
         raise NotImplementedError("find_importables_in_dir: virtual method")
-    
+
     def import_blob_name(self, import_name, libs, ctlr):
         """Return the blob tree for the given import name and libs.
 
@@ -594,30 +596,29 @@ class ImportHandler:
                                  % (self.lang, import_name))
 
 
-
 class CitadelEvaluator(Evaluator):
     """A Citadel evaluator -- i.e. the guy that knows how to translate
     a CITDL expression into a list of completions or a calltip.
     """
     citadel = None
-    have_requested_reeval_already = False # sentinel to trap infinite loop
+    have_requested_reeval_already = False  # sentinel to trap infinite loop
 
     def __init__(self, ctlr, buf, trg, expr, line):
         Evaluator.__init__(self, ctlr, buf, trg)
-        self.lang = buf.lang #XXX should use trg.lang instead (multi-lang differs)
+        self.lang = buf.lang  # XXX should use trg.lang instead (multi-lang differs)
         self.path = buf.path
         self.cwd = dirname(self.path)
-        self.expr = expr #XXX should be rigorous and use citdl_expr
-        self.line = line # 0-based
+        self.expr = expr  # XXX should be rigorous and use citdl_expr
+        self.line = line  # 0-based
 
     def __str__(self):
         return "'%s' at %s#%s" % (self.expr, basename(self.path), self.line+1)
 
     def post_process_cplns(self, cplns):
         """Hook for sub-classes to post-process the list of completions.
-        
+
         Implementations may modify the list in place.
-        
+
         Note that a common operation that all implementations should
         generally do (and the default impl. *does*) is to sort the list
         of completions case-insensitively by value and with punctuation
@@ -632,14 +633,14 @@ class CitadelEvaluator(Evaluator):
 
     def post_process_calltips(self, calltips):
         """Hook for sub-classes to post-process the list of calltips.
-        
+
         Implementations may modify the list in place.
         """
         return calltips
 
     def post_process_defns(self, defns):
         """Hook for sub-classes to post-process the list of defns.
-        
+
         Implementations may modify the list in place.
         """
         return defns
@@ -659,7 +660,7 @@ class CitadelEvaluator(Evaluator):
     def import_resolution_failure(self, name, path):
         """Called by import-resolution code to offer ability to react to
         a module import not resolving in the CIDB.
-        
+
         The nice-to-have plan was to request a scan of this module and then
         re-evaluate at this trigger when that was finished. If well behaved
         this would give the best completion GOOBE to the user: the first
@@ -675,18 +676,19 @@ class CitadelEvaluator(Evaluator):
         the next time through.
         """
         self.ctlr.warn("no info on import '%s'", name)
-        #log.warn("XXX Currently not reacting to import resolution failure. "
+        # log.warn("XXX Currently not reacting to import resolution failure. "
         #         "Try to do that later. (path=%s)" % path)
 
-
     #---- the guts of the evaluation
-
     def debug(self, msg, *args):
         self.ctlr.debug(msg, *args)
+
     def info(self, msg, *args):
         self.ctlr.info(msg, *args)
+
     def warn(self, msg, *args):
         self.ctlr.warn(msg, *args)
+
     def error(self, msg, *args):
         self.ctlr.error(msg, *args)
 
@@ -694,7 +696,7 @@ class CitadelEvaluator(Evaluator):
 class Citadel(object):
     """The manager of Citadel-parts of the CodeIntel system. This is a
     singleton canonically available from Manager.citadel.
-    
+
     Usage
     -----
 
@@ -702,7 +704,7 @@ class Citadel(object):
     Here is what the Manager should be doing.
 
         citadel = Citadel(mgr, ...)
-        
+
         citadel.initialize()
 
         # Use the citadel. The most common methods are:
@@ -727,7 +729,7 @@ class Citadel(object):
 
     def cile_driver_from_lang(self, lang):
         """Return the CILE driver for this language.
-        
+
         Raises KeyError if there isn't one registered.
         """
         return self._cile_driver_from_lang[lang]
@@ -737,6 +739,7 @@ class Citadel(object):
         lang.
         """
         return lang in self._is_citadel_cpln_from_lang
+
     def get_citadel_cpln_langs(self):
         return self._is_citadel_cpln_from_lang.keys()
 
@@ -759,5 +762,3 @@ class Citadel(object):
                 raise CodeIntelError("there is no registered ImportHandler "
                                      "class for language '%s'" % lang)
         return self._import_handler_from_lang[lang]
-
-

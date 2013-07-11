@@ -14,12 +14,12 @@
 # modify it under the terms of the GNU Lesser General Public
 # License as published by the Free Software Foundation; either
 # version 2.1 of the License, or (at your option) any later version.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
@@ -32,6 +32,9 @@ from mbcsgroupprober import MBCSGroupProber # multi-byte character sets
 from sbcsgroupprober import SBCSGroupProber # single-byte character sets
 from escprober import EscCharSetProber # ISO-2122, etc.
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 MINIMUM_THRESHOLD = 0.20
 ePureAscii = 0
@@ -61,32 +64,32 @@ class UniversalDetector:
     def feed(self, aBuf):
         if self.done: return
 
+        charmap = (
+            # EF BB BF  UTF-8 with BOM
+            ('\xEF\xBB\xBF', {'encoding': "UTF-8", 'confidence': 1.0}),
+            # FF FE 00 00  UTF-32, little-endian BOM
+            ('\xFF\xFE\x00\x00', {'encoding': "UTF-32LE", 'confidence': 1.0}),
+            # 00 00 FE FF  UTF-32, big-endian BOM
+            ('\x00\x00\xFE\xFF', {'encoding': "UTF-32BE", 'confidence': 1.0}),
+            # FE FF 00 00  UCS-4, unusual octet order BOM (3412)
+            ('\xFE\xFF\x00\x00', {'encoding': "X-ISO-10646-UCS-4-3412", 'confidence': 1.0}),
+            # 00 00 FF FE  UCS-4, unusual octet order BOM (2143)
+            ('\x00\x00\xFF\xFE', {'encoding': "X-ISO-10646-UCS-4-2143", 'confidence': 1.0}),
+            # FF FE  UTF-16, little endian BOM
+            ('\xFF\xFE', {'encoding': "UTF-16LE", 'confidence': 1.0}),
+            # FE FF  UTF-16, big endian BOM
+            ('\xFE\xFF', {'encoding': "UTF-16BE", 'confidence': 1.0}),
+        )
+
         aLen = len(aBuf)
         if not aLen: return
-        
+
         if not self._mGotData:
             # If the data starts with BOM, we know it is UTF
-            if aBuf[:3] == '\xEF\xBB\xBF':
-                # EF BB BF  UTF-8 with BOM
-                self.result = {'encoding': "UTF-8", 'confidence': 1.0}
-            elif aBuf[:4] == '\xFF\xFE\x00\x00':
-                # FF FE 00 00  UTF-32, little-endian BOM
-                self.result = {'encoding': "UTF-32LE", 'confidence': 1.0}
-            elif aBuf[:4] == '\x00\x00\xFE\xFF': 
-                # 00 00 FE FF  UTF-32, big-endian BOM
-                self.result = {'encoding': "UTF-32BE", 'confidence': 1.0}
-            elif aBuf[:4] == '\xFE\xFF\x00\x00':
-                # FE FF 00 00  UCS-4, unusual octet order BOM (3412)
-                self.result = {'encoding': "X-ISO-10646-UCS-4-3412", 'confidence': 1.0}
-            elif aBuf[:4] == '\x00\x00\xFF\xFE':
-                # 00 00 FF FE  UCS-4, unusual octet order BOM (2143)
-                self.result = {'encoding': "X-ISO-10646-UCS-4-2143", 'confidence': 1.0}
-            elif aBuf[:2] == '\xFF\xFE':
-                # FF FE  UTF-16, little endian BOM
-                self.result = {'encoding': "UTF-16LE", 'confidence': 1.0}
-            elif aBuf[:2] == '\xFE\xFF':
-                # FE FF  UTF-16, big endian BOM
-                self.result = {'encoding': "UTF-16BE", 'confidence': 1.0}
+            for chunk, result in charmap:
+                if aBuf[:len(chunk)] == chunk:
+                    self.result = result
+                    break
 
         self._mGotData = constants.True
         if self.result['encoding'] and (self.result['confidence'] > 0.0):
@@ -112,11 +115,14 @@ class UniversalDetector:
             if not self._mCharSetProbers:
                 self._mCharSetProbers = [MBCSGroupProber(), SBCSGroupProber(), Latin1Prober()]
             for prober in self._mCharSetProbers:
-                if prober.feed(aBuf) == constants.eFoundIt:
-                    self.result = {'encoding': prober.get_charset_name(),
-                                   'confidence': prober.get_confidence()}
-                    self.done = constants.True
-                    break
+                try:
+                    if prober.feed(aBuf) == constants.eFoundIt:
+                        self.result = {'encoding': prober.get_charset_name(),
+                                       'confidence': prober.get_confidence()}
+                        self.done = constants.True
+                        break
+                except (UnicodeDecodeError, UnicodeEncodeError), e:
+                    logger.exception(e)
 
     def close(self):
         if self.done: return
@@ -125,7 +131,7 @@ class UniversalDetector:
                 sys.stderr.write('no data received!\n')
             return
         self.done = constants.True
-        
+
         if self._mInputState == ePureAscii:
             self.result = {'encoding': 'ascii', 'confidence': 1.0}
             return self.result

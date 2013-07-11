@@ -67,6 +67,9 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
         }
     }
 """
+
+VERSION = "2.0"
+
 import os
 import re
 import sys
@@ -84,11 +87,16 @@ from cStringIO import StringIO
 CODEINTEL_HOME_DIR = os.path.expanduser(os.path.join('~', '.codeintel'))
 __file__ = os.path.normpath(os.path.abspath(__file__))
 __path__ = os.path.dirname(__file__)
+
 libs_path = os.path.join(__path__, 'libs')
 if libs_path not in sys.path:
     sys.path.insert(0, libs_path)
 
-from codeintel2.common import *
+arch_path = os.path.join(__path__, 'arch')
+if arch_path not in sys.path:
+    sys.path.insert(0, arch_path)
+
+from codeintel2.common import CodeIntelError, EvalTimeout, LogEvalController, TRG_FORM_CPLN, TRG_FORM_CALLTIP, TRG_FORM_DEFN
 from codeintel2.manager import Manager
 from codeintel2.citadel import CitadelBuffer
 from codeintel2.environment import SimplePrefsEnvironment
@@ -114,12 +122,12 @@ log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [codeintel_hdlr]
 log.handlers = [stderr_hdlr]
 codeintel_log.setLevel(logging.INFO)  # INFO
-logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # WARNING/INFO
+logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # WARNING
 
-for lang in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
+for logger in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
              'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
              'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
-    logging.getLogger("codeintel." + lang).setLevel(logging.WARNING)  # WARNING/DEBUG
+    logging.getLogger("codeintel." + logger).setLevel(logging.INFO)  # WARNING
 log.setLevel(logging.ERROR)  # ERROR
 
 cpln_fillup_chars = {
@@ -146,7 +154,6 @@ despaired = False
 
 completions = {}
 languages = {}
-sentinel = {}
 
 status_msg = {}
 status_lineno = {}
@@ -160,53 +167,56 @@ def pos2bytes(content, pos):
     return len(content[:pos].encode('utf-8'))
 
 
-def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=None):
+def calltip(view, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel', logger=None):
     if timeout is None:
         timeout = {'error': 3000, 'warning': 5000, 'info': 10000,
-                    'event': 10000, 'tip': 15000}.get(type, 3000)
+                    'event': 10000, 'tip': 15000}.get(ltype, 3000)
 
     if msg is None:
-        msg, type = type, 'debug'
+        msg, ltype = ltype, 'debug'
     msg = msg.strip()
 
     status_lock.acquire()
     try:
-        status_msg.setdefault(id, [None, None, 0])
-        if msg == status_msg[id][1]:
+        status_msg.setdefault(lid, [None, None, 0])
+        if msg == status_msg[lid][1]:
             return
-        status_msg[id][2] += 1
-        order = status_msg[id][2]
+        status_msg[lid][2] += 1
+        order = status_msg[lid][2]
     finally:
         status_lock.release()
 
     def _calltip_set():
-        lineno = view.line(view.sel()[0])
+        view_sel = view.sel()
+        lineno = view.line(view_sel[0]) if view_sel else 0
         status_lock.acquire()
         try:
-            current_type, current_msg, current_order = status_msg.get(id, [None, None, 0])
+            current_type, current_msg, current_order = status_msg.get(lid, [None, None, 0])
             if msg != current_msg and order == current_order:
                 if msg:
-                    print >>condeintel_log_file, "+", "%s: %s" % (type.capitalize(), msg)
-                    view.set_status(id, "%s: %s" % (type.capitalize(), msg))
+                    print >>condeintel_log_file, "+", "%s: %s" % (ltype.capitalize(), msg)
                     (logger or log.info)(msg)
-                else:
-                    view.erase_status(id)
-                status_msg[id][0] = [type, msg, order]
-                if 'warning' not in id and msg:
-                    status_lineno[id] = lineno
-                elif id in status_lineno:
-                    del status_lineno[id]
+                if ltype != 'debug':
+                    if msg:
+                        view.set_status(lid, "%s: %s" % (ltype.capitalize(), msg))
+                    else:
+                        view.erase_status(lid)
+                    status_msg[lid][0] = [ltype, msg, order]
+                if 'warning' not in lid and msg:
+                    status_lineno[lid] = lineno
+                elif lid in status_lineno:
+                    del status_lineno[lid]
         finally:
             status_lock.release()
 
     def _calltip_erase():
         status_lock.acquire()
         try:
-            if msg == status_msg.get(id, [None, None, 0])[1]:
-                view.erase_status(id)
-                status_msg[id][1] = None
-                if id in status_lineno:
-                    del status_lineno[id]
+            if msg == status_msg.get(lid, [None, None, 0])[1]:
+                view.erase_status(lid)
+                status_msg[lid][1] = None
+                if lid in status_lineno:
+                    del status_lineno[lid]
         finally:
             status_lock.release()
 
@@ -216,33 +226,35 @@ def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=
         sublime.set_timeout(_calltip_erase, timeout)
 
 
-def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
+def logger(view, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel'):
     if msg is None:
-        msg, type = type, 'info'
-    calltip(view, type, msg, timeout=timeout, delay=delay, id=id + '-' + type, logger=getattr(log, type, None))
+        msg, ltype = ltype, 'info'
+    calltip(view, ltype, msg, timeout=timeout, delay=delay, lid=lid + '-' + ltype, logger=getattr(log, ltype, None))
 
 
 def guess_lang(view=None, path=None):
-    if not view.settings().get('codeintel', True):
+    if not view or not view.settings().get('codeintel', True):
         return None
 
     syntax = None
     if view:
         syntax = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
 
-    id = view.id()
+    vid = view.id()
     _k_ = '%s::%s' % (syntax, path)
     try:
-        return languages[id][_k_]
+        return languages[vid][_k_]
     except KeyError:
         pass
-    languages.setdefault(id, {})
+    languages.setdefault(vid, {})
 
     lang = None
     _codeintel_syntax_map = dict((k.lower(), v) for k, v in view.settings().get('codeintel_syntax_map', {}).items())
     _lang = lang = syntax and _codeintel_syntax_map.get(syntax.lower(), syntax)
 
-    mgr = codeintel_manager()
+    folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
+    folders_id = str(hash(frozenset(folders)))
+    mgr = codeintel_manager(folders_id)
 
     if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
         lang = None
@@ -255,103 +267,94 @@ def guess_lang(view=None, path=None):
                 try:
                     _lang = lang = guess_lang_from_path(path)
                 except CodeIntelError:
-                    languages[id][_k_] = None
+                    languages[vid][_k_] = None
                     return
 
     _codeintel_disabled_languages = [l.lower() for l in view.settings().get('codeintel_disabled_languages', [])]
     if lang and lang.lower() in _codeintel_disabled_languages:
-        logger(view, 'info', "skip `%s': disabled language" % lang)
-        languages[id][_k_] = None
+        logger(view, 'debug', "skip `%s': disabled language" % lang)
+        languages[vid][_k_] = None
         return
 
     if not lang and _lang and _lang not in ('Console',):
         if mgr:
-            logger(view, 'info', "Invalid language: %s. Available: %s" % (_lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs()))))
+            logger(view, 'debug', "Invalid language: %s. Available: %s" % (_lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs()))))
         else:
-            logger(view, 'info', "Invalid language: %s" % _lang)
+            logger(view, 'debug', "Invalid language: %s" % _lang)
 
-    languages[id][_k_] = lang
+    languages[vid][_k_] = lang
     return lang
 
 
-def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs={}):
+def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], kwargs={}):
     def _autocomplete_callback(view, path, lang):
-        id = view.id()
-        content = view.substr(sublime.Region(0, view.size()))
-        sel = view.sel()[0]
-        pos = sel.end()
-        try:
-            next = content[pos].strip()
-        except IndexError:
-            next = ''
-        if pos and content and content[view.line(sel).begin():pos].strip() and not next.isalnum() and next != '_':
-            # TODO: For the sentinel to work, we need to send a prefix to the completions... 
-            # but no show_completions() currently available.
-            # pos = sentinel[id] if sentinel[id] is not None else view.sel()[0].end()
+        view_sel = view.sel()
+        if not view_sel:
+            return
 
-            def _trigger(cplns, calltips):
+        sel = view_sel[0]
+        pos = sel.end()
+        if not pos:
+            return
+
+        lpos = view.line(sel).begin()
+        text = view.substr(sublime.Region(lpos, pos + 1))
+        if not text.strip():
+            return
+
+        next = text[-1] if len(text) == pos + 1 - lpos else None
+
+        if not next or next != '_' and not next.isalnum():
+            vid = view.id()
+            content = view.substr(sublime.Region(0, view.size()))
+
+            def _trigger(calltips, cplns=None):
                 if cplns is not None or calltips is not None:
                     codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
-                if cplns:
-                    # Show autocompletions:
+
+                if cplns is not None:
+                    function = None if 'import ' in text else 'function'
                     _completions = sorted(
-                        [('%s  (%s)' % (name, type), name + ('(${1})' if type == 'function' else '')) for type, name in cplns],
+                        [('%s  (%s)' % (n, t), n + ('($0)' if t == function else '')) for t, n in cplns],
                         cmp=lambda a, b: cmp(a[1], b[1]) if a[1].startswith('_') == b[1].startswith('_') else 1 if a[1].startswith('_') else -1
                     )
                     if _completions:
-                        completions[id] = _completions
+                        # Show autocompletions:
+                        completions[vid] = _completions
                         view.run_command('auto_complete', {
                             'disable_auto_insert': True,
                             'api_completions_only': True,
                             'next_completion_if_showing': False,
                             'auto_complete_commit_on_tab': True,
                         })
-                elif calltips is not None:
+
+                if calltips is not None:
                     # Trigger a tooltip
                     calltip(view, 'tip', calltips[0])
-
-                    if content[sel.a - 1] == '(' and content[sel.a] == ')':
-                        rex = re.compile("\(([^\[\(\)]*)")
-                        m = rex.search(calltips[0])
-
-                        if m is None:
-                            return
-
-                        params = m.group(1).split(',')
-
-                        snippet = []
-                        i = 1
-                        for p in params:
-                            p = p.strip()
-                            if p.find('=') != -1 or p.find('<list>') != -1:
-                                continue
-                            if p.find(' ') != -1:
-                                p = p.split(' ')[1]
-
-                            var = p.replace('$', '').strip()
-                            snippet.append('${' + str(i) + ':' + var + '}')
-                            i += 1
-
-                        if i == 1:
-                            return
-
-                        view.run_command('insert_snippet', {
-                            'contents': ', '.join(snippet)
-                        })
-
-            sentinel[id] = None
-            codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
+                    # Insert function call snippets:
+                    if view.settings().get('codeintel_snippets', True):
+                        # Insert parameters as snippet:
+                        if content[sel.begin() - 1] == '(' and content[sel.begin()] == ')':
+                            m = re.search(r'\(([^\[\(\)]*)', calltips[0])
+                            params = [p.strip() for p in m.group(1).split(',')] if m else None
+                            if params:
+                                snippet = []
+                                for i, p in enumerate(params):
+                                    var, _, _ = p.partition('=')
+                                    if ' ' in var:
+                                        var = var.split(' ')[1]
+                                    if var[0] == '$':
+                                        var = var[1:]
+                                    snippet.append('${%s:%s}' % (i + 1, var))
+                                view.run_command('insert_snippet', {'contents': ', '.join(snippet)})
+            codeintel(view, path, content, lang, pos, forms, _trigger)
     # If it's a fill char, queue using lower values and preemptive behavior
     queue(view, _autocomplete_callback, timeout, busy_timeout, preemptive, args=args, kwargs=kwargs)
 
 
 _ci_envs_ = {}
 _ci_next_scan_ = {}
-_ci_mgr_ = None
-_ci_db_base_dir_ = None
-_ci_db_catalog_dirs_ = []
-_ci_db_import_everything_langs = None
-_ci_extra_module_dirs_ = None
+_ci_mgr_ = {}
 
 _ci_next_savedb_ = 0
 _ci_next_cullmem_ = 0
@@ -480,18 +483,19 @@ def codeintel_callbacks(force=False):
             callback(view, *args, **kwargs)
         sublime.set_timeout(_callback, 0)
     # saving and culling cached parts of the database:
-    mgr = codeintel_manager()
-    now = time.time()
-    if now >= _ci_next_savedb_ or force:
-        if _ci_next_savedb_:
-            log.debug('Saving database')
-            mgr.db.save()  # Save every 6 seconds
-        _ci_next_savedb_ = now + 6
-    if now >= _ci_next_cullmem_ or force:
-        if _ci_next_cullmem_:
-            log.debug('Culling memory')
-            mgr.db.cull_mem()  # Every 30 seconds
-        _ci_next_cullmem_ = now + 30
+    for folders_id in _ci_mgr_.keys():
+        mgr = codeintel_manager(folders_id)
+        now = time.time()
+        if now >= _ci_next_savedb_ or force:
+            if _ci_next_savedb_:
+                log.debug('Saving database')
+                mgr.db.save()  # Save every 6 seconds
+            _ci_next_savedb_ = now + 6
+        if now >= _ci_next_cullmem_ or force:
+            if _ci_next_cullmem_:
+                log.debug('Culling memory')
+                mgr.db.cull_mem()  # Every 30 seconds
+            _ci_next_cullmem_ = now + 30
 queue_dispatcher = codeintel_callbacks
 
 
@@ -502,19 +506,19 @@ def codeintel_cleanup(id):
         del _ci_next_scan_[id]
 
 
-def codeintel_manager():
+def codeintel_manager(folders_id):
+    folders_id = None
     global _ci_mgr_, condeintel_log_filename, condeintel_log_file
-    if _ci_mgr_:
-        mgr = _ci_mgr_
-    else:
+    mgr = _ci_mgr_.get(folders_id)
+    if mgr is None:
         for thread in threading.enumerate():
             if thread.name == "CodeIntel Manager":
                 thread.finalize()  # this finalizes the index, citadel and the manager and waits them to end (join)
         mgr = Manager(
-            extra_module_dirs=_ci_extra_module_dirs_,
-            db_base_dir=_ci_db_base_dir_,
-            db_catalog_dirs=_ci_db_catalog_dirs_,
-            db_import_everything_langs=_ci_db_import_everything_langs,
+            extra_module_dirs=None,
+            db_base_dir=None,  # os.path.expanduser(os.path.join('~', '.codeintel', 'databases', folders_id)),
+            db_catalog_dirs=[],
+            db_import_everything_langs=None,
         )
         mgr.upgrade()
         mgr.initialize()
@@ -523,10 +527,10 @@ def codeintel_manager():
         condeintel_log_filename = os.path.join(mgr.db.base_dir, 'codeintel.log')
         condeintel_log_file = open(condeintel_log_filename, 'w', 1)
         codeintel_log.handlers = [logging.StreamHandler(condeintel_log_file)]
-        msg = "Starting logging SublimeCodeIntel rev %s (%s) on %s" % (get_revision()[:12], os.stat(__file__)[stat.ST_MTIME], datetime.datetime.now().ctime())
+        msg = "Starting logging SublimeCodeIntel v%s rev %s (%s) on %s" % (VERSION, get_revision()[:12], os.stat(__file__)[stat.ST_MTIME], datetime.datetime.now().ctime())
         print >>condeintel_log_file, "%s\n%s" % (msg, "=" * len(msg))
 
-        _ci_mgr_ = mgr
+        _ci_mgr_[folders_id] = mgr
     return mgr
 
 
@@ -540,8 +544,10 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     logger(view, 'info', "processing `%s': please wait..." % lang)
     is_scratch = view.is_scratch()
     is_dirty = view.is_dirty()
-    id = view.id()
+    vid = view.id()
     folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
+    folders_id = str(hash(frozenset(folders)))
+    codeintel_config = view.settings().get('codeintel_config', {})
 
     def _codeintel_scan():
         global despair, despaired
@@ -550,11 +556,11 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         catalogs = []
         now = time.time()
 
-        mgr = codeintel_manager()
+        mgr = codeintel_manager(folders_id)
         mgr.db.event_reporter = lambda m: logger(view, 'event', m)
 
         try:
-            env = _ci_envs_[id]
+            env = _ci_envs_[vid]
             if env._folders != folders:
                 raise KeyError
             if now > env._time:
@@ -573,18 +579,21 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                     config_default_file = None
                 project_dir = None
                 project_base_dir = None
-                if path:
-                    # Try to find a suitable project directory (or best guess):
-                    for folder in ['.codeintel', '.git', '.hg', '.svn', 'trunk']:
-                        project_dir = find_folder(path, folder)
-                        if project_dir:
-                            if folder == '.codeintel':
-                                if project_dir == CODEINTEL_HOME_DIR or os.path.exists(os.path.join(project_dir, 'db')):
-                                    continue
-                            if folder.startswith('.'):
-                                project_base_dir = os.path.abspath(os.path.join(project_dir, '..'))
-                            else:
-                                project_base_dir = project_dir
+                for folder_path in folders + [path]:
+                    if folder_path:
+                        # Try to find a suitable project directory (or best guess):
+                        for folder in ['.codeintel', '.git', '.hg', '.svn', 'trunk']:
+                            project_dir = find_back(folder_path, folder)
+                            if project_dir:
+                                if folder == '.codeintel':
+                                    if project_dir == CODEINTEL_HOME_DIR or os.path.exists(os.path.join(project_dir, 'databases')):
+                                        continue
+                                if folder.startswith('.'):
+                                    project_base_dir = os.path.abspath(os.path.join(project_dir, '..'))
+                                else:
+                                    project_base_dir = project_dir
+                                break
+                        if project_base_dir:
                             break
                 if not (project_dir and os.path.exists(project_dir)):
                     project_dir = None
@@ -603,12 +612,12 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             for catalog in mgr.db.get_catalogs_zone().avail_catalogs():
                 if catalog['lang'] == lang:
                     catalogs.append(catalog['name'])
-
             config = {
                 "codeintel_selected_catalogs": catalogs,
                 "codeintel_max_recursive_dir_depth": 10,
                 "codeintel_scan_files_in_project": True,
             }
+            config.update(codeintel_config.get(lang, {}))
 
             _config = {}
             try:
@@ -624,9 +633,24 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 log.error(msg)
                 codeintel_log.error(msg)
             config.update(_config.get(lang, {}))
+
             for conf in ['pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths']:
                 v = [p.strip() for p in config.get(conf, []) + folders if p.strip()]
                 config[conf] = os.pathsep.join(set(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join(project_base_dir, p)) if project_base_dir else p for p in v if p.strip()))
+            for conf, p in config.items():
+                if isinstance(p, basestring) and p.startswith('~'):
+                    config[conf] = os.path.expanduser(p)
+
+            # Setup environment variables
+            env = config.get('env', {})
+            _environ = dict(os.environ)
+            for k, v in env.items():
+                _old = None
+                while '$' in v and v != _old:
+                    _old = v
+                    v = os.path.expandvars(v)
+                _environ[k] = v
+            config['env'] = _environ
 
             env = SimplePrefsEnvironment(**config)
             env._valid = valid
@@ -637,7 +661,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             env._project_base_dir = project_base_dir
             env._config_file = config_file
             env.__class__.get_proj_base_dir = lambda self: project_base_dir
-            _ci_envs_[id] = env
+            _ci_envs_[vid] = env
         env._time = now + 5  # don't check again in less than five seconds
 
         msgs = []
@@ -654,8 +678,8 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
 
             now = datetime.datetime.now()
-            if not _ci_next_scan_.get(id) or now > _ci_next_scan_[id]:
-                _ci_next_scan_[id] = now + datetime.timedelta(seconds=10)
+            if not _ci_next_scan_.get(vid) or now > _ci_next_scan_[vid]:
+                _ci_next_scan_[vid] = now + datetime.timedelta(seconds=10)
                 if isinstance(buf, CitadelBuffer):
                     despair = 0
                     despaired = False
@@ -763,7 +787,8 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             print >>condeintel_log_file, msg
 
             def _callback():
-                if view.line(view.sel()[0]) == view.line(pos):
+                view_sel = view.sel()
+                if view_sel and view.line(view_sel[0]) == view.line(pos):
                     callback(*ret)
             logger(view, 'info', "")
             sublime.set_timeout(_callback, 0)
@@ -774,15 +799,18 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
     codeintel_scan(view, path, content, lang, _codeintel, pos, forms)
 
 
-def find_folder(start_at, look_for):
+def find_back(start_at, look_for):
+    root = os.path.realpath('/')
     start_at = os.path.abspath(start_at)
     if not os.path.isdir(start_at):
         start_at = os.path.dirname(start_at)
+    if start_at == root:
+        return None
     while True:
         if look_for in os.listdir(start_at):
             return os.path.join(start_at, look_for)
         continue_at = os.path.abspath(os.path.join(start_at, '..'))
-        if continue_at == start_at:
+        if continue_at == start_at or continue_at == root:
             return None
         start_at = continue_at
 
@@ -840,72 +868,118 @@ def get_revision(path=None):
     return u'GIT-unknown'
 
 
+ALL_SETTINGS = [
+    'codeintel',
+    'codeintel_snippets',
+    'codeintel_disabled_languages',
+    'codeintel_live',
+    'codeintel_live_disabled_languages',
+    'codeintel_syntax_map',
+    'codeintel_scan_exclude_dir',
+    'codeintel_config',
+]
+
+
+def settings_changed():
+    for window in sublime.windows():
+        for view in window.views():
+            reload_settings(view)
+
+
+def reload_settings(view):
+    '''Restores user settings.'''
+    settings = sublime.load_settings(__name__ + '.sublime-settings')
+    settings.clear_on_change(__name__)
+    settings.add_on_change(__name__, settings_changed)
+
+    view_settings = view.settings()
+    for setting in ALL_SETTINGS:
+        if settings.get(setting) is not None:
+            view_settings.set(setting, settings.get(setting))
+
+    if view_settings.get('codeintel') is None:
+        view_settings.set('codeintel', True)
+
+    return view_settings
+
+
 class PythonCodeIntel(sublime_plugin.EventListener):
+    def on_load(self, view):
+        reload_settings(view)
+
+    def on_new(self, view):
+        reload_settings(view)
+
+    def on_clone(self, view):
+        reload_settings(view)
 
     def on_close(self, view):
-        id = view.id()
-        if id in completions:
-            del completions[id]
-        if id in sentinel:
-            del sentinel[id]
-        if id in languages:
-            del languages[id]
+        vid = view.id()
+        if vid in completions:
+            del completions[vid]
+        if vid in languages:
+            del languages[vid]
         codeintel_cleanup(view.file_name())
 
     def on_modified(self, view):
+        if not view.settings().get('codeintel_live', True):
+            return
+
         path = view.file_name()
         lang = guess_lang(view, path)
-        if lang:
+        if not lang or lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_disabled_languages', [])]:
+            return
 
-            pos = view.sel()[0].end()
-            text = view.substr(sublime.Region(pos - 1, pos))
-            is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
+        view_sel = view.sel()
+        if not view_sel:
+            return
 
-            live = True
-            live = live and view.settings().get('codeintel_live', True)
-            live = live and not lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_disabled_languages', [])]
-            # if live:
-            #     id = view.id()
-            #     _sentinel = sentinel.get(id)
-            #     sentinel[id] = pos if is_fill_char else (_sentinel if _sentinel is not None else None)
-            #     print sentinel[id]
-            #     live = live and sentinel[id] is not None
+        sel = view_sel[0]
+        pos = sel.end()
+        text = view.substr(sublime.Region(pos - 1, pos))
+        is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
 
-            if live:
-                if not hasattr(view, 'command_history') or (view.command_history(0)[0] == 'insert' and view.command_history(0)[1]['characters'] != ',') or (view.command_history(1)[0] == 'insert' and view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)') or (text == '(' and view.command_history(0)[0] == 'commit_completion'):
-                    autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path, lang])
-                else:
-                    view.run_command('hide_auto_complete')
+        # print view.command_history(1), view.command_history(0), view.command_history(-1)
+        if (not hasattr(view, 'command_history') or view.command_history(1)[0] is None and (
+                view.command_history(0)[0] in ('insert', 'paste') or
+                view.command_history(-1)[0] in ('insert', 'paste') and (
+                    view.command_history(0)[0] == 'commit_completion' or
+                    view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)'
+                )
+        )):
+            if view.command_history(0)[0] == 'commit_completion':
+                forms = ('calltips',)
             else:
-                def _scan_callback(view, path):
-                    content = view.substr(sublime.Region(0, view.size()))
-                    codeintel_scan(view, path, content, lang)
-                queue(view, _scan_callback, 3000, args=[path])
+                forms = ('calltips', 'cplns')
+            autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, forms, is_fill_char, args=[path, lang])
+        else:
+            view.run_command('hide_auto_complete')
 
     def on_selection_modified(self, view):
         global despair, despaired, old_pos
         delay_queue(600)  # on movement, delay queue (to make movement responsive)
-
-        rowcol = view.rowcol(view.sel()[0].end())
+        view_sel = view.sel()
+        if not view_sel:
+            return
+        rowcol = view.rowcol(view_sel[0].end())
         if old_pos != rowcol:
-            id = view.id()
-            sentinel[id] = None
+            vid = view.id()
             old_pos = rowcol
             despair = 1000
             despaired = True
             status_lock.acquire()
             try:
-                slns = [id for id, sln in status_lineno.items() if sln != rowcol[0]]
+                slns = [sid for sid, sln in status_lineno.items() if sln != rowcol[0]]
             finally:
                 status_lock.release()
-            for id in slns:
-                calltip(view, "", id=id)
+            for vid in slns:
+                calltip(view, "", lid=vid)
 
     def on_query_completions(self, view, prefix, locations):
-        id = view.id()
-        if id in completions:
-            _completions = completions[id]
-            del completions[id]
+        vid = view.id()
+        if vid in completions:
+            _completions = completions[vid]
+            del completions[vid]
             return _completions
         return []
 
@@ -916,7 +990,7 @@ class CodeIntelAutoComplete(sublime_plugin.TextCommand):
         path = view.file_name()
         lang = guess_lang(view, path)
         if lang:
-            autocomplete(view, 0, 0, True, args=[path, lang])
+            autocomplete(view, 0, 0, ('calltips', 'cplns'), True, args=[path, lang])
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
@@ -925,8 +999,12 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
         path = view.file_name()
         lang = guess_lang(view, path)
         if lang:
+            view_sel = view.sel()
+            if not view_sel:
+                return
+            sel = view_sel[0]
+            pos = sel.end()
             content = view.substr(sublime.Region(0, view.size()))
-            pos = view.sel()[0].end()
             file_name = view.file_name()
 
             def _trigger(defns):
@@ -949,7 +1027,7 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                             jump_history = jump_history_by_window[window.id()]
 
                             # Save current position so we can return to it
-                            row, col = view.rowcol(view.sel()[0].begin())
+                            row, col = view.rowcol(view_sel[0].begin())
                             current_location = "%s:%d" % (file_name, row + 1)
                             jump_history.append(current_location)
 
@@ -1010,11 +1088,7 @@ class CodeintelCommand(sublime_plugin.TextCommand):
 
     def reset(self):
         """Restores user settings."""
-        settings = sublime.load_settings('Base File.sublime-settings')
-        for attr in ('codeintel', 'codeintel_live', 'codeintel_live_disabled_languages'):
-            setting = settings.get(attr, None)
-            if setting is not None:
-                self.view.settings().set(attr, setting)
+        reload_settings(self.view)
         logger(self.view, 'info', "SublimeCodeIntel Reseted!")
 
     def enable(self, enable):
@@ -1094,7 +1168,7 @@ class SublimecodeintelLiveCommand(SublimecodeintelCommand):
             view = self.window.active_view()
 
             if onlylang:
-                enabled = enabled and view.settings().get('codeintel_live', True) == True
+                enabled = enabled and view.settings().get('codeintel_live', True) is True
                 lang = guess_lang(view)
                 enabled = enabled and lang and (lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_disabled_languages', [])]) != active
             else:

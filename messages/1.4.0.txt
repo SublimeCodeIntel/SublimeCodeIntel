@@ -1,0 +1,11 @@
+SublimeCodeIntel 1.4.0 changelog
+
+Please restart Sublime Text 2 after reading this.
+
+CHANGES/FIXES
+
+v1.4 (05-07-2013):
+
++ Added improved Package Control support and updated old versions.
+
++ Started transition to v2.0

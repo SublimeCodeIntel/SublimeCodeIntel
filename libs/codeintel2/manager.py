@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """The "Manager" is the controlling instance for a codeintel system."""
@@ -52,6 +52,7 @@ import codecs
 
 from SilverCity import ScintillaConstants
 
+import codeintel2
 from codeintel2.common import *
 from codeintel2.accessor import *
 from codeintel2.citadel import Citadel, BinaryBuffer
@@ -67,21 +68,15 @@ from codeintel2.udl import XMLParsingBufferMixin, UDLBuffer
 import langinfo
 
 if _xpcom_:
-    from xpcom import components, COMException
-    from xpcom.client import WeakReference
     from xpcom.server import UnwrapObject
 
 
-
 #---- global variables
-
-log = logging.getLogger("codeintel")
-#log.setLevel(logging.INFO)
-
+log = logging.getLogger("codeintel.manager")
+# log.setLevel(logging.INFO)
 
 
 #---- public interface
-
 class Manager(threading.Thread, Queue):
     # See the module docstring for usage information.
 
@@ -90,7 +85,7 @@ class Manager(threading.Thread, Queue):
                  db_event_reporter=None, db_catalog_dirs=None,
                  db_import_everything_langs=None):
         """Create a CodeIntel manager.
-        
+
             "db_base_dir" (optional) specifies the base directory for
                 the codeintel database. If not given it will default to
                 '~/.codeintel'.
@@ -127,11 +122,13 @@ class Manager(threading.Thread, Queue):
         self.langintel_class_from_lang = {}
         self._langintel_from_lang_cache = {}
         self.import_handler_class_from_lang = {}
-        self._is_citadel_from_lang = {} # registered langs that are Citadel-based
-        self._is_cpln_from_lang = {} # registered langs for which completion is supported
+        self._is_citadel_from_lang = {
+        }  # registered langs that are Citadel-based
+        self._is_cpln_from_lang = {
+        }  # registered langs for which completion is supported
         self._hook_handlers_from_lang = defaultdict(list)
 
-        self.env = env or DefaultEnvironment() 
+        self.env = env or DefaultEnvironment()
         # The database must be enabled before registering modules.
         self.db = Database(self, base_dir=db_base_dir,
                            catalog_dirs=db_catalog_dirs,
@@ -145,7 +142,7 @@ class Manager(threading.Thread, Queue):
 
     def upgrade(self):
         """Upgrade the database, if necessary.
-        
+
         It blocks until the upgrade is complete.  Alternatively, if you
         want more control over upgrading use:
             Database.upgrade_info()
@@ -169,12 +166,12 @@ class Manager(threading.Thread, Queue):
     def initialize(self):
         """Initialize the codeintel system."""
         # TODO: Implement DB cleaning.
-        #self.db.clean()
+        # self.db.clean()
         self.idxr.start()
 
     def _register_modules(self, extra_module_dirs=None):
         """Register codeintel/lang modules.
-        
+
         @param extra_module_dirs {sequence} is an optional list of extra
             dirs in which to look for and use "codeintel|lang_*.py"
             support modules. By default just the codeintel2 package
@@ -183,19 +180,82 @@ class Manager(threading.Thread, Queue):
         dirs = [dirname(__file__)]
         if extra_module_dirs:
             dirs += extra_module_dirs
-        for dir in dirs:
-            for module_path in glob(join(dir, "codeintel_*.py")):
-                self._register_module(module_path)
-            for module_path in glob(join(dir, "lang_*.py")):
-                warnings.warn("%s: `lang_*.py' codeintel modules are deprecated, "
-                              "use `codeintel_*.py'. Support for `lang_*.py' "
-                              "will be dropped in Komodo 5.1." % module_path,
-                              CodeIntelDeprecationWarning)
-                self._register_module(module_path)
+
+        import_hook = self._ImportHook(
+            self._registered_module_canon_paths.union(dirs))
+        sys.meta_path.append(import_hook)
+
+        try:
+            for dir in dirs:
+                for module_path in glob(join(dir, "codeintel_*.py")):
+                    self._register_module(module_path)
+                for module_path in glob(join(dir, "lang_*.py")):
+                    warnings.warn("%s: `lang_*.py' codeintel modules are deprecated, "
+                                  "use `codeintel_*.py'. Support for `lang_*.py' "
+                                  "will be dropped in Komodo 5.1." % module_path,
+                                  CodeIntelDeprecationWarning)
+                    self._register_module(module_path)
+        finally:
+            sys.meta_path.remove(import_hook)
+
+    class _ImportHook(object):
+        """This is an import hook for __import__ to look for modules in the
+        extra module paths as necessary.  This is needed because a bunch of the
+        modules assume they're in the codeintel2 package.
+        """
+
+        _suffixes = None
+
+        def __init__(self, paths):
+            """Create an import hook
+            @param paths {set} The paths to scan in
+            """
+            self._paths = paths
+            self._cache = None
+
+        def find_module(self, fullname, path=None):
+            parts = fullname.split(".")
+            if len(parts) != 2 or parts[0] != "codeintel2":
+                return None
+            name = parts[-1]
+            for path in self._paths:
+                fullpath = join(path, name + ".py")
+                if not os.path.exists(fullpath):
+                    continue
+                self._cache = fullpath
+                return self
+
+        def load_module(self, fullname):
+            if fullname in sys.modules:
+                return sys.modules[fullname]
+            parts = fullname.split(".")
+            if len(parts) != 2 or parts[0] != "codeintel2":
+                raise ImportError("Did not expect to handle import for %s" %
+                                  fullname)
+            name = parts[-1]
+            if self._cache and basename(self._cache) == name + ".py":
+                fullpath = self._cache
+            else:
+                # stale cache
+                for path in self._paths:
+                    fullpath = join(path, name + ".py")
+                    if os.path.exists(fullpath):
+                        break
+                else:
+                    raise ImportError("Failed to locate %s" % fullname)
+
+            try:
+                module = imp.load_source(fullname, fullpath)
+                sys.modules[fullname] = module
+                setattr(codeintel2, name, module)
+                return module
+            except:
+                log.exception("Failed to load %s", fullpath)
+                raise
 
     def _register_module(self, module_path):
         """Register the given codeintel support module.
-        
+
         @param module_path {str} is the path to the support module.
         @exception ImportError, CodeIntelError
 
@@ -211,8 +271,15 @@ class Manager(threading.Thread, Queue):
 
         module_dir, module_name = os.path.split(module_path)
         module_name = splitext(module_name)[0]
-        iinfo = imp.find_module(module_name, [module_dir])
-        module = imp.load_module(module_name, *iinfo)
+        module_full_name = "codeintel2." + module_name
+        if module_full_name in sys.modules:
+            module = sys.modules[module_full_name]
+        else:
+            iinfo = imp.find_module(module_name, [module_dir])
+            module = imp.load_module(module_name, *iinfo)
+            sys.modules[module_full_name] = module
+            setattr(codeintel2, module_name, module)
+
         if hasattr(module, "register"):
             log.debug("register `%s' support module", module_path)
             try:
@@ -250,7 +317,7 @@ class Manager(threading.Thread, Queue):
 
     def add_hook_handler(self, hook_handler):
         """Add a handler for various codeintel hooks.
-        
+
         @param hook_handler {hooks.HookHandler}
         """
         assert isinstance(hook_handler, hooks.HookHandler)
@@ -271,7 +338,7 @@ class Manager(threading.Thread, Queue):
                 self.db.save()
             except Exception:
                 log.exception("error saving database")
-            self.db = None # break the reference
+            self.db = None  # break the reference
 
     # Proxy the batch update API onto our Citadel instance.
     def batch_update(self, join=True, updater=None):
@@ -301,18 +368,20 @@ class Manager(threading.Thread, Queue):
         """Return True iff codeintel supports completion (i.e. autocomplete
         and calltips) for this language."""
         return lang in self._is_cpln_from_lang
+
     def get_cpln_langs(self):
         return self._is_cpln_from_lang.keys()
 
     def is_citadel_lang(self, lang):
         """Returns True if the given lang has been registered and
         is a Citadel-based language.
-        
+
         A "Citadel-based" language is one that uses CIX/CIDB/CITDL tech for
         its codeintel. Note that currently not all Citadel-based langs use
         the Citadel system for completion (e.g. Tcl).
         """
         return lang in self._is_citadel_from_lang
+
     def get_citadel_langs(self):
         return self._is_citadel_from_lang.keys()
 
@@ -325,22 +394,22 @@ class Manager(threading.Thread, Queue):
             else:
                 langintel = langintel_class(self)
             self._langintel_from_lang_cache[lang] = langintel
-        return self._langintel_from_lang_cache[lang] 
+        return self._langintel_from_lang_cache[lang]
 
     def hook_handlers_from_lang(self, lang):
         return self._hook_handlers_from_lang.get(lang, []) \
-               + self._hook_handlers_from_lang.get("*", [])
+            + self._hook_handlers_from_lang.get("*", [])
 
-    #XXX
-    #XXX Cache bufs based on (path, lang) so can share bufs. (weakref)
-    #XXX 
+    # XXX
+    # XXX Cache bufs based on (path, lang) so can share bufs. (weakref)
+    # XXX
     def buf_from_koIDocument(self, doc, env=None):
         lang = doc.language
         path = doc.displayPath
         if doc.isUntitled:
             path = join("<Unsaved>", path)
         accessor = KoDocumentAccessor(doc,
-            self.silvercity_lexer_from_lang.get(lang))
+                                      self.silvercity_lexer_from_lang.get(lang))
         encoding = doc.encoding.python_encoding_name
         try:
             buf_class = self.buf_class_from_lang[lang]
@@ -372,21 +441,22 @@ class Manager(threading.Thread, Queue):
         buf = BinaryBuffer(lang, self, env, path)
         return buf
 
-    MAX_FILESIZE = 50 * 1024 * 1024   # 50MB
+    MAX_FILESIZE = 1 * 1024 * 1024   # 1MB
 
     def buf_from_path(self, path, lang=None, env=None, encoding=None):
         # Detect and abort on large files - to avoid memory errors, bug 88487.
-        # The maximum size is 50MB - someone uses source code that big?
+        # The maximum size is 1MB - someone uses source code that big?
         filestat = os.stat(path)
         if filestat.st_size > self.MAX_FILESIZE:
-            log.warn("File %r has size greater than 50MB (%d)", path, filestat.st_size)
+            log.warn(
+                "File %r has size greater than 1MB (%d)", path, filestat.st_size)
             raise CodeIntelError('File too big. Size: %d bytes, path: %r' % (
                                  filestat.st_size, path))
 
         if lang is None or encoding is None:
             import textinfo
             ti = textinfo.textinfo_from_path(path, encoding=encoding,
-                    follow_symlinks=True)
+                                             follow_symlinks=True)
             if lang is None:
                 lang = (hasattr(ti.langinfo, "komodo_name")
                         and ti.langinfo.komodo_name
@@ -398,16 +468,14 @@ class Manager(threading.Thread, Queue):
         else:
             content = codecs.open(path, 'rb', encoding).read()
 
-        #TODO: Re-instate this when have solution for CILE test failures
+        # TODO: Re-instate this when have solution for CILE test failures
         #      that this causes.
-        #if not isabs(path) and not path.startswith("<Unsaved>"):
+        # if not isabs(path) and not path.startswith("<Unsaved>"):
         #    path = abspath(path)
 
         return self.buf_from_content(content, lang, env, path, encoding)
 
-    
     #---- Completion Evaluation Session/Queue handling
-
     # The current eval session (an Evaluator instance). A current session's
     # lifetime is as follows:
     # - [self._get()] Starts when the evaluator thread (this class) takes it
@@ -421,7 +489,7 @@ class Manager(threading.Thread, Queue):
 
     def request_eval(self, evalr):
         """Request evaluation of the given completion.
-        
+
             "evalr" is the Evaluator instance.
 
         The manager has an evaluation thread on which this evalr will be
@@ -432,9 +500,9 @@ class Manager(threading.Thread, Queue):
         Dev Notes:
         - XXX Add a timeout to the put and raise error on timeout?
         """
-        #self._handle_eval_sess(evalr)
+        # evalr.eval(self)
         self.put((evalr, False))
-    
+
     def request_reeval(self, evalr):
         """Occassionally evaluation will need to defer until something (e.g.
         scanning into the CIDB) is one. These sessions will re-request
@@ -443,12 +511,12 @@ class Manager(threading.Thread, Queue):
         self.put((evalr, True))
 
     def stop(self):
-        self.put((None, None)) # Sentinel to tell thread mainloop to stop.
+        self.put((None, None))  # Sentinel to tell thread mainloop to stop.
 
     def run(self):
         while 1:
             eval_sess, is_reeval = self.get()
-            if eval_sess is None: # Sentinel to stop.
+            if eval_sess is None:  # Sentinel to stop.
                 break
             try:
                 eval_sess.eval(self)
@@ -460,14 +528,14 @@ class Manager(threading.Thread, Queue):
             finally:
                 self._curr_eval_sess = None
         self.db.report_event(None)
-    
+
     def _handle_eval_sess_error(self, eval_sess):
         exc_info = sys.exc_info()
         tb_path, tb_lineno, tb_func \
             = traceback.extract_tb(exc_info[2])[-1][:3]
         if hasattr(exc_info[0], "__name__"):
             exc_str = "%s: %s" % (exc_info[0].__name__, exc_info[1])
-        else: # string exception
+        else:  # string exception
             exc_str = exc_info[0]
         eval_sess.ctlr.error("error evaluating %s: %s "
                              "(%s#%s in %s)", eval_sess, exc_str,
@@ -513,6 +581,3 @@ class Manager(threading.Thread, Queue):
         else:
             self._curr_eval_sess = eval_sess
         return eval_sess, is_reeval
-
-
-

@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 r"""Determine information about text files.
@@ -57,7 +57,7 @@ provides detailed meta information of text files.
     'Python'
     >>> ti.langinfo
     <Python LangInfo>
-    
+
 ...plus a number of other useful information gleaned from the file. To see
 a list of all useful attributes see
 
@@ -143,58 +143,52 @@ import locale
 import langinfo
 
 
-
-
 #---- exceptions and warnings
-
 class TextInfoError(Exception):
     pass
 
+
 class TextInfoConfigError(TextInfoError):
     pass
+
 
 class ChardetImportWarning(ImportWarning):
     pass
 warnings.simplefilter("once", ChardetImportWarning)
 
 
-
 #---- globals
-
 log = logging.getLogger("textinfo")
 
 # For debugging:
 DEBUG_CHARDET_INFO = False  # gather chardet info
 
 
-
 #---- module API
-
 def textinfo_from_filename(path):
     """Determine test info for the given path **using the filename only**.
-    
+
     No attempt is made to stat or read the file.
     """
     return TextInfo.init_from_filename(path)
 
+
 def textinfo_from_path(path, encoding=None, follow_symlinks=False,
                        quick_determine_lang=False):
     """Determine text info for the given path.
-    
+
     This raises EnvironmentError if the path doesn't not exist or could
     not be read.
     """
-    return TextInfo.init_from_path(path, encoding=encoding, 
+    return TextInfo.init_from_path(path, encoding=encoding,
                                    follow_symlinks=follow_symlinks,
                                    quick_determine_lang=quick_determine_lang)
 
 
-
 #---- main TextInfo class
-
 class TextInfo(object):
     path = None
-    file_type_name = None # e.g. "regular file", "directory", ...
+    file_type_name = None  # e.g. "regular file", "directory", ...
     file_type = None      # stat.S_IFMT(os.stat(path).st_mode)
     file_mode = None      # stat.S_IMODE(os.stat(path).st_mode)
     is_text = None
@@ -247,14 +241,14 @@ class TextInfo(object):
         self.path = path
         self._accessor = PathAccessor(path, follow_symlinks=follow_symlinks)
         try:
-            #TODO: pref: Is a preference specified for this path?
+            # TODO: pref: Is a preference specified for this path?
 
             self._classify_from_stat(lidb)
             if self.file_type_name != "regular file":
                 # Don't continue if not a regular file.
                 return self
 
-            #TODO: add 'pref:treat_as_text' a la TextMate (or
+            # TODO: add 'pref:treat_as_text' a la TextMate (or
             #      perhaps that is handled in _classify_from_filename())
 
             self._classify_from_filename(lidb, env)
@@ -282,7 +276,7 @@ class TextInfo(object):
             return self
         finally:
             # Free the memory used by the accessor.
-            del self._accessor 
+            del self._accessor
 
     def __repr__(self):
         if self.path:
@@ -292,7 +286,7 @@ class TextInfo(object):
                    % _one_line_summary_from_text(self.content, 30)
 
     def as_dict(self):
-        return dict((k,v) for k,v in self.__dict__.items()
+        return dict((k, v) for k, v in self.__dict__.items()
                     if not k.startswith('_'))
 
     def as_summary(self):
@@ -319,7 +313,7 @@ class TextInfo(object):
 
     def _classify_from_content(self, lidb):
 
-        #TODO: Plan:
+        # TODO: Plan:
         # - eol_* attrs (test cases for this!)
 
         head = self.text[:self._accessor.HEAD_SIZE]
@@ -355,7 +349,8 @@ class TextInfo(object):
                 self.lang = li.name
         if self.langinfo is None and "filetype" in self.vi_vars \
            or "ft" in self.vi_vars:
-            vi_filetype = self.vi_vars.get("filetype") or self.vi_vars.get("ft")
+            vi_filetype = self.vi_vars.get(
+                "filetype") or self.vi_vars.get("ft")
             li = lidb.langinfo_from_vi_filetype(vi_filetype)
             if li:
                 self.langinfo = li
@@ -369,17 +364,17 @@ class TextInfo(object):
                 (self.has_doctype_decl, self.doctype_decl,
                  self.doctype_name, self.doctype_public_id,
                  self.doctype_system_id) = self._get_doctype_decl_info(head)
-                
+
                 # If this is just plain XML, we try to use the doctype
                 # decl to choose a more specific XML lang.
                 if self.lang == "XML" and self.has_doctype_decl:
                     li = lidb.langinfo_from_doctype(
-                            public_id=self.doctype_public_id,
-                            system_id=self.doctype_system_id)
+                        public_id=self.doctype_public_id,
+                        system_id=self.doctype_system_id)
                     if li and li.name != "XML":
                         self.langinfo = li
                         self.lang = li.name
-                
+
             elif self.langinfo.conforms_to("HTML"):
                 (self.has_doctype_decl, self.doctype_decl,
                  self.doctype_name, self.doctype_public_id,
@@ -389,8 +384,8 @@ class TextInfo(object):
                 # on doctype.
                 if self.lang == "HTML" and self.has_doctype_decl:
                     li = lidb.langinfo_from_doctype(
-                            public_id=self.doctype_public_id,
-                            system_id=self.doctype_system_id)
+                        public_id=self.doctype_public_id,
+                        system_id=self.doctype_system_id)
                     if li and li.name != "HTML":
                         self.langinfo = li
                         self.lang = li.name
@@ -409,7 +404,8 @@ class TextInfo(object):
 
         # Attempt to specialize the lang.
         if self.langinfo is not None:
-            li = lidb.specialized_langinfo_from_content(self.langinfo, self.text)
+            li = lidb.specialized_langinfo_from_content(
+                self.langinfo, self.text)
             if li:
                 self.langinfo = li
                 self.lang = li.name
@@ -442,7 +438,7 @@ class TextInfo(object):
             self.lang = li.name
             self.is_text = li.is_text
             return
-        
+
         (has_doctype_decl, doctype_decl, doctype_name, doctype_public_id,
          doctype_system_id) = self._get_doctype_decl_info(head_bytes)
         if has_doctype_decl:
@@ -515,11 +511,12 @@ class TextInfo(object):
                               bom_encoding)
                     self._encoding_bozo(
                         u"BOM encoding (%s) could not decode %s"
-                         % (bom_encoding, self._accessor))
+                        % (bom_encoding, self._accessor))
 
         head_bytes = self._accessor.head_bytes
         if DEBUG_CHARDET_INFO:
-            sys.path.insert(0, os.path.expanduser("~/tm/check/contrib/chardet"))
+            sys.path.insert(0, os.path.expanduser(
+                "~/tm/check/contrib/chardet"))
             import chardet
             del sys.path[0]
             self.chardet_info = chardet.detect(head_bytes)
@@ -535,7 +532,7 @@ class TextInfo(object):
                           suggested_encoding, self._accessor)
 
         # 3. Check for EBCDIC.
-        #TODO: Not sure this should be included, chardet may be better
+        # TODO: Not sure this should be included, chardet may be better
         #      at this given different kinds of EBCDIC.
         EBCDIC_MAGIC = '\x4c\x6f\xa7\x94'
         if self._accessor.head_4_bytes == EBCDIC_MAGIC:
@@ -568,7 +565,7 @@ class TextInfo(object):
                               lang_encoding)
                     self._encoding_bozo(
                         u"lang-spec encoding (%s) could not decode %s"
-                         % (lang_encoding, self._accessor))
+                        % (lang_encoding, self._accessor))
 
         # 5. XML prolog
         if self.langinfo and self.langinfo.conforms_to("XML"):
@@ -586,8 +583,8 @@ class TextInfo(object):
                               norm_xml_encoding)
                     self._encoding_bozo(
                         u"XML prolog encoding (%s) could not decode %s"
-                         % (norm_xml_encoding, self._accessor))
-            
+                        % (norm_xml_encoding, self._accessor))
+
         # 6. HTML: Attempt to use Content-Type meta tag.
         if self.langinfo and self.langinfo.conforms_to("HTML"):
             has_http_content_type_info, http_content_type, http_encoding \
@@ -600,11 +597,12 @@ class TextInfo(object):
                     self.encoding = norm_http_encoding
                     return
                 else:
-                    log.debug("encoding: HTTP content-type encoding (%r) was *wrong*",
-                              norm_http_encoding)
+                    log.debug(
+                        "encoding: HTTP content-type encoding (%r) was *wrong*",
+                        norm_http_encoding)
                     self._encoding_bozo(
                         u"HTML content-type encoding (%s) could not decode %s"
-                         % (norm_http_encoding, self._accessor))
+                        % (norm_http_encoding, self._accessor))
 
         # 7. Emacs-style local vars.
         emacs_head_vars = self._get_emacs_head_vars(head_bytes)
@@ -625,7 +623,7 @@ class TextInfo(object):
                           norm_emacs_encoding)
                 self._encoding_bozo(
                     u"Emacs coding var (%s) could not decode %s"
-                     % (norm_emacs_encoding, self._accessor))
+                    % (norm_emacs_encoding, self._accessor))
 
         # 8. Vi[m]-style local vars.
         vi_vars = self._get_vi_vars(head_bytes)
@@ -645,11 +643,11 @@ class TextInfo(object):
                           norm_vi_encoding)
                 self._encoding_bozo(
                     u"Vi[m] coding var (%s) could not decode %s"
-                     % (norm_vi_encoding, self._accessor))
+                    % (norm_vi_encoding, self._accessor))
 
         # 9. Heuristic checks for UTF-16 without BOM.
         utf16_encoding = None
-        head_odd_bytes  = head_bytes[0::2]
+        head_odd_bytes = head_bytes[0::2]
         head_even_bytes = head_bytes[1::2]
         head_markers = ["<?xml", "#!"]
         for head_marker in head_markers:
@@ -659,7 +657,7 @@ class TextInfo(object):
                 utf16_encoding = "utf-16-le"
                 break
             elif head_even_bytes.startswith(head_marker) \
-               and head_odd_bytes[0:length] == '\x00'*length:
+                    and head_odd_bytes[0:length] == '\x00'*length:
                 utf16_encoding = "utf-16-be"
                 break
         internal_markers = ["coding"]
@@ -690,7 +688,7 @@ class TextInfo(object):
         if self._accessor.decode(norm_utf8_encoding):
             log.debug("UTF-8 encoding: %r", norm_utf8_encoding)
             self.encoding = norm_utf8_encoding
-            return   
+            return
 
         # 11. Lang-specific fallback (e.g. XML -> utf-8, Python -> ascii, ...).
         # Note: A potential problem here is that a fallback encoding here that
@@ -700,7 +698,8 @@ class TextInfo(object):
         fallback_lang = None
         if self.langinfo:
             fallback_lang = self.langinfo.name
-            fallback_encoding = self.langinfo.conformant_attr("default_encoding")
+            fallback_encoding = self.langinfo.conformant_attr(
+                "default_encoding")
         if fallback_encoding:
             if self._accessor.decode(fallback_encoding):
                 log.debug("encoding: fallback encoding for %s: %r",
@@ -712,7 +711,7 @@ class TextInfo(object):
                           fallback_lang, fallback_encoding)
                 self._encoding_bozo(
                     u"%s fallback encoding (%s) could not decode %s"
-                     % (fallback_lang, fallback_encoding, self._accessor))
+                    % (fallback_lang, fallback_encoding, self._accessor))
 
         # 12. chardet (http://chardet.feedparser.org/)
         # Note: I'm leary of using this b/c (a) it's a sizeable perf
@@ -738,7 +737,7 @@ class TextInfo(object):
                         log.debug("chardet encoding: %r", chardet_encoding)
                         self.encoding = norm_chardet_encoding
                         return
-     
+
         # 13. locale.getpreferredencoding()
         # Typical values for this:
         #   Windows:    cp1252 (aka windows-1252)
@@ -757,7 +756,8 @@ class TextInfo(object):
         # 14. iso8859-1
         norm_fallback8bit_encoding = _norm_encoding("iso8859-1")
         if self._accessor.decode(norm_fallback8bit_encoding):
-            log.debug("fallback 8-bit encoding: %r", norm_fallback8bit_encoding)
+            log.debug(
+                "fallback 8-bit encoding: %r", norm_fallback8bit_encoding)
             self.encoding = norm_fallback8bit_encoding
             return
 
@@ -783,9 +783,10 @@ class TextInfo(object):
         ''',
         re.VERBOSE | re.DOTALL
     )
+
     def _get_xml_prolog_info(self, head_bytes):
         """Parse out info from the '<?xml version=...' prolog, if any.
-        
+
         Returns (<has-xml-prolog>, <xml-version>, <xml-encoding>). Examples:
 
             (False, None, None)
@@ -796,7 +797,7 @@ class TextInfo(object):
         # that should have been picked up by an earlier BOM check or via
         # the subsequent heuristic check for UTF-16 without a BOM.
         if not head_bytes.startswith("<?xml"):
-            return  (False, None, None)
+            return (False, None, None)
 
         # Try to extract more info from the prolog.
         match = self._xml_prolog_pat.match(head_bytes)
@@ -814,13 +815,14 @@ class TextInfo(object):
         (?:\s+[\w-]+\s*=\s*(?:".*?"|'.*?'))+  # attributes
         \s*/?>)
         """,
-        re.IGNORECASE | re.VERBOSE
-    )
+                                    re.IGNORECASE | re.VERBOSE
+                                    )
     _html_attr_pat = re.compile(
         # Currently requiring XML attrs (i.e. quoted value).
         '''(?:\s+([\w-]+)\s*=\s*(".*?"|'.*?'))'''
     )
     _http_content_type_splitter = re.compile(";\s*")
+
     def _get_http_content_type_info(self, head_bytes):
         """Returns info extracted from an HTML content-type meta tag if any.
         Returns (<has-http-content-type-info>, <content-type>, <charset>).
@@ -836,8 +838,8 @@ class TextInfo(object):
 
         # Parse out '<meta ...>' tags, then the attributes in them.
         for meta_tag in self._html_meta_tag_pat.findall(head_bytes):
-            meta = dict( (k.lower(), v[1:-1])
-                for k,v in self._html_attr_pat.findall(meta_tag))
+            meta = dict((k.lower(), v[1:-1])
+                        for k, v in self._html_attr_pat.findall(meta_tag))
             if "http-equiv" in meta \
                and meta["http-equiv"].lower() == "content-type":
                 content = meta.get("content", "")
@@ -847,7 +849,8 @@ class TextInfo(object):
 
         # We found a http-equiv="Content-Type" tag, parse its content
         # attribute value.
-        parts = [p.strip() for p in self._http_content_type_splitter.split(content)]
+        parts = [
+            p.strip() for p in self._http_content_type_splitter.split(content)]
         if not parts:
             return (False, None, None)
         content_type = parts[0] or None
@@ -864,7 +867,7 @@ class TextInfo(object):
 
         return (True, content_type, charset)
 
-    #TODO: Note that this isn't going to catch the current HTML 5
+    # TODO: Note that this isn't going to catch the current HTML 5
     #      doctype:  '<!DOCTYPE html>'
     _doctype_decl_re = re.compile(r'''
         <!DOCTYPE
@@ -877,23 +880,24 @@ class TextInfo(object):
             # HTML 3.2 and 2.0 doctypes don't include a system-id.
             (?:\s+(["'])(?P<system_id_b>.*?)\6)?
         )
-        (\s*\[.*?\])?        
+        (\s*\[.*?\])?
         \s*>
         ''', re.IGNORECASE | re.DOTALL | re.UNICODE | re.VERBOSE)
+
     def _get_doctype_decl_info(self, head):
         """Parse out DOCTYPE info from the given XML or HTML content.
-        
+
         Returns a tuple of the form:
             (<has-doctype-decl>, <doctype-decl>,
              <name>, <public-id>, <system-id>)
-        
+
         The <public-id> is normalized as per this comment in the XML 1.0
         spec:
             Before a match is attempted, all strings of white space in the
             public identifier must be normalized to single space
             characters (#x20), and leading and trailing white space must
             be removed.
-        
+
         Examples:
             (False, None, None, None, None)
             (True, '<!DOCTYPE greeting SYSTEM "hello.dtd">',
@@ -903,7 +907,7 @@ class TextInfo(object):
              'html',
              '-//W3C//DTD XHTML 1.0 Transitional//EN',
              'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd')
-        
+
         Here is the spec for DOCTYPE decls in XML:
             http://www.xml.com/axml/target.html#NT-doctypedecl
         We loosely follow this to allow for some decls in HTML that isn't
@@ -915,7 +919,7 @@ class TextInfo(object):
         m = self._doctype_decl_re.search(head)
         if not m:
             return (False, None, None, None, None)
-        
+
         d = m.groupdict()
         name = d.get("name")
         system_id = d.get("system_id_a") or d.get("system_id_b")
@@ -927,11 +931,12 @@ class TextInfo(object):
     _emacs_vars_head_pat = re.compile("-\*-\s*(.*?)\s*-\*-")
 
     _emacs_head_vars_cache = None
+
     def _get_emacs_head_vars(self, head_bytes):
         """Return a dictionary of emacs-style local variables in the head.
 
         "Head" emacs vars on the ones in the '-*- ... -*-' one-liner.
-        
+
         Parsing is done loosely according to this spec (and according to
         some in-practice deviations from this):
         http://www.gnu.org/software/emacs/manual/html_node/emacs/Specifying-File-Variables.html#Specifying-File-Variables
@@ -939,7 +944,7 @@ class TextInfo(object):
         # Presuming an 8-bit encoding. If it is UTF-16 or UTF-32, then
         # that should have been picked up by an earlier BOM check.
         # Otherwise we rely on `chardet` to cover us.
-        
+
         if self._emacs_head_vars_cache is not None:
             return self._emacs_head_vars_cache
 
@@ -963,7 +968,8 @@ class TextInfo(object):
                 else:
                     for emacs_var_str in emacs_var_strs:
                         try:
-                            variable, value = emacs_var_str.strip().split(':', 1)
+                            variable, value = emacs_var_str.strip().split(
+                                ':', 1)
                         except ValueError:
                             log.debug("emacs variables error: malformed -*- "
                                       "line: %r", emacs_var_str)
@@ -978,7 +984,7 @@ class TextInfo(object):
                or val.startswith('"') and val.endswith('"')):
                 emacs_vars[var] = val[1:-1]
 
-        self._emacs_head_vars_cache = emacs_vars    
+        self._emacs_head_vars_cache = emacs_vars
         return emacs_vars
 
     # This regular expression is intended to match blocks like this:
@@ -997,6 +1003,7 @@ class TextInfo(object):
         """, re.IGNORECASE | re.MULTILINE | re.DOTALL | re.VERBOSE)
 
     _emacs_tail_vars_cache = None
+
     def _get_emacs_tail_vars(self, tail_bytes):
         r"""Return a dictionary of emacs-style local variables in the tail.
 
@@ -1009,7 +1016,7 @@ class TextInfo(object):
         {'foo': 'bar baz'}
         >>> TextInfo()._get_emacs_tail_vars('# Local Variables:\n# quoted: "bar "\n# End:')
         {'quoted': 'bar '}
-    
+
         Parsing is done according to this spec (and according to some
         in-practice deviations from this):
             http://www.gnu.org/software/emacs/manual/html_chapter/emacs_33.html#SEC485
@@ -1017,13 +1024,13 @@ class TextInfo(object):
         # Presuming an 8-bit encoding. If it is UTF-16 or UTF-32, then
         # that should have been picked up by an earlier BOM check.
         # Otherwise we rely on `chardet` to cover us.
-        
+
         if self._emacs_tail_vars_cache is not None:
             return self._emacs_tail_vars_cache
-        
+
         emacs_vars = {}
         if "Local Variables" not in tail_bytes:
-            self._emacs_tail_vars_cache = emacs_vars    
+            self._emacs_tail_vars_cache = emacs_vars
             return emacs_vars
 
         match = self._emacs_vars_tail_pat.search(tail_bytes)
@@ -1031,7 +1038,7 @@ class TextInfo(object):
             prefix = match.group("prefix")
             suffix = match.group("suffix")
             lines = match.group("content").splitlines(0)
-            #print "prefix=%r, suffix=%r, content=%r, lines: %s"\
+            # print "prefix=%r, suffix=%r, content=%r, lines: %s"\
             #      % (prefix, suffix, match.group("content"), lines)
 
             # Validate the Local Variables block: proper prefix and suffix
@@ -1052,9 +1059,11 @@ class TextInfo(object):
 
             # Parse out one emacs var per line.
             continued_for = None
-            for line in lines[:-1]: # no var on the last line ("PREFIX End:")
-                if prefix: line = line[len(prefix):] # strip prefix
-                if suffix: line = line[:-len(suffix)] # strip suffix
+            for line in lines[:-1]:  # no var on the last line ("PREFIX End:")
+                if prefix:
+                    line = line[len(prefix):]  # strip prefix
+                if suffix:
+                    line = line[:-len(suffix)]  # strip suffix
                 line = line.strip()
                 if continued_for:
                     variable = continued_for
@@ -1071,7 +1080,8 @@ class TextInfo(object):
                                   "in local variables entry: '%s'" % line)
                         continue
                     # Do NOT lowercase the variable name, because Emacs only
-                    # allows "mode" (and not "Mode", "MoDe", etc.) in this block.
+                    # allows "mode" (and not "Mode", "MoDe", etc.) in this
+                    # block.
                     value = value.strip()
                     if value.endswith('\\'):
                         value = value[:-1].rstrip()
@@ -1086,7 +1096,7 @@ class TextInfo(object):
                or val.startswith('"') and val.endswith('"')):
                 emacs_vars[var] = val[1:-1]
 
-        self._emacs_tail_vars_cache = emacs_vars    
+        self._emacs_tail_vars_cache = emacs_vars
         return emacs_vars
 
     # Note: It might nice if parser also gave which of 'vi, vim, ex' and
@@ -1100,6 +1110,7 @@ class TextInfo(object):
          re.compile(r'[ \t]+')),
     ]
     _vi_vars_cache = None
+
     def _get_vi_vars(self, bytes):
         r"""Return a dict of Vi[m] modeline vars.
 
@@ -1131,18 +1142,18 @@ class TextInfo(object):
             {'dir': 'c:\\tmp'}
         """
         # Presume 8-bit encoding... yada yada.
-        
+
         if self._vi_vars_cache is not None:
             return self._vi_vars_cache
-        
+
         vi_vars = {}
-        
-        #TODO: Consider reducing support to just "vi:" for speed. This
+
+        # TODO: Consider reducing support to just "vi:" for speed. This
         #      function takes way too much time.
         if "vi:" not in bytes and "ex:" not in bytes and "vim:" not in bytes:
             self._vi_vars_cache = vi_vars
             return vi_vars
-        
+
         for pat, splitter in self._vi_vars_pats_and_splitters:
             match = pat.search(bytes)
             if match:
@@ -1162,11 +1173,11 @@ class TextInfo(object):
     def _get_bom_info(self):
         r"""Returns (<has-bom>, <bom>, <bom-encoding>). Examples:
 
-            (True, '\xef\xbb\xbf', "utf-8") 
-            (True, '\xff\xfe', "utf-16-le") 
+            (True, '\xef\xbb\xbf', "utf-8")
+            (True, '\xff\xfe', "utf-16-le")
             (False, None, None)
         """
-        boms_and_encodings = [ # in order from longest to shortest
+        boms_and_encodings = [  # in order from longest to shortest
             (codecs.BOM_UTF32_LE, "utf-32-le"),
             (codecs.BOM_UTF32_BE, "utf-32-be"),
             (codecs.BOM_UTF8, "utf-8"),
@@ -1183,11 +1194,11 @@ class TextInfo(object):
 
     def _classify_from_filename(self, lidb, env):
         """Classify from the path *filename* only.
-        
+
         Sets `lang' and `langinfo', if can be determined.
         """
         filename = basename(self.path)
-        
+
         if env is not None:
             li = env.langinfo_from_filename(filename)
             if li:
@@ -1225,7 +1236,7 @@ class TextInfo(object):
     def _classify_from_stat(self, lidb):
         """Set some `file_*' attributes from stat mode."""
         from stat import S_ISREG, S_ISDIR, S_ISLNK, S_ISFIFO, S_ISSOCK, \
-                         S_ISBLK, S_ISCHR, S_IMODE, S_IFMT
+            S_ISBLK, S_ISCHR, S_IMODE, S_IFMT
         stat = self._accessor.stat
         st_mode = stat.st_mode
         self.file_type = S_IFMT(st_mode)
@@ -1273,24 +1284,25 @@ class Accessor(object):
     """
     # API:
     #   prop head_bytes -> head 8k bytes
-    #   prop head_4_bytes -> head 4 bytes (useful for BOM detection) 
+    #   prop head_4_bytes -> head 4 bytes (useful for BOM detection)
     #   prop tail_bytes -> tail 8k bytes
     #   def bytes_range(start, end) -> bytes in that range
 
-    HEAD_SIZE = pow(2, 13) # 8k
-    TAIL_SIZE = pow(2, 13) # 8k
+    HEAD_SIZE = pow(2, 13)  # 8k
+    TAIL_SIZE = pow(2, 13)  # 8k
 
     encoding = None
     text = None
 
     _unsuccessful_encodings = None
+
     def decode(self, encoding):
         """Decodes bytes with the given encoding and, if successful,
         sets `self.text` with the decoded result and returns True.
         Otherwise, returns False.
 
         Side-effects: On success, sets `self.text` and `self.encoding`.
-       
+
         Optimization: First an attempt is made to decode
         `self.head_bytes` instead of all of `self.bytes`. This allows
         for the normal usage in `TextInfo._classify_encoding()` to *not*
@@ -1340,7 +1352,7 @@ class PathAccessor(Accessor):
      READ_HEAD,             # _bytes==<head bytes>
      READ_TAIL,             # _bytes==<head>, _bytes_tail==<tail>
      READ_ALL) = range(4)   # _bytes==<all>, _bytes_tail==None, _file closed
-    _read_state = READ_NONE # one of the READ_* states
+    _read_state = READ_NONE  # one of the READ_* states
     _file = None
     _bytes = None
     _bytes_tail = None
@@ -1350,9 +1362,10 @@ class PathAccessor(Accessor):
         self.follow_symlinks = follow_symlinks
 
     def __str__(self):
-        return "path `%s'" % self.path 
+        return "path `%s'" % self.path
 
     _stat_cache = None
+
     @property
     def stat(self):
         if self._stat_cache is None:
@@ -1375,7 +1388,7 @@ class PathAccessor(Accessor):
 
     def _read(self, state):
         """Read up to at least `state`."""
-        #TODO: If `follow_symlinks` is False and this is a symlink we
+        # TODO: If `follow_symlinks` is False and this is a symlink we
         #      must use os.readlink() here.
         # It is the job of the caller to only call _read() if necessary.
         assert self._read_state < state
@@ -1387,36 +1400,38 @@ class PathAccessor(Accessor):
                 if state == self.READ_HEAD:
                     self._bytes = self._file.read(self.HEAD_SIZE)
                     self._read_state = (self.size <= self.HEAD_SIZE
-                        and self.READ_ALL or self.READ_HEAD)
+                                        and self.READ_ALL or self.READ_HEAD)
                 elif state == self.READ_TAIL:
                     if self.size <= self.HEAD_SIZE + self.TAIL_SIZE:
                         self._bytes = self._file.read()
                         self._read_state = self.READ_ALL
                     else:
                         self._bytes = self._file.read(self.HEAD_SIZE)
-                        self._file.seek(-self.TAIL_SIZE, 2) # 2 == relative to end
+                        self._file.seek(
+                            -self.TAIL_SIZE, 2)  # 2 == relative to end
                         self._bytes_tail = self._file.read(self.TAIL_SIZE)
                         self._read_state = self.READ_TAIL
                 elif state == self.READ_ALL:
                     self._bytes = self._file.read()
                     self._read_state = self.READ_ALL
-    
+
             elif self._read_state == self.READ_HEAD:
                 if state == self.READ_TAIL:
                     if self.size <= self.HEAD_SIZE + self.TAIL_SIZE:
                         self._bytes += self._file.read()
                         self._read_state = self.READ_ALL
                     else:
-                        self._file.seek(-self.TAIL_SIZE, 2) # 2 == relative to end
+                        self._file.seek(
+                            -self.TAIL_SIZE, 2)  # 2 == relative to end
                         self._bytes_tail = self._file.read(self.TAIL_SIZE)
                         self._read_state = self.READ_TAIL
                 elif state == self.READ_ALL:
                     self._bytes += self._file.read()
                     self._read_state = self.READ_ALL
-                    
+
             elif self._read_state == self.READ_TAIL:
                 assert state == self.READ_ALL
-                self._file.seek(self.HEAD_SIZE, 0) # 0 == relative to start
+                self._file.seek(self.HEAD_SIZE, 0)  # 0 == relative to start
                 remaining_size = self.size - self.HEAD_SIZE - self.TAIL_SIZE
                 assert remaining_size > 0, \
                     "negative remaining bytes to read from '%s': %d" \
@@ -1425,7 +1440,7 @@ class PathAccessor(Accessor):
                 self._bytes += self._bytes_tail
                 self._bytes_tail = None
                 self._read_state = self.READ_ALL
-                    
+
             if self._read_state == self.READ_ALL:
                 self.close()
         except Exception, ex:
@@ -1474,9 +1489,7 @@ class PathAccessor(Accessor):
         return self._bytes
 
 
-
 #---- internal support stuff
-
 # Recipe: regex_from_encoded_pattern (1.0)
 def _regex_from_encoded_pattern(s):
     """'foo'    -> re.compile(re.escape('foo'))
@@ -1503,10 +1516,12 @@ def _regex_from_encoded_pattern(s):
                                  "(must be one of '%s')"
                                  % (char, s, ''.join(flag_from_char.keys())))
         return re.compile(s[1:idx], flags)
-    else: # not an encoded regex
+    else:  # not an encoded regex
         return re.compile(re.escape(s))
 
 # Recipe: text_escape (0.2)
+
+
 def _escaped_text_from_text(text, escapes="eol"):
     r"""Return escaped version of text.
 
@@ -1525,11 +1540,11 @@ def _escaped_text_from_text(text, escapes="eol"):
                     replace EOL chars as above, tabs with '\t' and spaces
                     with periods ('.')
     """
-    #TODO:
+    # TODO:
     # - Add 'c-string' style.
     # - Add _escaped_html_from_text() with a similar call sig.
     import re
-    
+
     if isinstance(escapes, basestring):
         if escapes == "eol":
             escapes = {'\r\n': "\\r\\n\r\n", '\n': "\\n\n", '\r': "\\r\r"}
@@ -1550,8 +1565,9 @@ def _escaped_text_from_text(text, escapes="eol"):
         escapes_keys.sort(key=lambda a: len(a), reverse=True)
     except TypeError:
         # Python 2.3 support: sort() takes no keyword arguments
-        escapes_keys.sort(lambda a,b: cmp(len(a), len(b)))
+        escapes_keys.sort(lambda a, b: cmp(len(a), len(b)))
         escapes_keys.reverse()
+
     def repl(match):
         val = escapes[match.group(0)]
         return val
@@ -1563,9 +1579,9 @@ def _escaped_text_from_text(text, escapes="eol"):
 
 
 def _one_line_summary_from_text(text, length=78,
-        escapes={'\n':"\\n", '\r':"\\r", '\t':"\\t"}):
+                                escapes={'\n': "\\n", '\r': "\\r", '\t': "\\t"}):
     r"""Summarize the given text with one line of the given length.
-    
+
         "text" is the text to summarize
         "length" (default 78) is the max length for the summary
         "escapes" is a mapping of chars in the source text to
@@ -1614,16 +1630,17 @@ def _should_include_path(path, includes, excludes):
             return False
     return True
 
+
 def _walk(top, topdown=True, onerror=None, follow_symlinks=False):
     """A version of `os.walk()` with a couple differences regarding symlinks.
-    
+
     1. follow_symlinks=False (the default): A symlink to a dir is
        returned as a *non*-dir. In `os.walk()`, a symlink to a dir is
        returned in the *dirs* list, but it is not recursed into.
     2. follow_symlinks=True: A symlink to a dir is returned in the
        *dirs* list (as with `os.walk()`) but it *is conditionally*
        recursed into (unlike `os.walk()`).
-       
+
        A symlinked dir is only recursed into if it is to a deeper dir
        within the same tree. This is my understanding of how `find -L
        DIR` works.
@@ -1677,6 +1694,8 @@ def _walk(top, topdown=True, onerror=None, follow_symlinks=False):
         yield top, dirs, nondirs
 
 _NOT_SPECIFIED = ("NOT", "SPECIFIED")
+
+
 def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
                               recursive=True, includes=[], excludes=[],
                               skip_dupe_dirs=False,
@@ -1762,7 +1781,7 @@ def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
     TODO: perf improvements (profile, stat just once)
     """
     from os.path import basename, exists, isdir, join, normpath, abspath, \
-                        lexists, islink, realpath
+        lexists, islink, realpath
     from glob import glob
 
     assert not isinstance(path_patterns, basestring), \
@@ -1808,7 +1827,7 @@ def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
                 # 'includes' SHOULD affect whether a dir is yielded.
                 if (dirs == "always"
                     or (dirs == "if-not-recursive" and not recursive)
-                   ) and _should_include_path(path, includes, excludes):
+                    ) and _should_include_path(path, includes, excludes):
                     yield path
 
                 # However, if recursive, 'includes' should NOT affect
@@ -1816,7 +1835,7 @@ def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
                 # not:
                 #   script -r --include="*.py" DIR
                 if recursive and _should_include_path(path, [], excludes):
-                    for dirpath, dirnames, filenames in _walk(path, 
+                    for dirpath, dirnames, filenames in _walk(path,
                             follow_symlinks=follow_symlinks):
                         dir_indeces_to_remove = []
                         for i, dirname in enumerate(dirnames):
@@ -1853,6 +1872,8 @@ class _NoReflowFormatter(optparse.IndentedHelpFormatter):
         return description or ""
 
 # Recipe: pretty_logging (0.1) in C:\trentm\tm\recipes\cookbook
+
+
 class _PerLevelFormatter(logging.Formatter):
     """Allow multiple format string -- depending on the log level.
 
@@ -1866,10 +1887,11 @@ class _PerLevelFormatter(logging.Formatter):
             self.fmtFromLevel = {}
         else:
             self.fmtFromLevel = fmtFromLevel
+
     def format(self, record):
         record.lowerlevelname = record.levelname.lower()
         if record.levelno in self.fmtFromLevel:
-            #XXX This is a non-threadsafe HACK. Really the base Formatter
+            # XXX This is a non-threadsafe HACK. Really the base Formatter
             #    class should provide a hook accessor for the _fmt
             #    attribute. *Could* add a lock guard here (overkill?).
             _saved_fmt = self._fmt
@@ -1881,12 +1903,13 @@ class _PerLevelFormatter(logging.Formatter):
         else:
             return logging.Formatter.format(self, record)
 
+
 def _setup_logging(stream=None):
     """Do logging setup:
 
     We want a prettier default format:
          do: level: ...
-    Spacing. Lower case. Skip " level:" if INFO-level. 
+    Spacing. Lower case. Skip " level:" if INFO-level.
     """
     hdlr = logging.StreamHandler(stream)
     defaultFmt = "%(name)s: %(levelname)s: %(message)s"
@@ -1949,8 +1972,9 @@ def main(argv):
                 yield line.rstrip("\r\n")
         path_patterns = args_from_stdin()
 
-    for path in _paths_from_path_patterns(path_patterns, excludes=opts.excludes,
-                    recursive=opts.recursive, 
+    for path in _paths_from_path_patterns(
+        path_patterns, excludes=opts.excludes,
+                    recursive=opts.recursive,
                     dirs="if-not-recursive",
                     follow_symlinks=opts.follow_symlinks):
         try:
@@ -1991,7 +2015,7 @@ if __name__ == "__main__":
             traceback.print_exception(*exc_info)
         else:
             if hasattr(exc_info[0], "__name__"):
-                #log.error("%s: %s", exc_info[0].__name__, exc_info[1])
+                # log.error("%s: %s", exc_info[0].__name__, exc_info[1])
                 log.error(exc_info[1])
             else:  # string exception
                 log.error(exc_info[0])

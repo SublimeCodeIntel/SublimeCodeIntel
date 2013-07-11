@@ -1,26 +1,26 @@
 #!python
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """The new database for codeintel2.
@@ -58,7 +58,7 @@ There are two common modes of interaction:
    what completions to show for "foo."). Here a particular environment
    will have a list of "libs", all of them from the main Database
    instance, via, e.g.:
-   
+
     Database.get_stdlib(...)
     Database.get_catalog_lib(...)
     Database.get_lang_lib(...)
@@ -80,7 +80,7 @@ There are two common modes of interaction:
             import foo.<|>  # lib.get_blob_imports(prefix=('foo',))
         Note that prefix has to be a tuple (rather than a list) because
         the method is automatically cached.
-        
+
         Items in the returned set a 2-tuples, (<import-name>,
         <is-dir-import>), where <is-dir-import> is a boolean indicating
         if this is a prefix for a multidir import. For example, in
@@ -105,10 +105,10 @@ There are two common modes of interaction:
         where <ilk> is, e.g., "class" or "function" or "variable", etc.
         'ilk' can be specified to restrict the results to names of that
         ilk. If prefix is None then *all* toplevel names are returned.
-    
+
    where "blob" is the generic internal name used for "the token with
    which you import", e.g.:
-  
+
         LANGUAGE    IMPORT STATEMENT        BLOBNAME
         --------    ----------------        --------
         Python      import foo              foo
@@ -132,7 +132,7 @@ common-implementation lines. E.g. dir under "db" is a zone.
         # API Catalogs zone -- codeintel API data loaded from .cix files
         # in one of the db_catalog_dirs.
         catalogs/
-            res_index   # cix-path -> (res_id, last-updated, name, 
+            res_index   # cix-path -> (res_id, last-updated, name,
                         #              {lang -> blobname -> ilk -> toplevelnames})
             blob_index              # {lang -> blobname -> (dbfile, res_id)}
             toplevelname_index      # {lang -> ilk -> toplevelname -> res_id -> blobnames}
@@ -142,7 +142,7 @@ common-implementation lines. E.g. dir under "db" is a zone.
 
         # Codeintel includes .cix files for a number of language stdlibs
         # (all in "codeintel2/stdlibs/<lang>[-<ver>].cix"). These are
-        # loaded here (as needed). 
+        # loaded here (as needed).
         stdlibs/
             res_index                   # cix-path -> last-updated
             vers_and_names_from_lang(lang) # ordered list of (ver, name)
@@ -236,7 +236,7 @@ class).
 # Database.clean() and .check() TODO
 
 - dbfiles for paths viewed as another language will persist in the DB
-  (although I think the index entries will have been removed). 
+  (although I think the index entries will have been removed).
   These should be cleaned out.
 - check for collisions in catalog: same lang, same blobname provided by
   two CIX files
@@ -275,11 +275,9 @@ from codeintel2.database.multilanglib import MultiLangZone
 from codeintel2.database.projlib import ProjectZone
 
 
-
 #---- globals
-
 log = logging.getLogger("codeintel.db")
-#log.setLevel(logging.DEBUG)
+# log.setLevel(logging.DEBUG)
 
 
 #---- Database zone and lib implementations
@@ -354,7 +352,7 @@ class Database(object):
     # - 2.0.1: s/VERSION.txt/VERSION/, made PHP a MultiLangZone
     VERSION = "2.0.24"
 
-    LEN_PREFIX = 3 # Length of prefix in 'toplevelprefix_index' indeces.
+    LEN_PREFIX = 3  # Length of prefix in 'toplevelprefix_index' indeces.
 
     # Possible return values from .upgrade_info().
     (UPGRADE_NOT_NECESSARY,
@@ -384,7 +382,7 @@ class Database(object):
                 only JavaScript and PHP are included in the set.
         """
         self.mgr = mgr
-        self._lock = threading.RLock() # XXX Perhaps use per-zone locks?
+        self._lock = threading.RLock()  # XXX Perhaps use per-zone locks?
 
         self._catalogs_zone = None
         self._stdlibs_zone = None
@@ -397,7 +395,7 @@ class Database(object):
             self.base_dir = abspath(base_dir)
         else:
             self.base_dir = base_dir
-        
+
         self.catalog_dirs = catalog_dirs
         self.event_reporter = event_reporter
 
@@ -407,10 +405,11 @@ class Database(object):
             assert isinstance(import_everything_langs, set)
             self.import_everything_langs = import_everything_langs
 
-        self.corruptions = [] # list of noted errors during db operation
+        self.corruptions = []  # list of noted errors during db operation
 
     def acquire_lock(self):
         self._lock.acquire()
+
     def release_lock(self):
         self._lock.release()
 
@@ -432,7 +431,7 @@ class Database(object):
     def upgrade_info(self):
         """Returns information indicating if a db upgrade is necessary
         and possible.
-        
+
         Returns one of the following:
             (UPGRADE_NOT_NECESSARY, None)
             (UPGRADE_NOT_POSSIBLE, "<reason>")
@@ -476,16 +475,17 @@ class Database(object):
         self.acquire_lock()
         try:
             if exists(self.base_dir):
-                #TODO: make this more bullet proof
+                # TODO: make this more bullet proof
                 if backup:
                     err_base_dir = self.base_dir + ".err"
                     log.info("backing up db to '%s'", err_base_dir)
                     if os.path.exists(err_base_dir):
                         rmdir(err_base_dir)
-                        for i in range(10): # Try to avoid OSError from slow-deleting NTFS
-                            if not os.path.exists(err_base_dir): break
+                        for i in range(10):  # Try to avoid OSError from slow-deleting NTFS
+                            if not os.path.exists(err_base_dir):
+                                break
                             time.sleep(1)
-                    if os.path.exists(err_base_dir): # couldn't remove it
+                    if os.path.exists(err_base_dir):  # couldn't remove it
                         log.warn("couldn't remove old '%s' (skipping backup)",
                                  err_base_dir)
                         rmdir(self.base_dir)
@@ -494,13 +494,15 @@ class Database(object):
                 else:
                     rmdir(self.base_dir)
 
+            self._catalogs_zone = None
+            self._stdlibs_zone = None
             self.create()
         finally:
             self.release_lock()
 
     def upgrade(self):
         """Upgrade the current database.
-        
+
         Typically this is only called if .upgrade_info() returns
         UPGRADE_NECESSARY.
         """
@@ -557,7 +559,7 @@ class Database(object):
             self.get_stdlibs_zone().remove_lang(lang)
 
             # API catalogs zone
-            #TODO: CatalogsZone needs a .remove_lang(). Until then we just
+            # TODO: CatalogsZone needs a .remove_lang(). Until then we just
             #      remove the whole thing.
 
             # (multi)langzone
@@ -649,6 +651,7 @@ class Database(object):
             pass
 
     _non_lang_db_dirs = ["catalogs", "stdlibs", "projs"]
+
     def _gen_langs_in_db(self):
         for d in os.listdir(join(self.base_dir, "db")):
             if d in self._non_lang_db_dirs:
@@ -692,7 +695,7 @@ class Database(object):
 
         errors += self._check_catalogszone()
 
-        #TODO: check stdlibs zone
+        # TODO: check stdlibs zone
 
         for lang in self._gen_langs_in_db():
             if not self.mgr.is_citadel_lang(lang):
@@ -716,7 +719,7 @@ class Database(object):
 
     def _check_catalogszone(self):
         log.debug("check catalogs zone...")
-        #TODO: check toplevelname_index
+        # TODO: check toplevelname_index
         errors = []
         catalogs_zone = self.get_catalogs_zone()
         cix_path_from_res_id = {}
@@ -758,8 +761,8 @@ class Database(object):
                 path = codecs.open(path_path, encoding="utf-8").read()
             res_index = lang_zone.load_index(path, "res_index", {})
             blob_index = lang_zone.load_index(path, "blob_index", {})
-            #TODO
-            #toplevelname_index = lang_zone.load_index(
+            # TODO
+            # toplevelname_index = lang_zone.load_index(
             #        path, "toplevelname_index", {})
 
             all_blobnames = {}
@@ -778,7 +781,7 @@ class Database(object):
                     except KeyError:
                         errors.append(
                             "%s lang zone: blob '%s' provided by '%s' is "
-                            "not in '%s/blob_index' index" 
+                            "not in '%s/blob_index' index"
                             % (lang_zone.lang, blobname,
                                join(path, filename), d))
                         continue
@@ -815,7 +818,7 @@ class Database(object):
                 path = codecs.open(path_path, encoding="utf-8").read()
             res_index = lang_zone.load_index(path, "res_index", {})
             blob_index = lang_zone.load_index(path, "blob_index", {})
-            #toplevelname_index = lang_zone.load_index(
+            # toplevelname_index = lang_zone.load_index(
             #        path, "toplevelname_index", {})
 
             all_langs_and_blobnames = {}
@@ -823,9 +826,10 @@ class Database(object):
                     in res_index.items():
                 # res_data: {lang -> blobname -> ilk -> toplevelnames}
                 for lang, blobname in (
-                     (lang, tfifb.keys()[0]) # only one blob per lang in a resource
-                     for lang, tfifb in res_data.items()
-                    ):
+                    (lang, tfifb.keys()[
+                     0])  # only one blob per lang in a resource
+                    for lang, tfifb in res_data.items()
+                ):
                     if (lang, blobname) in all_langs_and_blobnames:
                         errors.append("%s lang zone: %s blob '%s' provided "
                                       "by more than one file in '%s' dir"
@@ -837,7 +841,7 @@ class Database(object):
                     except KeyError:
                         errors.append(
                             "%s lang zone: %s blob '%s' provided by '%s' is "
-                            "not in '%s/blob_index'" 
+                            "not in '%s/blob_index'"
                             % (lang_zone.lang, lang, blobname,
                                join(path, filename), d))
                         continue
@@ -871,7 +875,7 @@ class Database(object):
         """
         log.warn("database corruption during '%s': %s (resolution: %s)",
                  action, desc, resolution)
-        self.corruptions.append( (action, desc, resolution) )
+        self.corruptions.append((action, desc, resolution))
 
     def get_catalogs_zone(self):
         if self._catalogs_zone is None:
@@ -880,7 +884,7 @@ class Database(object):
 
     def get_catalog_lib(self, lang, selections=None):
         """Get a lang-specific handler for the catalog of loaded CIX files.
-        
+
             "lang" is the language.
             "selections" (optional) is a set of catalog names (or full
                 path to the CIX files) to use.  Essentially it is a
@@ -972,7 +976,8 @@ class Database(object):
         blob_files = glob(dbsubpath+".*")
         for blob_cache_file in blob_files:
             ext = splitext(blob_cache_file)[1]
-            if ext == ".blob": continue # this is the blob ET itself
+            if ext == ".blob":
+                continue  # this is the blob ET itself
             cache_key = ext[1:]
             try:
                 blob.cache[cache_key] = self.load_pickle(blob_cache_file)
@@ -1023,15 +1028,13 @@ class Database(object):
         finally:
             fout.close()
 
-
     #---- Convenience methods for getting database hash keys.
     # MD5 hexdigests are used to generate keys into the db (typically
     # file paths).
-
-    #TODO:PERF: evaluate perf improvement with caching of this
+    # TODO:PERF: evaluate perf improvement with caching of this
     def bhash_from_blob_info(self, res_path, lang, blobname):
         """Return a unique name for a blob dbfile.
-        
+
         This is used as the filename for the dbfile for this blob.
         """
         s = ':'.join([res_path, lang, blobname])
@@ -1039,17 +1042,15 @@ class Database(object):
             s = s.encode(sys.getfilesystemencoding())
         return md5(s).hexdigest()
 
-    #TODO:PERF: evaluate perf improvement with caching of this
+    # TODO:PERF: evaluate perf improvement with caching of this
     def dhash_from_dir(self, dir):
         """Return a hash path to use internally in the db for the given dir."""
         if isinstance(dir, unicode):
             dir = dir.encode(sys.getfilesystemencoding())
         return md5(dir).hexdigest()
 
-
     #---- The following are convenience methods for working with a
     #     particular LangZone and a buffer.
-    
     def get_buf_scan_time(self, buf):
         """Return the mtime for the given buffer in the database or
         return None.
@@ -1075,4 +1076,3 @@ class Database(object):
         self._get_lang_zone(buf.lang).update_buf_data(
             buf, scan_tree, scan_time, scan_error,
             skip_scan_time_check=skip_scan_time_check)
-

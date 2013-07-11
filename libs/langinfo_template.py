@@ -1,25 +1,25 @@
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -31,7 +31,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 
 """LangInfo definitions for template languages."""
@@ -52,6 +52,12 @@ class EJSLangInfo(LangInfo):
     exts = [".ejs"]
 
 
+class KomodoSnippetLangInfo(LangInfo):
+    name = "Komodo Snippet"
+    conforms_to_bases = ["Text"]
+    exts = [".snippet"]
+
+
 class DjangoTemplateLangInfo(LangInfo):
     name = "Django Template"
     conforms_to_bases = ["Text"]
@@ -60,6 +66,7 @@ class DjangoTemplateLangInfo(LangInfo):
         ("import", re.compile(r'\{\%[ \t]+(load\b.*?)\%\}')),
         ("class", re.compile(r'\{\%[ \t]+(block\b.*?)\%\}')),
     ]
+
 
 class DjangoHTMLTemplateLangInfo(DjangoTemplateLangInfo):
     name = "Django HTML Template"
@@ -71,9 +78,11 @@ class DjangoHTMLTemplateLangInfo(DjangoTemplateLangInfo):
         ],
     }
 
+
 class TwigTemplateLangInfo(DjangoTemplateLangInfo):
     name = "Twig"
     exts = [".twig"]
+
 
 class DjangoXHTMLTemplateLangInfo(DjangoTemplateLangInfo):
     name = "Django XHTML Template"
@@ -84,6 +93,7 @@ class DjangoXHTMLTemplateLangInfo(DjangoTemplateLangInfo):
         ],
     }
 
+
 class DjangoTextTemplateLangInfo(DjangoTemplateLangInfo):
     name = "Django Text Template"
     specialization_hints_from_lang = {
@@ -92,6 +102,7 @@ class DjangoTextTemplateLangInfo(DjangoTemplateLangInfo):
             ('{{', re.compile(r'\{\{.*?\}\}')),
         ],
     }
+
 
 class DjangoXMLTemplateLangInfo(DjangoTemplateLangInfo):
     name = "Django XML Template"
@@ -104,8 +115,8 @@ class DjangoXMLTemplateLangInfo(DjangoTemplateLangInfo):
 
 
 class EpMojoHTMLTemplateLangInfo(LangInfo):
-    #TODO: How to best handle relationship with HTML?
-    #TODO: How to enable detection?
+    # TODO: How to best handle relationship with HTML?
+    # TODO: How to enable detection?
     name = "ep (Mojo) HTML Template"
     komodo_name = "EpMojo"
     conforms_to_bases = ["Text"]
@@ -115,8 +126,8 @@ class EpMojoHTMLTemplateLangInfo(LangInfo):
 
 
 class MasonHTMLTemplateLangInfo(LangInfo):
-    #TODO: How to best handle relationship with HTML?
-    #TODO: How to enable detection?
+    # TODO: How to best handle relationship with HTML?
+    # TODO: How to enable detection?
     name = "Mason HTML Template"
     komodo_name = "Mason"
     conforms_to_bases = ["Text"]
@@ -126,8 +137,8 @@ class MasonHTMLTemplateLangInfo(LangInfo):
 
 
 class TemplateToolkitLangInfo(LangInfo):
-    #TODO: link to lang page
-    #TODO: Is template toolkit just for HTML files?
+    # TODO: link to lang page
+    # TODO: Is template toolkit just for HTML files?
     name = "Template Toolkit HTML Template"  # a little long
     komodo_name = "TemplateToolkit"
     conforms_to_bases = ["Text"]
@@ -146,7 +157,7 @@ class SmartyLangInfo(LangInfo):
 
 class CakePHPTemplate(LangInfo):
     """CakePHP view template files.
-    
+
     CakePHP is a PHP framework with an MVC system. By convention "view"
     files (they are PHP) use the .ctp extension.
     http://book.cakephp.org/view/22/cakephp-conventions#view-conventions-26
@@ -155,3 +166,19 @@ class CakePHPTemplate(LangInfo):
     conforms_to_bases = ["PHP"]
     exts = [".ctp"]
 
+
+class LaravelBladeTemplateLangInfo(LangInfo):
+    name = "Laravel Blade Template"
+    komodo_name = "LaravelBlade"
+    conforms_to_bases = ["Text"]
+    exts = [".blade.php"]
+    section_regexes = [
+        ("section", re.compile(r'@section')),
+    ]
+
+
+class GroovyServerPagesLangInfo(LangInfo):
+    name = "Groovy Server Pages"
+    conforms_to_bases = ["HTML"]
+    exts = [".gsp"]
+    komodo_name = "HTML"

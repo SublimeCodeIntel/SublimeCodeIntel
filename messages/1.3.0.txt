@@ -1,0 +1,12 @@
+SublimeCodeIntel 1.3.0 changelog
+
+Please restart Sublime Text 2 after reading this.
+
+CHANGES/FIXES
+
++ This build should fix many of the problems seen in Linux systems.
+
+- Libraries for Linux rebuilt with libpcre statically (libpcre bundled for Linux builds).
+
+- ``calltip()`` is now thread safe (which caused some strange behavior in Linux
+  where Sublime Text 2 ended up being unresponsive).

@@ -1,25 +1,25 @@
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
+#
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-# 
+#
 # The Original Code is Komodo code.
-# 
+#
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-# 
+#
 # Contributor(s):
 #   ActiveState Software Inc
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -31,7 +31,7 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
+#
 # ***** END LICENSE BLOCK *****
 #
 # Contributors:
@@ -66,19 +66,20 @@ from shared_lexer import EOF_STYLE
 
 from codeintel2 import lang_tcl
 
+
 class TclLexerClassifier:
     """ This classifier is similar to the parser-level classifier, but
     it works on the SilverCity "raw" tokens as opposed to the
     tokens that get created by the lexer layer.  There should be some
-    folding though."""    
+    folding though."""
 
     def is_comment(self, ttype):
         return ttype == ScintillaConstants.SCE_TCL_COMMENT
-        
+
     @property
     def style_comment(self):
         return ScintillaConstants.SCE_TCL_COMMENT
-        
+
     @property
     def style_default(self):
         return ScintillaConstants.SCE_TCL_DEFAULT
@@ -91,19 +92,19 @@ class TclLexerClassifier:
 
 op_re = re.compile(r'([\\\{\}\[\]])')
 
+
 class TclLexer(shared_lexer.Lexer):
     def __init__(self, code):
         shared_lexer.Lexer.__init__(self)
         self.q = []
         self.classifier = TclLexerClassifier()
         lang_tcl.TclLexer().tokenize_by_style(code, self._fix_token_list)
-        # Tcl.TclLexer().tokenize_by_style(code, self._fix_token_list)
-        # self._fix_token_list(q_tmp) # Updates self.q in place
+        self.prepare_token_list_for_use()
         self.string_types = [ScintillaConstants.SCE_TCL_STRING,
-                         ScintillaConstants.SCE_TCL_CHARACTER,
-                         ScintillaConstants.SCE_TCL_LITERAL
-                         ]
-        
+                             ScintillaConstants.SCE_TCL_CHARACTER,
+                             ScintillaConstants.SCE_TCL_LITERAL
+                             ]
+
     def _fix_token_list(self, **tok):
         """ Same as perl_lexer: split op tokens into separate
             recognizable operators.
@@ -112,10 +113,11 @@ class TclLexer(shared_lexer.Lexer):
             return
         tval = tok['text']
         if tok['style'] == ScintillaConstants.SCE_TCL_OPERATOR and len(tval) > 1:
-            # In Tcl rely on white-space to separate operators except for braces, brackets, and backslashes
-            new_tokens = [x for x in op_re.split(tval) if x] # drop empties
+            # In Tcl rely on white-space to separate operators except for
+            # braces, brackets, and backslashes
+            new_tokens = [x for x in op_re.split(tval) if x]  # drop empties
             if len(new_tokens) == 1:
-                self.q.append(tok)
+                self.complete_token_push(tok)
             else:
                 col = tok['start_column']
                 for stxt in new_tokens:
@@ -126,7 +128,8 @@ class TclLexer(shared_lexer.Lexer):
                     col = new_tok['end_column']
                     self.q.append(new_tok)
         else:
-            self.q.append(tok)
+            self.complete_token_push(tok)
+
 
 def provide_sample_code():
     return r"""# ----------------------------------------------------------------------------
