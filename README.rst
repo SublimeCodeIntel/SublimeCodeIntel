@@ -129,7 +129,7 @@ v2.0 (11-07-2013):
     ``ctrl+click`` = Jump to definition
     ``ctrl+super+alt+Up`` = Jump to definition
     ``ctrl+super+alt+Left`` = Go back
-    ``super+shift+space`` = Manual CodeIntel
+    ``ctrl+shift+space`` = Manual CodeIntel
 
   For Linux:
     ``super+click`` = Jump to definition
