@@ -107,23 +107,9 @@ Additional settings can be configured in the User File Settings:
 Troubleshooting
 ---------------
 
-Using ``build.sh``
+Building process is no longer distributed with this repository. You need to get SublimeCodeIntel/`CodeIntelSources <https://github.com/SublimeCodeIntel/CodeIntelSources/>`_ to run build.sh.
 
-
-If everything else fails, try rebuilding the libraries using ``build.sh``.
-You need to install some things to make sure it's going to work.
-These are likely to be packaged on your system, such as, for Ubuntu/Debian-like
-distros. Open a terminal and do::
-
-    $ sudo apt-get install g++
-
-    $ sudo apt-get install python-dev
-
-Once you have installed those, you may need to use the ``build.sh`` script.
-In your terminal, go to your ``Packages/SublimeCodeIntel/src`` folder, then
-simply run::
-
-    $ ./build.sh
+More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/SublimeCodeIntel/CodeIntelSources/src>`_.
 
 
 What's New
@@ -131,32 +117,44 @@ What's New
 
 v2.0:
 
-+ Snippets for functions inserted during autocomplete.
-
 + SublimeCodeIntel's openkomodo codeintel engine updated. The new codeintel is faster and more reliable.
+
++ Snippets for functions inserted during autocomplete.
 
 + Binary files for Linux, Windows and Mac OS X updated.
 
-+ Shortcuts for jump to definition have changed.
++ Shortcuts for jump to definition have changed:
+
+  For Mac OS X:
+    ``ctrl+click`` = Jump to definition
+    ``ctrl+super+alt+Up`` = Jump to definition
+    ``ctrl+super+alt+Left`` = Go back
+    ``super+shift+space`` = Manual CodeIntel
 
   For Linux:
     ``super+click`` = Jump to definition
     ``ctrl+super+alt+Up`` = Jump to definition
     ``ctrl+super+alt+Left`` = Go back
+    ``ctrl+shift+space`` = Manual CodeIntel
 
-  For Mac OS X:
+  For Windows:
     ``alt+click`` = Jump to definition
     ``ctrl+super+alt+Up`` = Jump to definition
     ``ctrl+super+alt+Left`` = Go back
+    ``ctrl+shift+space`` = Manual CodeIntel
 
-  For Mac OS X:
-    ``alt+click`` = Jump to definition
-    ``ctrl+super+alt+Up`` = Jump to definition
-    ``ctrl+super+alt+Left`` = Go back
+- PHP and UDL languages bugs fixed.
 
-- PHP bugs fixed.
+- Stability improved (Should no longer use 100% CPU all the time.)
 
-- Stability improved (Should no longer use 100% CPU.)
++ Sources have their own repositories at http://github.com/SublimeCodeIntel
+
+
+v1.4 (05-07-2013):
+
++ Added improved Package Control support and updated old versions.
+
++ Started transition to v2.0
 
 
 v1.3 (20-12-2011):

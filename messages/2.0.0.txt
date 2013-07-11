@@ -2,9 +2,14 @@ SublimeCodeIntel 2.0.0 changelog
 
 Please restart Sublime Text 2 after reading this.
 
+In case of problems, please close Sublime Text 2 and delete the ``~/.codeintel`` directory before restarting ST2.
+
+
 NEW FEATURES
 
 + SublimeCodeIntel's openkomodo codeintel engine updated. The new codeintel is faster and more reliable.
+
++ Sources have their own repositories at http://github.com/SublimeCodeIntel
 
 
 CHANGES/FIXES
@@ -13,23 +18,26 @@ CHANGES/FIXES
 
 + Binary files for Linux, Windows and Mac OS X updated.
 
-+ Shortcuts for jump to definition have changed.
++ Shortcuts for jump to definition have changed:
+
+  For Mac OS X:
+    ``ctrl+click`` = Jump to definition
+    ``ctrl+super+alt+Up`` = Jump to definition
+    ``ctrl+super+alt+Left`` = Go back
+    ``super+shift+space`` = Manual CodeIntel
 
   For Linux:
     ``super+click`` = Jump to definition
     ``ctrl+super+alt+Up`` = Jump to definition
     ``ctrl+super+alt+Left`` = Go back
+    ``ctrl+shift+space`` = Manual CodeIntel
 
   For Windows:
     ``alt+click`` = Jump to definition
     ``ctrl+super+alt+Up`` = Jump to definition
     ``ctrl+super+alt+Left`` = Go back
+    ``ctrl+shift+space`` = Manual CodeIntel
 
-  For Mac OS X:
-    ``alt+click`` = Jump to definition
-    ``ctrl+super+alt+Up`` = Jump to definition
-    ``ctrl+super+alt+Left`` = Go back
-
-- PHP bugs fixed.
+- PHP and UDL languages bugs fixed.
 
 - Stability improved (Should no longer use 100% CPU all the time.)
