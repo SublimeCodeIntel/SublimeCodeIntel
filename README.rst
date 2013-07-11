@@ -115,7 +115,7 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 What's New
 ----------
 
-v2.0:
+v2.0 (11-07-2013):
 
 + SublimeCodeIntel's openkomodo codeintel engine updated. The new codeintel is faster and more reliable.
 
