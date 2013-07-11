@@ -168,55 +168,56 @@ def pos2bytes(content, pos):
     return len(content[:pos].encode('utf-8'))
 
 
-def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=None):
+def calltip(view, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel', logger=None):
     if timeout is None:
         timeout = {'error': 3000, 'warning': 5000, 'info': 10000,
-                    'event': 10000, 'tip': 15000}.get(type, 3000)
+                    'event': 10000, 'tip': 15000}.get(ltype, 3000)
 
     if msg is None:
-        msg, type = type, 'debug'
+        msg, ltype = ltype, 'debug'
     msg = msg.strip()
 
     status_lock.acquire()
     try:
-        status_msg.setdefault(id, [None, None, 0])
-        if msg == status_msg[id][1]:
+        status_msg.setdefault(lid, [None, None, 0])
+        if msg == status_msg[lid][1]:
             return
-        status_msg[id][2] += 1
-        order = status_msg[id][2]
+        status_msg[lid][2] += 1
+        order = status_msg[lid][2]
     finally:
         status_lock.release()
 
     def _calltip_set():
-        lineno = view.line(view.sel()[0])
+        view_sel = view.sel()
+        lineno = view.line(view_sel[0]) if view_sel else 0
         status_lock.acquire()
         try:
-            current_type, current_msg, current_order = status_msg.get(id, [None, None, 0])
+            current_type, current_msg, current_order = status_msg.get(lid, [None, None, 0])
             if msg != current_msg and order == current_order:
                 if msg:
-                    print >>condeintel_log_file, "+", "%s: %s" % (type.capitalize(), msg)
+                    print >>condeintel_log_file, "+", "%s: %s" % (ltype.capitalize(), msg)
                     (logger or log.info)(msg)
-                if type != 'debug':
+                if ltype != 'debug':
                     if msg:
-                        view.set_status(id, "%s: %s" % (type.capitalize(), msg))
+                        view.set_status(lid, "%s: %s" % (ltype.capitalize(), msg))
                     else:
-                        view.erase_status(id)
-                    status_msg[id][0] = [type, msg, order]
-                if 'warning' not in id and msg:
-                    status_lineno[id] = lineno
-                elif id in status_lineno:
-                    del status_lineno[id]
+                        view.erase_status(lid)
+                    status_msg[lid][0] = [ltype, msg, order]
+                if 'warning' not in lid and msg:
+                    status_lineno[lid] = lineno
+                elif lid in status_lineno:
+                    del status_lineno[lid]
         finally:
             status_lock.release()
 
     def _calltip_erase():
         status_lock.acquire()
         try:
-            if msg == status_msg.get(id, [None, None, 0])[1]:
-                view.erase_status(id)
-                status_msg[id][1] = None
-                if id in status_lineno:
-                    del status_lineno[id]
+            if msg == status_msg.get(lid, [None, None, 0])[1]:
+                view.erase_status(lid)
+                status_msg[lid][1] = None
+                if lid in status_lineno:
+                    del status_lineno[lid]
         finally:
             status_lock.release()
 
@@ -226,10 +227,10 @@ def calltip(view, type, msg=None, timeout=None, delay=0, id='CodeIntel', logger=
         sublime.set_timeout(_calltip_erase, timeout)
 
 
-def logger(view, type, msg=None, timeout=None, delay=0, id='CodeIntel'):
+def logger(view, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel'):
     if msg is None:
-        msg, type = type, 'info'
-    calltip(view, type, msg, timeout=timeout, delay=delay, id=id + '-' + type, logger=getattr(log, type, None))
+        msg, ltype = ltype, 'info'
+    calltip(view, ltype, msg, timeout=timeout, delay=delay, lid=lid + '-' + ltype, logger=getattr(log, ltype, None))
 
 
 def guess_lang(view=None, path=None):
@@ -240,13 +241,13 @@ def guess_lang(view=None, path=None):
     if view:
         syntax = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
 
-    id = view.id()
+    vid = view.id()
     _k_ = '%s::%s' % (syntax, path)
     try:
-        return languages[id][_k_]
+        return languages[vid][_k_]
     except KeyError:
         pass
-    languages.setdefault(id, {})
+    languages.setdefault(vid, {})
 
     lang = None
     _codeintel_syntax_map = dict((k.lower(), v) for k, v in view.settings().get('codeintel_syntax_map', {}).items())
@@ -267,13 +268,13 @@ def guess_lang(view=None, path=None):
                 try:
                     _lang = lang = guess_lang_from_path(path)
                 except CodeIntelError:
-                    languages[id][_k_] = None
+                    languages[vid][_k_] = None
                     return
 
     _codeintel_disabled_languages = [l.lower() for l in view.settings().get('codeintel_disabled_languages', [])]
     if lang and lang.lower() in _codeintel_disabled_languages:
         logger(view, 'debug', "skip `%s': disabled language" % lang)
-        languages[id][_k_] = None
+        languages[vid][_k_] = None
         return
 
     if not lang and _lang and _lang not in ('Console',):
@@ -282,7 +283,7 @@ def guess_lang(view=None, path=None):
         else:
             logger(view, 'debug', "Invalid language: %s" % _lang)
 
-    languages[id][_k_] = lang
+    languages[vid][_k_] = lang
     return lang
 
 
@@ -307,7 +308,7 @@ def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs=
                 if cplns:
                     # Show autocompletions:
                     _completions = sorted(
-                        [('%s  (%s)' % (name, type), name + ('(${1})' if type == 'function' else '')) for type, name in cplns],
+                        [('%s  (%s)' % (n, t), n + ('($0)' if t == function else '')) for t, n in cplns],
                         cmp=lambda a, b: cmp(a[1], b[1]) if a[1].startswith('_') == b[1].startswith('_') else 1 if a[1].startswith('_') else -1
                     )
                     if _completions:
@@ -549,7 +550,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     logger(view, 'info', "processing `%s': please wait..." % lang)
     is_scratch = view.is_scratch()
     is_dirty = view.is_dirty()
-    id = view.id()
+    vid = view.id()
     folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
     folders_id = str(hash(frozenset(folders)))
     codeintel_config = view.settings().get('codeintel_config', {})
@@ -565,7 +566,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         mgr.db.event_reporter = lambda m: logger(view, 'event', m)
 
         try:
-            env = _ci_envs_[id]
+            env = _ci_envs_[vid]
             if env._folders != folders:
                 raise KeyError
             if now > env._time:
@@ -666,7 +667,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             env._project_base_dir = project_base_dir
             env._config_file = config_file
             env.__class__.get_proj_base_dir = lambda self: project_base_dir
-            _ci_envs_[id] = env
+            _ci_envs_[vid] = env
         env._time = now + 5  # don't check again in less than five seconds
 
         msgs = []
@@ -683,8 +684,8 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
 
             now = datetime.datetime.now()
-            if not _ci_next_scan_.get(id) or now > _ci_next_scan_[id]:
-                _ci_next_scan_[id] = now + datetime.timedelta(seconds=10)
+            if not _ci_next_scan_.get(vid) or now > _ci_next_scan_[vid]:
+                _ci_next_scan_[vid] = now + datetime.timedelta(seconds=10)
                 if isinstance(buf, CitadelBuffer):
                     despair = 0
                     despaired = False
@@ -875,13 +876,11 @@ def get_revision(path=None):
 class PythonCodeIntel(sublime_plugin.EventListener):
 
     def on_close(self, view):
-        id = view.id()
-        if id in completions:
-            del completions[id]
-        if id in sentinel:
-            del sentinel[id]
-        if id in languages:
-            del languages[id]
+        vid = view.id()
+        if vid in completions:
+            del completions[vid]
+        if vid in languages:
+            del languages[vid]
         codeintel_cleanup(view.file_name())
 
     def on_modified(self, view):
@@ -920,24 +919,23 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
         rowcol = view.rowcol(view.sel()[0].end())
         if old_pos != rowcol:
-            id = view.id()
-            sentinel[id] = None
+            vid = view.id()
             old_pos = rowcol
             despair = 1000
             despaired = True
             status_lock.acquire()
             try:
-                slns = [id for id, sln in status_lineno.items() if sln != rowcol[0]]
+                slns = [sid for sid, sln in status_lineno.items() if sln != rowcol[0]]
             finally:
                 status_lock.release()
-            for id in slns:
-                calltip(view, "", id=id)
+            for vid in slns:
+                calltip(view, "", lid=vid)
 
     def on_query_completions(self, view, prefix, locations):
-        id = view.id()
-        if id in completions:
-            _completions = completions[id]
-            del completions[id]
+        vid = view.id()
+        if vid in completions:
+            _completions = completions[vid]
+            del completions[vid]
             return _completions
         return []
 
