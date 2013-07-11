@@ -793,7 +793,8 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             print >>condeintel_log_file, msg
 
             def _callback():
-                if view.line(view.sel()[0]) == view.line(pos):
+                view_sel = view.sel()
+                if view_sel and view.line(view_sel[0]) == view.line(pos):
                     callback(*ret)
             logger(view, 'info', "")
             sublime.set_timeout(_callback, 0)
@@ -959,8 +960,10 @@ class PythonCodeIntel(sublime_plugin.EventListener):
     def on_selection_modified(self, view):
         global despair, despaired, old_pos
         delay_queue(600)  # on movement, delay queue (to make movement responsive)
-
-        rowcol = view.rowcol(view.sel()[0].end())
+        view_sel = view.sel()
+        if not view_sel:
+            return
+        rowcol = view.rowcol(view_sel[0].end())
         if old_pos != rowcol:
             vid = view.id()
             old_pos = rowcol
@@ -998,8 +1001,12 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
         path = view.file_name()
         lang = guess_lang(view, path)
         if lang:
+            view_sel = view.sel()
+            if not view_sel:
+                return
+            sel = view_sel[0]
+            pos = sel.end()
             content = view.substr(sublime.Region(0, view.size()))
-            pos = view.sel()[0].end()
             file_name = view.file_name()
 
             def _trigger(defns):
@@ -1022,7 +1029,7 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                             jump_history = jump_history_by_window[window.id()]
 
                             # Save current position so we can return to it
-                            row, col = view.rowcol(view.sel()[0].begin())
+                            row, col = view.rowcol(view_sel[0].begin())
                             current_location = "%s:%d" % (file_name, row + 1)
                             jump_history.append(current_location)
 
