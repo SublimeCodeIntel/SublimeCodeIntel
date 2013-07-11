@@ -154,7 +154,6 @@ despaired = False
 
 completions = {}
 languages = {}
-sentinel = {}
 
 status_msg = {}
 status_lineno = {}
@@ -287,73 +286,68 @@ def guess_lang(view=None, path=None):
     return lang
 
 
-def autocomplete(view, timeout, busy_timeout, preemptive=False, args=[], kwargs={}):
+def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], kwargs={}):
     def _autocomplete_callback(view, path, lang):
-        id = view.id()
-        content = view.substr(sublime.Region(0, view.size()))
-        sel = view.sel()[0]
-        pos = sel.end()
-        try:
-            next = content[pos].strip()
-        except IndexError:
-            next = ''
-        if pos and content and content[view.line(sel).begin():pos].strip() and not next.isalnum() and next != '_':
-            # TODO: For the sentinel to work, we need to send a prefix to the completions...
-            # but no show_completions() currently available.
-            # pos = sentinel[id] if sentinel[id] is not None else view.sel()[0].end()
+        view_sel = view.sel()
+        if not view_sel:
+            return
 
-            def _trigger(cplns, calltips):
+        sel = view_sel[0]
+        pos = sel.end()
+        if not pos:
+            return
+
+        lpos = view.line(sel).begin()
+        text = view.substr(sublime.Region(lpos, pos + 1))
+        if not text.strip():
+            return
+
+        next = text[-1] if len(text) == pos + 1 - lpos else None
+
+        if not next or next != '_' and not next.isalnum():
+            vid = view.id()
+            content = view.substr(sublime.Region(0, view.size()))
+
+            def _trigger(calltips, cplns=None):
                 if cplns is not None or calltips is not None:
                     codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
-                if cplns:
-                    # Show autocompletions:
+
+                if cplns is not None:
+                    function = None if 'import ' in text else 'function'
                     _completions = sorted(
                         [('%s  (%s)' % (n, t), n + ('($0)' if t == function else '')) for t, n in cplns],
                         cmp=lambda a, b: cmp(a[1], b[1]) if a[1].startswith('_') == b[1].startswith('_') else 1 if a[1].startswith('_') else -1
                     )
                     if _completions:
-                        completions[id] = _completions
+                        # Show autocompletions:
+                        completions[vid] = _completions
                         view.run_command('auto_complete', {
                             'disable_auto_insert': True,
                             'api_completions_only': True,
                             'next_completion_if_showing': False,
                             'auto_complete_commit_on_tab': True,
                         })
-                elif calltips is not None and False:
+
+                if calltips is not None:
                     # Trigger a tooltip
                     calltip(view, 'tip', calltips[0])
-
-                    if content[sel.a - 1] == '(' and content[sel.a] == ')':
-                        rex = re.compile("\(([^\[\(\)]*)")
-                        m = rex.search(calltips[0])
-
-                        if m is None:
-                            return
-
-                        params = m.group(1).split(',')
-
-                        snippet = []
-                        i = 1
-                        for p in params:
-                            p = p.strip()
-                            if p.find('=') != -1:
-                                continue
-                            if p.find(' ') != -1:
-                                p = p.split(' ')[1]
-
-                            var = p.replace('$', '').strip()
-                            snippet.append('${' + str(i) + ':' + var + '}')
-                            i += 1
-
-                        if i == 1:
-                            return
-
-                        view.run_command('insert_snippet', {
-                            'contents': ', '.join(snippet)
-                        })
-
-            sentinel[id] = None
-            codeintel(view, path, content, lang, pos, ('cplns', 'calltips'), _trigger)
+                    # Insert function call snippets:
+                    if view.settings().get('codeintel_snippets', True):
+                        # Insert parameters as snippet:
+                        if content[sel.begin() - 1] == '(' and content[sel.begin()] == ')':
+                            m = re.search(r'\(([^\[\(\)]*)', calltips[0])
+                            params = [p.strip() for p in m.group(1).split(',')] if m else None
+                            if params:
+                                snippet = []
+                                for i, p in enumerate(params):
+                                    var, _, _ = p.partition('=')
+                                    if ' ' in var:
+                                        var = var.split(' ')[1]
+                                    if var[0] == '$':
+                                        var = var[1:]
+                                    snippet.append('${%s:%s}' % (i + 1, var))
+                                view.run_command('insert_snippet', {'contents': ', '.join(snippet)})
+            codeintel(view, path, content, lang, pos, forms, _trigger)
     # If it's a fill char, queue using lower values and preemptive behavior
     queue(view, _autocomplete_callback, timeout, busy_timeout, preemptive, args=args, kwargs=kwargs)
 
@@ -928,34 +922,38 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         codeintel_cleanup(view.file_name())
 
     def on_modified(self, view):
+        if not view.settings().get('codeintel_live', True):
+            return
+
         path = view.file_name()
         lang = guess_lang(view, path)
-        if lang:
+        if not lang or lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_disabled_languages', [])]:
+            return
 
-            pos = view.sel()[0].end()
-            text = view.substr(sublime.Region(pos - 1, pos))
-            is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
+        view_sel = view.sel()
+        if not view_sel:
+            return
 
-            live = True
-            live = live and view.settings().get('codeintel_live', True)
-            live = live and not lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_disabled_languages', [])]
-            # if live:
-            #     id = view.id()
-            #     _sentinel = sentinel.get(id)
-            #     sentinel[id] = pos if is_fill_char else (_sentinel if _sentinel is not None else None)
-            #     print sentinel[id]
-            #     live = live and sentinel[id] is not None
+        sel = view_sel[0]
+        pos = sel.end()
+        text = view.substr(sublime.Region(pos - 1, pos))
+        is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
 
-            if live:
-                if not hasattr(view, 'command_history') or (view.command_history(0)[0] == 'insert' and view.command_history(0)[1]['characters'] != ',') or (view.command_history(1)[0] == 'insert' and view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)') or (text == '(' and view.command_history(0)[0] == 'commit_completion'):
-                    autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, is_fill_char, args=[path, lang])
-                else:
-                    view.run_command('hide_auto_complete')
+        # print view.command_history(1), view.command_history(0), view.command_history(-1)
+        if (not hasattr(view, 'command_history') or view.command_history(1)[0] is None and (
+                view.command_history(0)[0] in ('insert', 'paste') or
+                view.command_history(-1)[0] in ('insert', 'paste') and (
+                    view.command_history(0)[0] == 'commit_completion' or
+                    view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)'
+                )
+        )):
+            if view.command_history(0)[0] == 'commit_completion':
+                forms = ('calltips',)
             else:
-                def _scan_callback(view, path):
-                    content = view.substr(sublime.Region(0, view.size()))
-                    codeintel_scan(view, path, content, lang)
-                queue(view, _scan_callback, 3000, args=[path])
+                forms = ('calltips', 'cplns')
+            autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, forms, is_fill_char, args=[path, lang])
+        else:
+            view.run_command('hide_auto_complete')
 
     def on_selection_modified(self, view):
         global despair, despaired, old_pos
@@ -992,7 +990,7 @@ class CodeIntelAutoComplete(sublime_plugin.TextCommand):
         path = view.file_name()
         lang = guess_lang(view, path)
         if lang:
-            autocomplete(view, 0, 0, True, args=[path, lang])
+            autocomplete(view, 0, 0, ('calltips', 'cplns'), True, args=[path, lang])
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
