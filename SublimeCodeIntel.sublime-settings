@@ -10,7 +10,14 @@
     */
     "codeintel": true,
 
-    // An array of language names which are disabled.
+    /*
+        Insert functions snippets.
+    */
+    "codeintel_snippets": true,
+
+    /*
+        An array of language names which are disabled.
+    */
     "codeintel_disabled_languages":
     [
     ],
@@ -23,7 +30,9 @@
     */
     "codeintel_live": true,
 
-    // An array of language names to disable.
+    /*
+        An array of language names to disable.
+    */
     "codeintel_live_disabled_languages":
     [
     ],

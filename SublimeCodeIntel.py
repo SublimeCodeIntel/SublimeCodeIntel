@@ -67,6 +67,9 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
         }
     }
 """
+
+VERSION = "2.0"
+
 import os
 import re
 import sys
@@ -93,7 +96,7 @@ arch_path = os.path.join(__path__, 'arch')
 if arch_path not in sys.path:
     sys.path.insert(0, arch_path)
 
-from codeintel2.common import *
+from codeintel2.common import CodeIntelError, EvalTimeout, LogEvalController, TRG_FORM_CPLN, TRG_FORM_CALLTIP, TRG_FORM_DEFN
 from codeintel2.manager import Manager
 from codeintel2.citadel import CitadelBuffer
 from codeintel2.environment import SimplePrefsEnvironment
@@ -529,7 +532,7 @@ def codeintel_manager(folders_id):
         condeintel_log_filename = os.path.join(mgr.db.base_dir, 'codeintel.log')
         condeintel_log_file = open(condeintel_log_filename, 'w', 1)
         codeintel_log.handlers = [logging.StreamHandler(condeintel_log_file)]
-        msg = "Starting logging SublimeCodeIntel rev %s (%s) on %s" % (get_revision()[:12], os.stat(__file__)[stat.ST_MTIME], datetime.datetime.now().ctime())
+        msg = "Starting logging SublimeCodeIntel v%s rev %s (%s) on %s" % (VERSION, get_revision()[:12], os.stat(__file__)[stat.ST_MTIME], datetime.datetime.now().ctime())
         print >>condeintel_log_file, "%s\n%s" % (msg, "=" * len(msg))
 
         _ci_mgr_[folders_id] = mgr
