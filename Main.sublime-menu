@@ -17,12 +17,12 @@
                         [
                             {
                                 "command": "open_file",
-                                "args": {"file": "${packages}/SublimeCodeIntel/Base File.sublime-settings"},
+                                "args": {"file": "${packages}/SublimeCodeIntel/SublimeCodeIntel.sublime-settings"},
                                 "caption": "Settings – Default"
                             },
                             {
                                 "command": "open_file",
-                                "args": {"file": "${packages}/User/Base File.sublime-settings"},
+                                "args": {"file": "${packages}/User/SublimeCodeIntel.sublime-settings"},
                                 "caption": "Settings – User"
                             },
                             { "caption": "-" },
