@@ -900,6 +900,7 @@ ALL_SETTINGS = [
     'codeintel_syntax_map',
     'codeintel_scan_exclude_dir',
     'codeintel_config',
+    'sublime_auto_complete',
 ]
 
 
@@ -922,6 +923,9 @@ def reload_settings(view):
 
     if view_settings.get('codeintel') is None:
         view_settings.set('codeintel', True)
+
+    if not view_settings.get('sublime_auto_complete'):
+        view_settings.set('auto_complete', False)
 
     return view_settings
 

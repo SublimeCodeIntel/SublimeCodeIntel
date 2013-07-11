@@ -10,6 +10,9 @@
     */
     "codeintel": true,
 
+    /* Disable Sublime Text autocomplete: */
+    "sublime_auto_complete": false,
+
     /*
         Insert functions snippets.
     */
