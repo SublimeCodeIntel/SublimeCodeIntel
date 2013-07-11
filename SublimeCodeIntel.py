@@ -873,7 +873,50 @@ def get_revision(path=None):
     return u'GIT-unknown'
 
 
+ALL_SETTINGS = [
+    'codeintel',
+    'codeintel_snippets',
+    'codeintel_disabled_languages',
+    'codeintel_live',
+    'codeintel_live_disabled_languages',
+    'codeintel_syntax_map',
+    'codeintel_scan_exclude_dir',
+    'codeintel_config',
+]
+
+
+def settings_changed():
+    for window in sublime.windows():
+        for view in window.views():
+            reload_settings(view)
+
+
+def reload_settings(view):
+    '''Restores user settings.'''
+    settings = sublime.load_settings(__name__ + '.sublime-settings')
+    settings.clear_on_change(__name__)
+    settings.add_on_change(__name__, settings_changed)
+
+    view_settings = view.settings()
+    for setting in ALL_SETTINGS:
+        if settings.get(setting) is not None:
+            view_settings.set(setting, settings.get(setting))
+
+    if view_settings.get('codeintel') is None:
+        view_settings.set('codeintel', True)
+
+    return view_settings
+
+
 class PythonCodeIntel(sublime_plugin.EventListener):
+    def on_load(self, view):
+        reload_settings(view)
+
+    def on_new(self, view):
+        reload_settings(view)
+
+    def on_clone(self, view):
+        reload_settings(view)
 
     def on_close(self, view):
         vid = view.id()
@@ -1040,11 +1083,7 @@ class CodeintelCommand(sublime_plugin.TextCommand):
 
     def reset(self):
         """Restores user settings."""
-        settings = sublime.load_settings('Base File.sublime-settings')
-        for attr in ('codeintel', 'codeintel_live', 'codeintel_live_disabled_languages'):
-            setting = settings.get(attr, None)
-            if setting is not None:
-                self.view.settings().set(attr, setting)
+        reload_settings(self.view)
         logger(self.view, 'info', "SublimeCodeIntel Reseted!")
 
     def enable(self, enable):
@@ -1124,7 +1163,7 @@ class SublimecodeintelLiveCommand(SublimecodeintelCommand):
             view = self.window.active_view()
 
             if onlylang:
-                enabled = enabled and view.settings().get('codeintel_live', True) == True
+                enabled = enabled and view.settings().get('codeintel_live', True) is True
                 lang = guess_lang(view)
                 enabled = enabled and lang and (lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_disabled_languages', [])]) != active
             else:
