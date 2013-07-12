@@ -5,7 +5,7 @@ Code intelligence plugin ported from `Open Komodo Editor <http://www.openkomodo.
 
 Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2):
 
-    PHP, Python, RHTML, JavaScript, Smarty, Mason, Node.js, XBL, Tcl, HTML, HTML5, TemplateToolkit, XUL, Django, Perl, Ruby, Python3.
+    JavaScript, Mason, XBL, XUL, RHTML, SCSS, Python, HTML, Ruby, Python3, XML, Sass, XSLT, Django, HTML5, Perl, CSS, Twig, Less, Smarty, Node.js, Tcl, TemplateToolkit, PHP.
 
 Provides the following features:
 
@@ -51,9 +51,25 @@ The "Packages" packages directory is located at:
 Using
 -----
 
-* Sublime CodeIntel will allow you to jump around symbol definitions even across files with just a click. To "Jump to Symbol Declaration" use ``ctr+super+alt+Up`` (or ``alt+click`` in Windows, ``super+click`` in Linux or ``ctrl+click`` in Mac OS X) over the symbol, and ``ctr+super+alt+Left`` for going back.
+* Start typing code as usual, autocomplete will pop up whenever it's available. SublimeCodeIntel will also allow you to jump around symbol definitions even across files with just a click ..and back.
 
-* Start typing code as usual, autocomplete will pop up whenever it's available. To trigger manual codeintel autocompletion use ``shift+ctrl+space`` (``shift+super+space`` in Mac OS X).
+  For Mac OS X:
+    * Jump to definition = ``Control+Click``
+    * Jump to definition = ``Control+Command+Alt+Up``
+    * Go back = ``Control+Command+Alt+Left``
+    * Manual Code Intelligence = ``Control+Shift+space``
+
+  For Linux:
+    * Jump to definition = ``Super+Click``
+    * Jump to definition = ``Control+Super+Alt+Up``
+    * Go back = ``Control+Super+Alt+Left``
+    * Manual Code Intelligence = ``Control+Shift+space``
+
+  For Windows:
+    * Jump to definition = ``Alt+Click``
+    * Jump to definition = ``Control+Windows+Alt+Up``
+    * Go back = ``Control+Windows+Alt+Left``
+    * Manual Code Intelligence = ``Control+Shift+space``
 
 Don't despair! The first time you use it it needs to build some indexes and it can take more than a few seconds.
 
@@ -107,7 +123,21 @@ Additional settings can be configured in the User File Settings:
 Troubleshooting
 ---------------
 
-Building process is no longer distributed with this repository. You need to get SublimeCodeIntel/`CodeIntelSources <https://github.com/SublimeCodeIntel/CodeIntelSources/>`_ to run build.sh.
+To force re-indexation of the code intelligence database you need to follow these steps:
+
+* Close Sublime Text 2
+
+* Open a terminal or navigate through your directories to find the directory ``~/.codeintel`` that contains ``codeintel.log``, ``VERSION`` and the directory ``db``. In Windows, this should be at ``%userprofile%\.codeintel``.
+
+* Delete the whole directory ``~/.codeintel`` and all of its content. Particularly, if you want to delete only the indexes, the code intelligence database indexes are located inside ``~/.codeintel/db``.
+
+* Start Sublime Text 2 and enjoy a clean re-indexing!
+
+
+Building
+--------
+
+Building process is no longer distributed with this repository. You need to get SublimeCodeIntel/`CodeIntelSources <https://github.com/SublimeCodeIntel/CodeIntelSources/>`_ to run ``build.sh``.
 
 More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/SublimeCodeIntel/CodeIntelSources/src>`_.
 
@@ -133,25 +163,7 @@ v2.0 (11-07-2013):
 
 + Binary files for Linux, Windows and Mac OS X updated.
 
-+ Shortcuts for jump to definition have changed:
-
-  For Mac OS X:
-    ``ctrl+click`` = Jump to definition
-    ``ctrl+super+alt+Up`` = Jump to definition
-    ``ctrl+super+alt+Left`` = Go back
-    ``ctrl+shift+space`` = Manual CodeIntel
-
-  For Linux:
-    ``super+click`` = Jump to definition
-    ``ctrl+super+alt+Up`` = Jump to definition
-    ``ctrl+super+alt+Left`` = Go back
-    ``ctrl+shift+space`` = Manual CodeIntel
-
-  For Windows:
-    ``alt+click`` = Jump to definition
-    ``ctrl+super+alt+Up`` = Jump to definition
-    ``ctrl+super+alt+Left`` = Go back
-    ``ctrl+shift+space`` = Manual CodeIntel
++ Shortcuts for jump to definition have changed.
 
 - PHP and UDL languages bugs fixed.
 
