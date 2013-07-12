@@ -923,8 +923,11 @@ def reload_settings(view):
     if view_settings.get('codeintel') is None:
         view_settings.set('codeintel', True)
 
-    if not view_settings.get('sublime_auto_complete'):
-        view_settings.set('auto_complete', False)
+    path = view.file_name()
+    lang = guess_lang(view, path)
+    if lang and lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_enabled_languages', [])]:
+        if not view_settings.get('sublime_auto_complete'):
+            view_settings.set('auto_complete', False)
 
     return view_settings
 
