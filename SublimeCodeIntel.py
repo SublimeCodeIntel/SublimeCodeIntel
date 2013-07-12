@@ -270,11 +270,10 @@ def guess_lang(view=None, path=None):
                     languages[vid][_k_] = None
                     return
 
-    _codeintel_disabled_languages = [l.lower() for l in view.settings().get('codeintel_disabled_languages', [])]
-    if lang and lang.lower() in _codeintel_disabled_languages:
-        logger(view, 'debug', "skip `%s': disabled language" % lang)
+    _codeintel_enabled_languages = [l.lower() for l in view.settings().get('codeintel_enabled_languages', [])]
+    if lang and lang.lower() not in _codeintel_enabled_languages:
         languages[vid][_k_] = None
-        return
+        return None
 
     if not lang and _lang and _lang in ('Console', 'Plain text'):
         if mgr:
@@ -891,9 +890,9 @@ def get_revision(path=None):
 ALL_SETTINGS = [
     'codeintel',
     'codeintel_snippets',
-    'codeintel_disabled_languages',
+    'codeintel_enabled_languages',
     'codeintel_live',
-    'codeintel_live_disabled_languages',
+    'codeintel_live_enabled_languages',
     'codeintel_max_recursive_dir_depth',
     'codeintel_scan_files_in_project',
     'codeintel_selected_catalogs',
@@ -954,7 +953,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
         path = view.file_name()
         lang = guess_lang(view, path)
-        if not lang or lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_disabled_languages', [])]:
+        if not lang or lang.lower() not in [l.lower() for l in view.settings().get('codeintel_live_enabled_languages', [])]:
             return
 
         view_sel = view.sel()
@@ -1125,16 +1124,17 @@ class CodeintelCommand(sublime_plugin.TextCommand):
     def on_off(self, enable, lang=None):
         """Turns live autocomplete on or off."""
         if lang:
-            _codeintel_live_disabled_languages = self.view.settings().get('codeintel_live_disabled_languages', [])
-            if lang.lower() in [l.lower() for l in _codeintel_live_disabled_languages]:
-                if enable:
-                    _codeintel_live_disabled_languages = [l for l in _codeintel_live_disabled_languages if l.lower() != lang.lower()]
-                    self.view.settings().set('codeintel_live_disabled_languages', _codeintel_live_disabled_languages)
+            _codeintel_live_enabled_languages = self.view.settings().get('codeintel_live_enabled_languages', [])
+            if lang.lower() in [l.lower() for l in _codeintel_live_enabled_languages]:
+                if not enable:
+                    _codeintel_live_enabled_languages = [l for l in _codeintel_live_enabled_languages if l.lower() != lang.lower()]
+                    self.view.settings().set('codeintel_live_enabled_languages', _codeintel_live_enabled_languages)
                     logger(self.view, 'info', "SublimeCodeIntel Live Autocompletion for %s %s" % (lang, "Enabled!" if enable else "Disabled"))
-            elif not enable:
-                _codeintel_live_disabled_languages.append(lang)
-                self.view.settings().set('codeintel_live_disabled_languages', _codeintel_live_disabled_languages)
-                logger(self.view, 'info', "SublimeCodeIntel Live Autocompletion for %s %s" % (lang, "Enabled!" if enable else "Disabled"))
+            else:
+                if enable:
+                    _codeintel_live_enabled_languages.append(lang)
+                    self.view.settings().set('codeintel_live_enabled_languages', _codeintel_live_enabled_languages)
+                    logger(self.view, 'info', "SublimeCodeIntel Live Autocompletion for %s %s" % (lang, "Enabled!" if enable else "Disabled"))
         else:
             self.view.settings().set('codeintel_live', enable)
             logger(self.view, 'info', "SublimeCodeIntel Live Autocompletion %s" % ("Enabled!" if enable else "Disabled",))
@@ -1197,7 +1197,7 @@ class SublimecodeintelLiveCommand(SublimecodeintelCommand):
             if onlylang:
                 enabled = enabled and view.settings().get('codeintel_live', True) is True
                 lang = guess_lang(view)
-                enabled = enabled and lang and (lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_disabled_languages', [])]) != active
+                enabled = enabled and lang and (lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_enabled_languages', [])]) == active
             else:
                 enabled = enabled and view.settings().get('codeintel_live', True) == active
 

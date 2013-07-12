@@ -19,10 +19,13 @@
     "codeintel_snippets": true,
 
     /*
-        An array of language names which are disabled.
+        An array of language names which are enabled.
     */
-    "codeintel_disabled_languages":
+    "codeintel_enabled_languages":
     [
+        "JavaScript", "Mason", "XBL", "XUL", "RHTML", "SCSS", "Python", "HTML",
+        "Ruby", "Python3", "XML", "Sass", "XSLT", "Django", "HTML5", "Perl", "CSS",
+        "Twig", "Less", "Smarty", "Node.js", "Tcl", "TemplateToolkit", "PHP"
     ],
 
     /*
@@ -34,10 +37,13 @@
     "codeintel_live": true,
 
     /*
-        An array of language names to disable.
+        An array of language names to enable.
     */
-    "codeintel_live_disabled_languages":
+    "codeintel_live_enabled_languages":
     [
+        "JavaScript", "Mason", "XBL", "XUL", "RHTML", "SCSS", "Python", "HTML",
+        "Ruby", "Python3", "XML", "Sass", "XSLT", "Django", "HTML5", "Perl", "CSS",
+        "Twig", "Less", "Smarty", "Node.js", "Tcl", "TemplateToolkit", "PHP"
     ],
 
     /*
