@@ -645,7 +645,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             try:
                 tryReadDict(config_file, _config)
             except Exception, e:
-                msg = "Malformed configuration file '%s': %s" % (config_default_file, e)
+                msg = "Malformed configuration file '%s': %s" % (config_file, e)
                 log.error(msg)
                 codeintel_log.error(msg)
             config.update(_config.get(lang, {}))
