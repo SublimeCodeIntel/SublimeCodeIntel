@@ -11,7 +11,7 @@
     "codeintel": true,
 
     /* Disable Sublime Text autocomplete: */
-    "sublime_auto_complete": false,
+    "sublime_auto_complete": true,
 
     /*
         Insert functions snippets.
