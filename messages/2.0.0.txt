@@ -60,6 +60,7 @@ NEW FEATURES
 
 
 CHANGES/FIXES
+
 - Disables Sublime Text 2's auto_complete by default (new ``sublime_auto_complete`` setting)
 
 - JavaScript and PHP: Do not include all files and directories from the project base directory while scanning.

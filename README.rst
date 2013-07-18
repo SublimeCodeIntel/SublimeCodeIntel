@@ -144,6 +144,12 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 
 What's New
 ----------
+v2.0.1 (??-??-????):
+
+- Removed some Linux dependencies to GLIBC_2.4.
+
+- Sublime Text 2 built-in auto complete no longer disabled by default (use `"sublime_auto_complete": false` setting instad).
+
 
 v2.0 (11-07-2013):
 
