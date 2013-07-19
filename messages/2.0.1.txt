@@ -1,0 +1,59 @@
+SublimeCodeIntel v2.0.1 Release Notes
+=====================================
+[Please restart Sublime Text 2 after reading this. In case of trouble, please read the Troubleshooting section in the README]
+
+Code intelligence plugin ported from Open Komodo Editor to Sublime Text 2.
+
+Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2):
+
+JavaScript, Mason, XBL, XUL, RHTML, SCSS, Python, HTML, Ruby, Python3, XML, Sass, XSLT, Django, HTML5, Perl, CSS, Twig, Less, Smarty, Node.js, Tcl, TemplateToolkit, PHP.
+
+Provides the following features:
+
+Jump to Symbol Definition - Jump to the file and line of the definition of a symbol.
+Imports autocomplete - Shows autocomplete with the available modules/symbols in real time.
+Function Call tooltips - Displays information in the status bar about the working function.
+Plugin should work in all three platforms (MacOS X, Windows and Linux).
+
++ Shortcuts for jump to definition have changed:
+
+  For Mac OS X:
+    * Jump to definition = ``Control+Click``
+    * Jump to definition = ``Control+Command+Alt+Up``
+    * Go back = ``Control+Command+Alt+Left``
+    * Manual CodeIntel = ``Control+Shift+space``
+
+  For Linux:
+    * Jump to definition = ``Super+Click``
+    * Jump to definition = ``Control+Super+Alt+Up``
+    * Go back = ``Control+Super+Alt+Left``
+    * Manual CodeIntel = ``Control+Shift+space``
+
+  For Windows:
+    * Jump to definition = ``Alt+Click``
+    * Jump to definition = ``Control+Windows+Alt+Up``
+    * Go back = ``Control+Windows+Alt+Left``
+    * Manual CodeIntel = ``Control+Shift+space``
+
+
+For more information:
+---------------------
+Please take the time to read the documentation:
+
+* Online - https://github.com/SublimeCodeIntel/SublimeCodeIntel
+
+
+IMPORTANT
+
+Do NOT edit the default SublimeCodeIntel settings. Your changes will be lost
+when SublimeCodeIntel is updated. ALWAYS edit the user SublimeCodeIntel settings
+by selecting "Preferences->Package Settings->SublimeCodeIntel->Settings - User".
+Note that individual settings you include in your user settings will **completely**
+replace the corresponding default setting, so you must provide that setting in its entirety.
+
+
+CHANGES/FIXES
+
+- Removed some Linux dependencies to GLIBC_2.4.
+
+- Sublime Text 2 built-in auto complete no longer disabled by default (use `"sublime_auto_complete": false` setting instad).

@@ -144,7 +144,7 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 
 What's New
 ----------
-v2.0.1 (??-??-????):
+v2.0.1 (19-07-2013):
 
 - Removed some Linux dependencies to GLIBC_2.4.
 

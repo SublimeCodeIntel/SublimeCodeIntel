@@ -68,7 +68,7 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
     }
 """
 
-VERSION = "2.0"
+VERSION = "2.0.1"
 
 import os
 import re
