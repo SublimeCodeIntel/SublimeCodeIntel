@@ -67,6 +67,7 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
         }
     }
 """
+from __future__ import print_function
 
 VERSION = "2.0.2"
 
@@ -81,8 +82,10 @@ import sublime
 import sublime_plugin
 import threading
 import logging
-
-from cStringIO import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 CODEINTEL_HOME_DIR = os.path.expanduser(os.path.join('~', '.codeintel'))
 __file__ = os.path.normpath(os.path.abspath(__file__))
@@ -194,7 +197,7 @@ def calltip(view, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel', logge
             current_type, current_msg, current_order = status_msg.get(lid, [None, None, 0])
             if msg != current_msg and order == current_order:
                 if msg:
-                    print >>condeintel_log_file, "+", "%s: %s" % (ltype.capitalize(), msg)
+                    print("+", "%s: %s" % (ltype.capitalize(), msg), file=condeintel_log_file)
                     (logger or log.info)(msg)
                 if ltype != 'debug':
                     if msg:
@@ -525,7 +528,7 @@ def codeintel_manager(folders_id):
         condeintel_log_file = open(condeintel_log_filename, 'w', 1)
         codeintel_log.handlers = [logging.StreamHandler(condeintel_log_file)]
         msg = "Starting logging SublimeCodeIntel v%s rev %s (%s) on %s" % (VERSION, get_revision()[:12], os.stat(__file__)[stat.ST_MTIME], datetime.datetime.now().ctime())
-        print >>condeintel_log_file, "%s\n%s" % (msg, "=" * len(msg))
+        print("%s\n%s" % (msg, "=" * len(msg)), file=condeintel_log_file)
 
         _ci_mgr_[folders_id] = mgr
     return mgr
@@ -638,13 +641,13 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             _config = {}
             try:
                 tryReadDict(config_default_file, _config)
-            except Exception, e:
+            except Exception as e:
                 msg = "Malformed configuration file '%s': %s" % (config_default_file, e)
                 log.error(msg)
                 codeintel_log.error(msg)
             try:
                 tryReadDict(config_file, _config)
-            except Exception, e:
+            except Exception as e:
                 msg = "Malformed configuration file '%s': %s" % (config_default_file, e)
                 log.error(msg)
                 codeintel_log.error(msg)
@@ -703,7 +706,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                     despair = 0
                     despaired = False
                     msg = "Updating indexes for '%s'... The first time this can take a while." % lang
-                    print >>condeintel_log_file, msg
+                    print(msg, file=condeintel_log_file)
                     logger(view, 'info', msg, timeout=20000, delay=1000)
                     if not path or is_scratch:
                         buf.scan()  # FIXME: Always scanning unsaved files (since many tabs can have unsaved files, or find other path as ID)
@@ -717,7 +720,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             buf = None
         if callback:
             msg = "Doing CodeIntel for '%s' (hold on)..." % lang
-            print >>condeintel_log_file, msg
+            print(msg, file=condeintel_log_file)
             logger(view, 'info', msg, timeout=20000, delay=1000)
             callback(buf, msgs)
         else:
@@ -803,7 +806,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             timestr = "%sms" % int(round(total))
         if not despaired or total < timeout:
             msg = "Done '%s' CodeIntel! Full CodeIntel took %s" % (lang, timestr)
-            print >>condeintel_log_file, msg
+            print(msg, file=condeintel_log_file)
 
             def _callback():
                 view_sel = view.sel()
@@ -813,7 +816,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             sublime.set_timeout(_callback, 0)
         else:
             msg = "Just finished indexing '%s'! Please try again. Full CodeIntel took %s" % (lang, timestr)
-            print >>condeintel_log_file, msg
+            print(msg, file=condeintel_log_file)
             logger(view, 'info', msg, timeout=3000)
     codeintel_scan(view, path, content, lang, _codeintel, pos, forms)
 
