@@ -68,7 +68,7 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
     }
 """
 
-VERSION = "2.0.1"
+VERSION = "2.0.2"
 
 import os
 import re
@@ -968,14 +968,14 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         text = view.substr(sublime.Region(pos - 1, pos))
         is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
 
-        # print 'on_modified', view.command_history(1), view.command_history(0), view.command_history(-1)
         if (not hasattr(view, 'command_history') or view.command_history(1)[0] is None and (
-                view.command_history(0)[0] in ('insert', 'paste') or
+                view.command_history(0)[0] == 'insert' and not any(c == view.command_history(0)[1]['characters'][-1] for c in ('\n', '\t', ' ')) or
                 view.command_history(-1)[0] in ('insert', 'paste') and (
                     view.command_history(0)[0] == 'commit_completion' or
                     view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)'
                 )
         )):
+            # print 'on_modified', view.command_history(1), view.command_history(0), view.command_history(-1)
             if view.command_history(0)[0] == 'commit_completion':
                 forms = ('calltips',)
             else:
