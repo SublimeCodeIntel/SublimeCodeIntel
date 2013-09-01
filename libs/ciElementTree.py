@@ -1,25 +1,52 @@
+import sys
+import sublime
+
+VERSION = sys.version_info[:2]  # Python version
+PLATFORM = sublime.platform()  # String  Returns the platform, which may be "osx", "linux" or "windows"
+ARCH = sublime.arch()  # String  Returns the CPU architecture, which may be "x32" or "x64"
+
+platform = None
+
 try:
     from _local_arch.ciElementTree import *
     platform = "Local arch"
 except ImportError:
-    try:
-        from _linux_libcpp6_x86_64.ciElementTree import *
-        platform = "Linux 64 bits"
-    except ImportError:
-        try:
-            from _linux_libcpp6_x86.ciElementTree import *
-            platform = "Linux 32 bits"
-        except ImportError:
-            try:
-                from _win64.ciElementTree import *
+    if VERSION >= (3, 3):
+        if PLATFORM == 'osx':
+            from _macosx_universal_py33.ciElementTree import *
+            platform = "MacOS X Universal"
+        elif PLATFORM == 'linux':
+            if ARCH == 'x64':
+                from _linux_libcpp6_x86_64_py33.ciElementTree import *
+                platform = "Linux 64 bits"
+            elif ARCH == 'x32':
+                from _linux_libcpp6_x86_py33.ciElementTree import *
+                platform = "Linux 32 bits"
+        elif PLATFORM == 'windows':
+            if ARCH == 'x64':
+                from _win64_py33.ciElementTree import *
                 platform = "Windows 64 bits"
-            except ImportError:
-                try:
-                    from _win32.ciElementTree import *
-                    platform = "Windows 32 bits"
-                except ImportError:
-                    try:
-                        from _macosx_universal.ciElementTree import *
-                        platform = "MacOS X Universal"
-                    except ImportError:
-                        raise ImportError("Could not find a suitable ciElementTree binary for your platform and architecture.")
+            elif ARCH == 'x32':
+                from _win32_py33.ciElementTree import *
+                platform = "Windows 32 bits"
+    elif VERSION >= (2, 6):
+        if PLATFORM == 'osx':
+            from _macosx_universal_py26.ciElementTree import *
+            platform = "MacOS X Universal"
+        elif PLATFORM == 'linux':
+            if ARCH == 'x64':
+                from _linux_libcpp6_x86_64_py26.ciElementTree import *
+                platform = "Linux 64 bits"
+            elif ARCH == 'x32':
+                from _linux_libcpp6_x86_py26.ciElementTree import *
+                platform = "Linux 32 bits"
+        elif PLATFORM == 'windows':
+            if ARCH == 'x64':
+                from _win64_py26.ciElementTree import *
+                platform = "Windows 64 bits"
+            elif ARCH == 'x32':
+                from _win32_py26.ciElementTree import *
+                platform = "Windows 32 bits"
+
+if not platform:
+    raise ImportError("Could not find a suitable ciElementTree binary for your platform and architecture.")
