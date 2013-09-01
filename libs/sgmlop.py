@@ -1,9 +1,9 @@
 import sys
-import sublime
+import struct
 
-VERSION = sys.version_info[:2]  # Python version
-PLATFORM = sublime.platform()  # String  Returns the platform, which may be "osx", "linux" or "windows"
-ARCH = sublime.arch()  # String  Returns the CPU architecture, which may be "x32" or "x64"
+VERSION = sys.version_info[:2]
+PLATFORM = sys.platform
+ARCH = 'x%d' % (struct.calcsize('P') * 8)
 
 platform = None
 
@@ -12,10 +12,10 @@ try:
     platform = "Local arch"
 except ImportError:
     if VERSION >= (3, 3):
-        if PLATFORM == 'osx':
+        if PLATFORM == 'darwin':
             from _macosx_universal_py33.sgmlop import *
             platform = "MacOS X Universal"
-        elif PLATFORM == 'linux':
+        elif PLATFORM == 'linux2':
             if ARCH == 'x64':
                 from _linux_libcpp6_x86_64_py33.sgmlop import *
                 platform = "Linux 64 bits"
@@ -30,10 +30,10 @@ except ImportError:
                 from _win32_py33.sgmlop import *
                 platform = "Windows 32 bits"
     elif VERSION >= (2, 6):
-        if PLATFORM == 'osx':
+        if PLATFORM == 'darwin':
             from _macosx_universal_py26.sgmlop import *
             platform = "MacOS X Universal"
-        elif PLATFORM == 'linux':
+        elif PLATFORM == 'linux2':
             if ARCH == 'x64':
                 from _linux_libcpp6_x86_64_py26.sgmlop import *
                 platform = "Linux 64 bits"
