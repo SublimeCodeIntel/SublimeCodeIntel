@@ -106,7 +106,6 @@ __all__ = [
 # structure, and convert it from and to XML.
 ##
 
-import string
 import sys
 import re
 
@@ -812,7 +811,7 @@ def _encode_entity(text, pattern=_escape):
             if text is None:
                 text = "&#%d;" % ord(char)
             append(text)
-        return string.join(out, "")
+        return "".join(out)
     try:
         return _encode(pattern.sub(escape_entities, text), "ascii")
     except TypeError:
@@ -823,7 +822,7 @@ def _encode_entity(text, pattern=_escape):
 # (or "utf-16")
 
 
-def _escape_cdata(text, encoding=None, replace=string.replace):
+def _escape_cdata(text, encoding=None, replace=str.replace):
     # escape character data
     try:
         if encoding:
@@ -839,7 +838,7 @@ def _escape_cdata(text, encoding=None, replace=string.replace):
         _raise_serialization_error(text)
 
 
-def _escape_attrib(text, encoding=None, replace=string.replace):
+def _escape_attrib(text, encoding=None, replace=str.replace):
     # escape attribute value
     try:
         if encoding:
@@ -864,7 +863,7 @@ def fixtag(tag, namespaces):
     # tag and namespace declaration, if any
     if isinstance(tag, QName):
         tag = tag.text
-    namespace_uri, tag = string.split(tag[1:], "}", 1)
+    namespace_uri, tag = tag[1:].split("}", 1)
     prefix = namespaces.get(namespace_uri)
     if prefix is None:
         prefix = _namespace_map.get(namespace_uri)
@@ -1044,7 +1043,7 @@ def tostring(element, encoding=None):
     file = dummy()
     file.write = data.append
     ElementTree(element).write(file, encoding)
-    return string.join(data, "")
+    return "".join(data)
 
 ##
 # Generic element structure builder.  This builder converts a sequence
@@ -1084,7 +1083,7 @@ class TreeBuilder:
     def _flush(self):
         if self._data:
             if self._last is not None:
-                text = string.join(self._data, "")
+                text = "".join(self._data)
                 if self._tail:
                     assert self._last.tail is None, "internal error (tail)"
                     self._last.tail = text
@@ -1246,7 +1245,7 @@ class XMLTreeBuilder:
             if prefix == ">":
                 self._doctype = None
                 return
-            text = string.strip(text)
+            text = text.strip()
             if not text:
                 return
             self._doctype.append(text)

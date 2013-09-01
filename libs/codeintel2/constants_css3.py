@@ -882,7 +882,7 @@ for attr, details in list(CSS3_DATA.items()):
                         attr_line = "        " + attr_line
                     desc_lines.append(attr_line)
         CSS3_SPECIFIC_CALLTIP_DICT[attr] = "\n".join(
-            desc_lines).encode("ascii", 'replace')
+            desc_lines)
 
 removed_css2_items = ["azimuth", "clip", "pointer-events"]
 

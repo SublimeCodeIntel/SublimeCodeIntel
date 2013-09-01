@@ -1169,7 +1169,7 @@ class CSSBuffer(Buffer):
 
 #---- internal support stuff
 _ident_chars_dictionary = dict((ch, 1) for ch in
-                               string.lowercase + string.uppercase + string.digits + "-")
+                               string.ascii_lowercase + string.ascii_uppercase + string.digits + "-")
 
 
 def _isident_first_char(char):

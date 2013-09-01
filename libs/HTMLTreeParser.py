@@ -39,7 +39,7 @@
 import re
 import string
 import sys
-import mimetools
+import email
 import io
 from elementtree import ElementTree
 
@@ -179,8 +179,8 @@ class HTMLTreeBuilder(ElementTree.TreeBuilder):
                 elif k == "content":
                     content = v
             if http_equiv == "content-type" and content:
-                # use mimetools to parse the http header
-                header = mimetools.Message(
+                # use email to parse the http header
+                header = email.Message(
                     io.StringIO("%s: %s\n\n" % (http_equiv, content))
                 )
                 encoding = header.getparam("charset")
