@@ -1,4 +1,4 @@
-SublimeCodeIntel v2.0.1 Release Notes
+SublimeCodeIntel v2.0.2 Release Notes
 =====================================
 [Please restart Sublime Text 2 after reading this. In case of trouble, please read the Troubleshooting section in the README]
 
@@ -53,5 +53,9 @@ replace the corresponding default setting, so you must provide that setting in i
 
 
 CHANGES/FIXES
+
+- Snippets insertion delayed a bit.
+
+- Tooltips are removed when line changes.
 
 - Improved autocomplete in HTML.

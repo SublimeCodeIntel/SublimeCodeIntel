@@ -144,6 +144,15 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 
 What's New
 ----------
+v2.0.2 (?):
+
+- Snippets insertion delayed a bit.
+
+- Tooltips are removed when line changes.
+
+- Improved autocomplete in HTML.
+
+
 v2.0.1 (19-07-2013):
 
 - Removed some Linux dependencies to GLIBC_2.4.
