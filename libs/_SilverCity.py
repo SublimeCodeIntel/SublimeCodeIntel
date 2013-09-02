@@ -15,14 +15,14 @@ except ImportError:
         if PLATFORM == 'darwin':
             from _macosx_universal_py33._SilverCity import *
             platform = "MacOS X Universal"
-        elif PLATFORM == 'linux2':
+        elif PLATFORM.startswith('linux'):
             if ARCH == 'x64':
                 from _linux_libcpp6_x86_64_py33._SilverCity import *
                 platform = "Linux 64 bits"
             elif ARCH == 'x32':
                 from _linux_libcpp6_x86_py33._SilverCity import *
                 platform = "Linux 32 bits"
-        elif PLATFORM == 'windows':
+        elif PLATFORM.startswith('win'):
             if ARCH == 'x64':
                 from _win64_py33._SilverCity import *
                 platform = "Windows 64 bits"
@@ -33,14 +33,14 @@ except ImportError:
         if PLATFORM == 'darwin':
             from _macosx_universal_py26._SilverCity import *
             platform = "MacOS X Universal"
-        elif PLATFORM == 'linux2':
+        elif PLATFORM.startswith('linux'):
             if ARCH == 'x64':
                 from _linux_libcpp6_x86_64_py26._SilverCity import *
                 platform = "Linux 64 bits"
             elif ARCH == 'x32':
                 from _linux_libcpp6_x86_py26._SilverCity import *
                 platform = "Linux 32 bits"
-        elif PLATFORM == 'windows':
+        elif PLATFORM.startswith('win'):
             if ARCH == 'x64':
                 from _win64_py26._SilverCity import *
                 platform = "Windows 64 bits"
