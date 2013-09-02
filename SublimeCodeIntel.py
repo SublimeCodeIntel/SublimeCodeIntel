@@ -188,7 +188,7 @@ def calltip(view, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel', logge
 
     def _calltip_set():
         view_sel = view.sel()
-        lineno = view.line(view_sel[0]) if view_sel else 0
+        lineno = view.rowcol(view_sel[0].end())[0] if view_sel else 0
         status_lock.acquire()
         try:
             current_type, current_msg, current_order = status_msg.get(lid, [None, None, 0])
@@ -196,16 +196,16 @@ def calltip(view, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel', logge
                 if msg:
                     print("+", "%s: %s" % (ltype.capitalize(), msg), file=condeintel_log_file)
                     (logger or log.info)(msg)
-                if ltype != 'debug':
-                    if msg:
+                    if ltype != 'debug':
                         view.set_status(lid, "%s: %s" % (ltype.capitalize(), msg))
-                    else:
-                        view.erase_status(lid)
-                    status_msg[lid][0] = [ltype, msg, order]
-                if 'warning' not in lid and msg:
-                    status_lineno[lid] = lineno
-                elif lid in status_lineno:
-                    del status_lineno[lid]
+                        status_msg[lid][0] = [ltype, msg, order]
+                    if 'warning' not in lid:
+                        status_lineno[lid] = lineno
+                else:
+                    view.erase_status(lid)
+                    status_msg[lid][1] = None
+                    if lid in status_lineno:
+                        del status_lineno[lid]
         finally:
             status_lock.release()
 
