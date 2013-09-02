@@ -286,14 +286,14 @@ def guess_lang(view=None, path=None):
 
 
 def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], kwargs={}):
-    def _autocomplete_callback(view, path, lang):
+    def _autocomplete_callback(view, path, original_pos, lang):
         view_sel = view.sel()
         if not view_sel:
             return
 
         sel = view_sel[0]
         pos = sel.end()
-        if not pos:
+        if not pos or pos != original_pos:
             return
 
         lpos = view.line(sel).begin()
@@ -325,15 +325,20 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                             'auto_complete_commit_on_tab': True,
                         })
 
-                if calltips is not None:
-                    # Trigger a tooltip
-                    calltip(view, 'tip', calltips[0])
-                    # Insert function call snippets:
-                    if view_settings.get('codeintel_snippets', True):
-                        # Insert parameters as snippet:
-                        if content[sel.begin() - 1] == '(' and content[sel.begin()] == ')':
-                            m = re.search(r'\(([^\[\(\)]*)', calltips[0])
-                            params = [p.strip() for p in m.group(1).split(',')] if m else None
+                if calltips is None:
+                    return
+                tip_info = calltips[0].split('\n')
+
+                # Trigger a tooltip
+                calltip(view, 'tip', ' '.join(tip_info[1:]))
+
+                # Insert function call snippets:
+                if view_settings.get('codeintel_snippets', True):
+                    # Insert parameters as snippet:
+                    if content[sel.begin() - 1] == '(' and content[sel.begin()] == ')':
+                        m = re.search(r'([^\s]+)\(([^\[\(\)]*)', tip_info[0])
+                        if m:
+                            params = [p.strip() for p in m.group(2).split(',')]
                             if params:
                                 snippet = []
                                 for i, p in enumerate(params):
@@ -343,7 +348,21 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                                     if var[0] == '$':
                                         var = var[1:]
                                     snippet.append('${%s:%s}' % (i + 1, var))
-                                view.run_command('insert_snippet', {'contents': ', '.join(snippet)})
+                                contents = ', '.join(snippet)
+                                # func = m.group(1)
+                                # scope = view.scope_name(pos)
+                                # view.run_command('new_snippet', {'contents': contents, 'tab_trigger': func, 'scope': scope})  # FIXME: Doesn't add the new snippet... is it possible to do so?
+                                def _insert_snippet():
+                                    # Check to see we are still at a position where the snippet is wanted:
+                                    view_sel = view.sel()
+                                    if not view_sel:
+                                        return
+                                    sel = view_sel[0]
+                                    pos = sel.end()
+                                    if not pos or pos != original_pos:
+                                        return
+                                    view.run_command('insert_snippet', {'contents': contents})
+                                sublime.set_timeout(_insert_snippet, 500)  # Delay snippet insertion a bit... it's annoying some times
             codeintel(view, path, content, lang, pos, forms, _trigger)
     # If it's a fill char, queue using lower values and preemptive behavior
     queue(view, _autocomplete_callback, timeout, busy_timeout, preemptive, args=args, kwargs=kwargs)
@@ -980,7 +999,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                 forms = ('calltips',)
             else:
                 forms = ('calltips', 'cplns')
-            autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, forms, is_fill_char, args=[path, lang])
+            autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, forms, is_fill_char, args=[path, pos, lang])
         else:
             view.run_command('hide_auto_complete')
 
@@ -1016,10 +1035,15 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 class CodeIntelAutoComplete(sublime_plugin.TextCommand):
     def run(self, edit, block=False):
         view = self.view
+        view_sel = view.sel()
+        if not view_sel:
+            return
+        sel = view_sel[0]
+        pos = sel.end()
         path = view.file_name()
         lang = guess_lang(view, path)
         if lang:
-            autocomplete(view, 0, 0, ('calltips', 'cplns'), True, args=[path, lang])
+            autocomplete(view, 0, 0, ('calltips', 'cplns'), True, args=[path, pos, lang])
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
