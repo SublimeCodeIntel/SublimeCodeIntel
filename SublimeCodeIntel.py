@@ -328,9 +328,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                 if calltips is None:
                     return
                 tip_info = calltips[0].split('\n')
-
-                # Trigger a tooltip
-                calltip(view, 'tip', ' '.join(tip_info[1:]))
+                tooltip = ' '.join(tip_info[1:])
 
                 # Insert function call snippets:
                 if view_settings.get('codeintel_snippets', True):
@@ -363,6 +361,11 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                                         return
                                     view.run_command('insert_snippet', {'contents': contents})
                                 sublime.set_timeout(_insert_snippet, 500)  # Delay snippet insertion a bit... it's annoying some times
+                            tooltip += ' - ' + tip_info[0]  # Add function to the end
+                        else:
+                            tooltip = tip_info[0] + ' ' + tooltip  # No function match, just add the first line
+                # Trigger a tooltip
+                calltip(view, 'tip', tooltip)
             codeintel(view, path, content, lang, pos, forms, _trigger)
     # If it's a fill char, queue using lower values and preemptive behavior
     queue(view, _autocomplete_callback, timeout, busy_timeout, preemptive, args=args, kwargs=kwargs)
