@@ -1002,7 +1002,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
 
         # print('on_modified', view.command_history(1), view.command_history(0), view.command_history(-1))
-        if (not hasattr(view, 'command_history') or view.command_history(1)[0] is None and (
+        if (not hasattr(view, 'command_history') or view.command_history(1)[1] is None and (
                 view.command_history(0)[0] == 'insert' or
                 view.command_history(-1)[0] in ('insert', 'paste') and (
                     view.command_history(0)[0] == 'commit_completion' or
