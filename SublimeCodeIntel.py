@@ -1174,11 +1174,7 @@ class CodeintelCommand(sublime_plugin.TextCommand):
 class SublimecodeintelWindowCommand(sublime_plugin.WindowCommand):
     def is_enabled(self):
         view = self.window.active_view()
-
-        if view:
-            return True
-        else:
-            return False
+        return bool(view)
 
     def run_(self, args):
         pass
@@ -1192,7 +1188,7 @@ class SublimecodeintelCommand(SublimecodeintelWindowCommand):
             view = self.window.active_view()
             enabled = enabled and view.settings().get('codeintel', True) == active
 
-        return enabled
+        return bool(enabled)
 
     def run_(self, args={}):
         view = self.window.active_view()
@@ -1231,7 +1227,7 @@ class SublimecodeintelLiveCommand(SublimecodeintelCommand):
             else:
                 enabled = enabled and view.settings().get('codeintel_live', True) == active
 
-        return enabled
+        return bool(enabled)
 
 
 class SublimecodeintelEnableLiveCommand(SublimecodeintelLiveCommand):
