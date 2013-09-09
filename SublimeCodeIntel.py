@@ -945,14 +945,17 @@ def settings_changed():
 
 def reload_settings(view):
     '''Restores user settings.'''
-    settings = sublime.load_settings(__name__ + '.sublime-settings')
-    settings.clear_on_change(__name__)
-    settings.add_on_change(__name__, settings_changed)
+    settings_name = 'SublimeCodeIntel'
+    settings = sublime.load_settings(settings_name + '.sublime-settings')
+    settings.clear_on_change(settings_name)
+    settings.add_on_change(settings_name, settings_changed)
 
     view_settings = view.settings()
-    for setting in ALL_SETTINGS:
-        if settings.get(setting) is not None:
-            view_settings.set(setting, settings.get(setting))
+
+    for setting_name in ALL_SETTINGS:
+        if settings.get(setting_name) is not None:
+            setting = settings.get(setting_name)
+            view_settings.set(setting_name, setting)
 
     if view_settings.get('codeintel') is None:
         view_settings.set('codeintel', True)
