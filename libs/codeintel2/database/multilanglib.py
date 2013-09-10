@@ -47,7 +47,7 @@ from glob import glob
 from pprint import pprint, pformat
 import time
 import logging
-from io import StringIO
+from io import BytesIO
 import copy
 
 import ciElementTree as ET
@@ -924,7 +924,7 @@ class MultiLangZone(LangZone):
                         if blob.get("src") is None:
                             blob.set(
                                 "src", buf.path)   # for defns_from_pos() support
-                        ET.ElementTree(blob).write(join(dbdir, dbfile+".blob"))
+                        ET.ElementTree(blob).write(join(dbdir, dbfile + ".blob"))
                     elif action == "remove":
                         dbfile = blob_index[lang][blobname]
                         del blob_index[lang][blobname]
@@ -934,7 +934,7 @@ class MultiLangZone(LangZone):
                                   self.lang, lang, dhash, dbfile)
                         try:
                             os.remove(join(
-                                self.base_dir, dhash, dbfile+".blob"))
+                                self.base_dir, dhash, dbfile + ".blob"))
                         except EnvironmentError as ex:
                             self.db.corruption("MultiLangZone.update_buf_data",
                                                "could not remove dbfile for '%s' blob: %s"
@@ -943,20 +943,20 @@ class MultiLangZone(LangZone):
                     elif action == "update":
                         # Try to only change the dbfile on disk if it is
                         # different.
-                        s = StringIO()
+                        s = BytesIO()
                         if blob.get("src") is None:
                             blob.set(
                                 "src", buf.path)   # for defns_from_pos() support
                         ET.ElementTree(blob).write(s)
                         new_dbfile_content = s.getvalue()
                         dbfile = blob_index[lang][blobname]
-                        dbpath = join(self.base_dir, dhash, dbfile+".blob")
+                        dbpath = join(self.base_dir, dhash, dbfile + ".blob")
                         # PERF: Might be nice to cache the new dbfile
                         #       content for the next time this resource is
                         #       updated. For files under edit this will be
                         #       common. I.e. just for the "editset".
                         try:
-                            fin = open(dbpath, 'r')
+                            fin = open(dbpath, 'rb')
                         except (OSError, IOError) as ex:
                             # Technically if the dbfile doesn't exist, this
                             # is a sign of database corruption. No matter
@@ -974,7 +974,7 @@ class MultiLangZone(LangZone):
                             # XXX What to do if fail to write out file?
                             log.debug("fs-write: %s|%s blob '%s/%s'",
                                       self.lang, lang, dhash, dbfile)
-                            fout = open(dbpath, 'w')
+                            fout = open(dbpath, 'wb')
                             try:
                                 fout.write(new_dbfile_content)
                             finally:
