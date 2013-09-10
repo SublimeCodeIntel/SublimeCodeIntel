@@ -1241,13 +1241,6 @@ class PythonCILEDriver(CILEDriver):
         log.info("scan_purelang: path: %r lang: %s", buf.path, buf.lang)
         # log.warn("TODO: python cile that uses elementtree")
         content = buf.accessor.text
-        if isinstance(content, str):
-            encoding = buf.encoding or "utf-8"
-            try:
-                content = content.encode(encoding)
-            except UnicodeError as ex:
-                raise CodeIntelError("cannot encode Python content as %r (%s)"
-                                     % (encoding, ex))
         el = pythoncile.scan_et(content, buf.path, lang=self.lang)
         return el
 
