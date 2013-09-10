@@ -58,11 +58,13 @@ hotshotProfilers = {}
 
 
 def isident(char):
-    return "a" <= char <= "z" or "A" <= char <= "Z" or char == "_"
+    char = ord(char)
+    return ord('a') <= char <= ord('z') or ord('A') <= char <= ord('Z') or char == ord('_')
 
 
 def isdigit(char):
-    return "0" <= char <= "9"
+    char = ord(char)
+    return ord('0') <= char <= ord('9')
 
 # A "safe" language name for the given language where safe generally
 # means safe for a file path.
