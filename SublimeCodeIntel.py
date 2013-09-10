@@ -728,7 +728,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 codeintel_log.warning(msg)
                 msgs.append(('info', msg))
 
-            buf = mgr.buf_from_content(content.encode('utf-8'), lang, env, path or "<Unsaved>", 'utf-8')
+            buf = mgr.buf_from_content(content, lang, env, path or "<Unsaved>", 'utf-8')
 
             now = datetime.datetime.now()
             if not _ci_next_scan_.get(vid) or now > _ci_next_scan_[vid]:
