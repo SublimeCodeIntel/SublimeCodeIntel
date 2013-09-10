@@ -432,11 +432,11 @@ class AST2CIXVisitor(ast.NodeVisitor):
         file = self.cix.close()
         return file
 
-    def generic_visit(self, node):
-        method = 'visit_' + node.__class__.__name__
-        if not hasattr(self, method):
-            log.info("generic visit_%s:%s: %r %r", node.__class__.__name__, getattr(node, 'lineno', '?'), self.lines and hasattr(node, 'lineno') and self.lines[node.lineno - 1], node._fields)
-        return super(AST2CIXVisitor, self).generic_visit(node)
+    # def generic_visit(self, node):
+    #     method = 'visit_' + node.__class__.__name__
+    #     if not hasattr(self, method):
+    #         log.info("generic visit_%s:%s: %r %r", node.__class__.__name__, getattr(node, 'lineno', '?'), self.lines and hasattr(node, 'lineno') and self.lines[node.lineno - 1], node._fields)
+    #     return super(AST2CIXVisitor, self).generic_visit(node)
 
     def visit_Module(self, node):
         log.info("visit_%s:%s: %r %r", node.__class__.__name__, getattr(node, 'lineno', '?'), self.lines and hasattr(node, 'lineno') and self.lines[node.lineno - 1], node._fields)
