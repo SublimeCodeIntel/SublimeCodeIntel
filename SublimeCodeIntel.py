@@ -340,12 +340,13 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                             if params:
                                 snippet = []
                                 for i, p in enumerate(params):
-                                    var, _, _ = p.partition('=')
-                                    if ' ' in var:
-                                        var = var.split(' ')[1]
-                                    if var[0] == '$':
-                                        var = var[1:]
-                                    snippet.append('${%s:%s}' % (i + 1, var))
+                                    if p:
+                                        var, _, _ = p.partition('=')
+                                        if ' ' in var:
+                                            var = var.split(' ')[1]
+                                        if var[0] == '$':
+                                            var = var[1:]
+                                        snippet.append('${%s:%s}' % (i + 1, var))
                                 contents = ', '.join(snippet)
                                 # func = m.group(1)
                                 # scope = view.scope_name(pos)
