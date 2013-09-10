@@ -91,7 +91,7 @@ from functools import partial
 
 # this particular ET is different from xml.etree and is expected
 # to be returned from scan_et() by the clients of this module
-import ciElementTree as et
+import ciElementTree as ET
 
 import ast
 import parser
@@ -261,7 +261,7 @@ def _node_citdl(node):
     return max_type
 
 
-class AST2CIXVisitor:
+class AST2CIXVisitor(ast.NodeVisitor):
     """Generate Code Intelligence XML (CIX) from walking a Python AST tree.
 
     This just generates the CIX content _inside_ of the <file/> tag. The
@@ -278,7 +278,8 @@ class AST2CIXVisitor:
         if self.DEBUG is None:
             self.DEBUG = log.isEnabledFor(logging.DEBUG)
         self.moduleName = moduleName
-        if content:
+        self.content = content
+        if content and self.DEBUG:
             self.lines = content.splitlines(0)
         else:
             self.lines = None
@@ -288,7 +289,15 @@ class AST2CIXVisitor:
             # <scope name>: <namespace dict>
         }
         self.nsstack = []
-        self.cix = et.TreeBuilder()
+        self.cix = ET.TreeBuilder()
+        self.tree = None
+
+    def parse(self):
+        """Parse text into a tree and walk the result"""
+        self.tree = ast.parse(self.content)
+
+    def walk(self):
+        return self.visit(self.tree)
 
     def emit_start(self, s, attrs={}):
         self.cix.start(s, _et_attrs(attrs))
@@ -415,9 +424,10 @@ class AST2CIXVisitor:
     def getCIX(self, path):
         """Return CIX content for parsed data."""
         log.debug("getCIX")
-        moduleNS = self.st[()]
         self.emit_start('file', dict(lang=self.lang, path=path))
-        self.cix_module(moduleNS)
+        if self.st:
+            moduleNS = self.st[()]
+            self.cix_module(moduleNS)
         self.emit_end('file')
         file = self.cix.close()
         return file
@@ -1568,7 +1578,7 @@ def scan_cix(content, filename, md5sum=None, mtime=None, lang="Python"):
     content must be syntactically correct.
     """
     codeintel = scan_et(content, filename, md5sum, mtime, lang)
-    tree = et.ElementTree(codeintel)
+    tree = ET.ElementTree(codeintel)
 
     stream = StringIO()
 
@@ -1636,38 +1646,33 @@ def scan_et(content, filename, md5sum=None, mtime=None, lang="Python"):
     else:
         path = filename
 
+    moduleName = os.path.splitext(os.path.basename(filename))[0]
+    parser = AST2CIXVisitor(moduleName, content=content, lang=lang)
     try:
-        ast_ = _getAST(content)
+        parser.parse()
         if _gClockIt:
-            sys.stdout.write(" (ast:%.3fs)" % (_gClock()-_gStartTime))
-    except Exception as ex:
-        file = et.Element('file', _et_attrs(dict(lang=lang,
+            sys.stdout.write(" (parse:%.3fs)" % (_gClock() - _gStartTime))
+    except SyntaxError as ex:
+        file = ET.Element('file', _et_attrs(dict(lang=lang,
                                                  path=path,
                                                  error=str(ex))))
     else:
-        moduleName = os.path.splitext(os.path.basename(filename))[0]
-        visitor = AST2CIXVisitor(moduleName, content=content, lang=lang)
-        if log.isEnabledFor(logging.DEBUG):
-            walker = ast.NodeVisitor()
-            walker.VERBOSE = 1
-        else:
-            walker = None
-        ast.walk(ast_, visitor, walker)
+        parser.walk()
         if _gClockIt:
-            sys.stdout.write(" (walk:%.3fs)" % (_gClock()-_gStartTime))
+            sys.stdout.write(" (walk:%.3fs)" % (_gClock() - _gStartTime))
         if log.isEnabledFor(logging.INFO):
             # Dump a repr of the gathering info for debugging
             # - We only have to dump the module namespace because
             #   everything else should be linked from it.
-            for nspath, namespace in list(visitor.st.items()):
+            for nspath, namespace in list(parser.st.items()):
                 if len(nspath) == 0:  # this is the module namespace
                     pprint.pprint(namespace)
 
-        file = visitor.getCIX(path)
+        file = parser.getCIX(path)
         if _gClockIt:
-            sys.stdout.write(" (getCIX:%.3fs)" % (_gClock()-_gStartTime))
+            sys.stdout.write(" (getCIX:%.3fs)" % (_gClock() - _gStartTime))
 
-    codeintel = et.Element('codeintel', _et_attrs(dict(version="2.0")))
+    codeintel = ET.Element('codeintel', _et_attrs(dict(version="2.0")))
     codeintel.append(file)
     return codeintel
 
