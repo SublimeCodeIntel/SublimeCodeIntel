@@ -313,7 +313,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                     function = None if 'import ' in text else 'function'
                     _completions = sorted(
                         [('%s  (%s)' % (n, t), n + ('($0)' if t == function else '')) for t, n in cplns],
-                        cmp=lambda a, b: cmp(a[1], b[1]) if a[1].startswith('_') == b[1].startswith('_') else 1 if a[1].startswith('_') else -1
+                        key=lambda o: o[1]
                     )
                     if _completions:
                         # Show autocompletions:
