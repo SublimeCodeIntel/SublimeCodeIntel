@@ -200,7 +200,7 @@ class SilverCityAccessor(Accessor):
         lower, upper = 0, len(self.tokens) - 1  # [lower-limit, upper-limit)
         sentinel = 15
         while sentinel > 0:
-            idx = ((upper - lower) / 2) + lower
+            idx = ((upper - lower) // 2) + lower
             token = self.tokens[idx]
             # print "_token_at_pos %d: token idx=%d text[%d:%d]=%r"\
             #      % (pos, idx, token["start_index"], token["end_index"],
