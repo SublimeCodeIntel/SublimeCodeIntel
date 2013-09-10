@@ -934,23 +934,26 @@ class AST2CIXVisitor(ast.NodeVisitor):
             self._handleUnknownAssignment(item.context_expr, node.lineno)
         self.generic_visit(node)
 
-    def visit_TryExcept(self, node):
+    def visit_Try(self, node):
         log.info("visit_%s:%s: %r %r", node.__class__.__name__, getattr(node, 'lineno', '?'), self.lines and hasattr(node, 'lineno') and self.lines[node.lineno - 1], node._fields)
-        self.visit(node)
+        for body in node.body:
+            self.visit(body)
+
         for handler in node.handlers:
             try:
-                if handler[1]:
-                    try:
-                        lineno = handler[1].lineno
-                    except AttributeError:
-                        lineno = node.lineno
-                    self._handleUnknownAssignment(handler[1], lineno)
-                if handler[2]:
-                    self.visit(handler[2])
+                if handler.name:
+                    lineno = handler.lineno
+                    self._handleUnknownAssignment(handler.name, lineno)
+                for body in handler.body:
+                    self.visit(body)
             except IndexError:
                 pass
-        if node.else_:
-            self.visit(node.else_)
+
+        for orelse in node.orelse:
+            self.visit(orelse)
+
+        for finalbody in node.finalbody:
+            self.visit(finalbody)
 
     def _resolveObjectRef(self, expr):
         """Try to resolve the given expression to a variable namespace.
