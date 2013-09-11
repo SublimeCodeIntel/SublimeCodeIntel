@@ -443,7 +443,7 @@ class UDLBuffer(CitadelBuffer):
 
         # Get a style group from styles.py.
         if "UDL" in styles.StateMap:
-            for style_group, const_names in styles.StateMap["UDL"].items():
+            for style_group, const_names in list(styles.StateMap["UDL"].items()):
                 if const_name in const_names:
                     style_names.append(style_group)
                     break

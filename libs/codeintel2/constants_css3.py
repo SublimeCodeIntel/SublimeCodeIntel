@@ -861,7 +861,7 @@ CSS3_DATA = {
 
 CSS3_SPECIFIC_ATTRS_DICT = {}
 CSS3_SPECIFIC_CALLTIP_DICT = {}
-for attr, details in CSS3_DATA.items():
+for attr, details in list(CSS3_DATA.items()):
     values = details.get("values", {})
     attr_completions = sorted(values.keys())
     if attr_completions:
@@ -873,7 +873,7 @@ for attr, details in CSS3_DATA.items():
         desc_lines = textwrap.wrap(description, width=60)
         if values:
             desc_lines.append("")
-            for value, attr_desc in values.items():
+            for value, attr_desc in list(values.items()):
                 attr_desc = "  %r: %s" % (value, attr_desc)
                 attr_desc_lines = textwrap.wrap(attr_desc, width=50)
                 for i in range(len(attr_desc_lines)):
@@ -882,7 +882,7 @@ for attr, details in CSS3_DATA.items():
                         attr_line = "        " + attr_line
                     desc_lines.append(attr_line)
         CSS3_SPECIFIC_CALLTIP_DICT[attr] = "\n".join(
-            desc_lines).encode("ascii", 'replace')
+            desc_lines)
 
 removed_css2_items = ["azimuth", "clip", "pointer-events"]
 
@@ -909,7 +909,7 @@ for name in removed_css2_items:
     CSS_ATTR_DICT.pop(name, None)
     CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.pop(name, None)
 
-for property, calltip in CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.items():
+for property, calltip in list(CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.items()):
     if property not in CSS3_SPECIFIC_CALLTIP_DICT:
         if property in CSS2_SPECIFIC_CALLTIP_DICT:
             calltip += "\n(CSS2, CSS3)"

@@ -183,7 +183,7 @@ class iterparse:
         p._setevents(events, self._events)
         try:
             p.feed(self.content)
-        except SyntaxError, e:
+        except SyntaxError as e:
             self.err = e
             self.err_info = (
                 p.CurrentLineNumber, p.CurrentColumnNumber, p.CurrentByteIndex)
@@ -193,7 +193,7 @@ class iterparse:
         del events[:]
         try:
             self.root = p.close()
-        except SyntaxError, e:
+        except SyntaxError as e:
             # if we had a previous syntax error, keep it
             if not self.err:
                 self.err = e
@@ -401,7 +401,7 @@ class XMLDocument(object):
                                 diff = pos - elem.end[2] + 1
                                 elem.end = (elem.end[
                                             0], elem.end[1] + diff, pos)
-                    except IndexError, e:
+                    except IndexError as e:
                         # XXX FIXME BUG 56337
                         log.exception(e)
                         pass
@@ -468,22 +468,22 @@ class XMLDocument(object):
         self.current = elem = elementFromTag(self, current, parent)
 
     def dump(self):
-        print "error ", self.err
-        print "error_info ", self.err_info
-        print "%d nodes created" % len(self.nodemap)
-        print "doctype ", self.doctype
-        print "publicId ", self.publicId
-        print "systemId ", self.systemId
-        print self.prefixmap
-        print self.nsmap
-        print "root ", self.root
+        print("error ", self.err)
+        print("error_info ", self.err_info)
+        print("%d nodes created" % len(self.nodemap))
+        print("doctype ", self.doctype)
+        print("publicId ", self.publicId)
+        print("systemId ", self.systemId)
+        print(self.prefixmap)
+        print(self.nsmap)
+        print("root ", self.root)
         if self.root:
-            print "root tag ", self.root.tag
-            print "root ns ", self.root.ns
-            print "root localName ", self.root.localName
-            print "root start ", self.root.start
-            print "root end ", self.root.end
-        print "tree.current ", self.current
+            print("root tag ", self.root.tag)
+            print("root ns ", self.root.ns)
+            print("root localName ", self.root.localName)
+            print("root start ", self.root.start)
+            print("root end ", self.root.end)
+        print("tree.current ", self.current)
 
 import HTMLTreeParser
 
@@ -538,7 +538,7 @@ class TreeService:
                     f = open(uri, 'r')
                     content = f.read(-1)
                     f.close()
-                except IOError, e:
+                except IOError as e:
                     # ignore file errors and return an empty tree
                     content = ""
             if not content.startswith("<?xml"):
@@ -587,7 +587,7 @@ if __name__ == "__main__":
         t1 = time.clock()
         tree = getService().getTreeForURI(bigfile)
         t2 = time.clock()
-        print "cElementTree took ", (t2-t1)
+        print("cElementTree took ", (t2-t1))
         tree.dump()
 
     if 0:
@@ -598,13 +598,13 @@ if __name__ == "__main__":
         tree = HTMLDocument()
         tree.parse(content)
         t2 = time.clock()
-        print "HTMLBuilder took ", (t2-t1)
+        print("HTMLBuilder took ", (t2-t1))
 
     if 0:
-        print currentTag("<xsl")
-        print currentTag("<xsl:")
-        print currentTag("<xsl:tag")
-        print currentTag("text><xsl:tag")
+        print(currentTag("<xsl"))
+        print(currentTag("<xsl:"))
+        print(currentTag("<xsl:tag"))
+        print(currentTag("text><xsl:tag"))
         # print nodemap
 
     html = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -613,9 +613,9 @@ if __name__ == "__main__":
 <head>
 """
     tree = getService().getTreeForURI("Text.html", html)
-    print tostring(tree.root)
+    print(tostring(tree.root))
 
-    html = u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+    html = """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
 <html>
 <HEAD>
  <TITLE>Mozilla Cross-Reference</TITLE>
@@ -665,7 +665,7 @@ if __name__ == "__main__":
 
 """
     tree = getService().getTreeForURI("Text.html", html)
-    print tostring(tree.root)
+    print(tostring(tree.root))
 
     html = """<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
 <HTML>
@@ -786,7 +786,7 @@ if __name__ == "__main__":
     tree = getService().getTreeForContent(xml)
     assert tree.current.localName == "template", "current element is incorrect"
 
-    xml = u"""<?xml version="1.0"?>
+    xml = """<?xml version="1.0"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
   <xsl:output method="xml" indent="yes"/>
   <xsl:
