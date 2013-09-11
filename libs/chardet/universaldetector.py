@@ -26,11 +26,12 @@
 # 02110-1301  USA
 ######################### END LICENSE BLOCK #########################
 
-import constants, sys
-from latin1prober import Latin1Prober # windows-1252
-from mbcsgroupprober import MBCSGroupProber # multi-byte character sets
-from sbcsgroupprober import SBCSGroupProber # single-byte character sets
-from escprober import EscCharSetProber # ISO-2122, etc.
+from . import constants
+import sys
+from .latin1prober import Latin1Prober # windows-1252
+from .mbcsgroupprober import MBCSGroupProber # multi-byte character sets
+from .sbcsgroupprober import SBCSGroupProber # single-byte character sets
+from .escprober import EscCharSetProber # ISO-2122, etc.
 import re
 import logging
 
@@ -43,19 +44,19 @@ eHighbyte = 2
 
 class UniversalDetector:
     def __init__(self):
-        self._highBitDetector = re.compile(r'[\x80-\xFF]')
-        self._escDetector = re.compile(r'(\033|~{)')
+        self._highBitDetector = re.compile(b'[\x80-\xFF]')
+        self._escDetector = re.compile(b'(\033|~{)')
         self._mEscCharSetProber = None
         self._mCharSetProbers = []
         self.reset()
 
     def reset(self):
         self.result = {'encoding': None, 'confidence': 0.0}
-        self.done = constants.False
-        self._mStart = constants.True
-        self._mGotData = constants.False
+        self.done = False
+        self._mStart = True
+        self._mGotData = False
         self._mInputState = ePureAscii
-        self._mLastChar = ''
+        self._mLastChar = b''
         if self._mEscCharSetProber:
             self._mEscCharSetProber.reset()
         for prober in self._mCharSetProbers:
@@ -91,9 +92,9 @@ class UniversalDetector:
                     self.result = result
                     break
 
-        self._mGotData = constants.True
+        self._mGotData = True
         if self.result['encoding'] and (self.result['confidence'] > 0.0):
-            self.done = constants.True
+            self.done = True
             return
 
         if self._mInputState == ePureAscii:
@@ -102,7 +103,7 @@ class UniversalDetector:
             elif (self._mInputState == ePureAscii) and self._escDetector.search(self._mLastChar + aBuf):
                 self._mInputState = eEscAscii
 
-        self._mLastChar = aBuf[-1]
+        self._mLastChar = aBuf[-1:]
 
         if self._mInputState == eEscAscii:
             if not self._mEscCharSetProber:
@@ -110,7 +111,7 @@ class UniversalDetector:
             if self._mEscCharSetProber.feed(aBuf) == constants.eFoundIt:
                 self.result = {'encoding': self._mEscCharSetProber.get_charset_name(),
                                'confidence': self._mEscCharSetProber.get_confidence()}
-                self.done = constants.True
+                self.done = True
         elif self._mInputState == eHighbyte:
             if not self._mCharSetProbers:
                 self._mCharSetProbers = [MBCSGroupProber(), SBCSGroupProber(), Latin1Prober()]
@@ -119,9 +120,9 @@ class UniversalDetector:
                     if prober.feed(aBuf) == constants.eFoundIt:
                         self.result = {'encoding': prober.get_charset_name(),
                                        'confidence': prober.get_confidence()}
-                        self.done = constants.True
+                        self.done = True
                         break
-                except (UnicodeDecodeError, UnicodeEncodeError), e:
+                except (UnicodeDecodeError, UnicodeEncodeError) as e:
                     logger.exception(e)
 
     def close(self):
@@ -130,7 +131,7 @@ class UniversalDetector:
             if constants._debug:
                 sys.stderr.write('no data received!\n')
             return
-        self.done = constants.True
+        self.done = True
 
         if self._mInputState == ePureAscii:
             self.result = {'encoding': 'ascii', 'confidence': 1.0}

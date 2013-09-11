@@ -46,7 +46,7 @@ import sys
 import re
 import textwrap
 import time
-import cPickle
+import pickle
 import logging
 
 from ciElementTree import Element, SubElement, tostring
@@ -91,7 +91,7 @@ def memoize(function, limit=None):
     list = []
 
     def memoize_wrapper(*args, **kwargs):
-        key = cPickle.dumps((args, kwargs))
+        key = pickle.dumps((args, kwargs))
         try:
             list.append(list.pop(list.index(key)))
         except ValueError:
@@ -106,7 +106,7 @@ def memoize(function, limit=None):
     memoize_wrapper._memoize_list = list
     memoize_wrapper._memoize_limit = limit
     memoize_wrapper._memoize_origfunc = function
-    memoize_wrapper.func_name = function.func_name
+    memoize_wrapper.__name__ = function.__name__
     return memoize_wrapper
 
 
@@ -166,7 +166,7 @@ def re_sub(*args):
         end = time.time()
         delta = end-start
         if delta > 0.01:  # adjust as needed.
-            print delta, '\t', args
+            print(delta, '\t', args)
     else:
         retval = re.sub(*args)
     return retval
@@ -679,7 +679,7 @@ class ModuleInfo:
         # imports = getattr(modInfo, 'aImports', [])
         # imports.reverse()
         for _import in getattr(modInfo, 'aImports', []):
-            attrs = _import.keys()
+            attrs = list(_import.keys())
             importNode = SubElement(currNode, "import")
             for k in attrs:
                 importNode.set(k, str(_import[k]))
@@ -706,7 +706,7 @@ class ModuleInfo:
             return (cmp(a[0]['line'], b[0]['line']) or
                     cmp(a[0]['name'].lower(), b[0]['name'].lower()))
 
-        variables = modInfo.aVar.values()
+        variables = list(modInfo.aVar.values())
         variables.sort(sorter1)
         try:
             export_info = modInfo.export_info
@@ -969,7 +969,7 @@ class Parser:
         # I.e. when parsing "XML/Simple.pm" the blob name is "Simple", but we
         #      need it be "XML::Simple" in this case. The bestPackageName is
         #      used to find the best matching name.
-        packages = [x for x in self.moduleInfo.modules.keys() if x != 'main']
+        packages = [x for x in list(self.moduleInfo.modules.keys()) if x != 'main']
         packages.sort(sorter1)
         bestPackageName = None
         for k in packages:

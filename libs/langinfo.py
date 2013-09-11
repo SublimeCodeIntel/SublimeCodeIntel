@@ -268,7 +268,7 @@ class Database(object):
         self.dirs = dirs
 
     def langinfos(self):
-        for li in self._langinfo_from_norm_lang.values():
+        for li in list(self._langinfo_from_norm_lang.values()):
             yield li
 
     def langinfo_from_lang(self, lang):
@@ -352,7 +352,7 @@ class Database(object):
         if filename in self._langinfo_from_filename:
             return self._langinfo_from_filename[filename]
         else:
-            for regex, li in self._langinfo_from_filename_re.items():
+            for regex, li in list(self._langinfo_from_filename_re.items()):
                 if regex.search(filename):
                     return li
 
@@ -387,7 +387,7 @@ class Database(object):
             else:  # a struct format
                 try:
                     length = struct.calcsize(format)
-                except struct.error, ex:
+                except struct.error as ex:
                     warnings.warn("error in %s magic number struct format: %r"
                                   % (li, format),
                                   InvalidLangInfoWarning)
@@ -449,7 +449,7 @@ class Database(object):
         self._specialization_hints_from_lang = {
         }  # <lang> -> (<hint>, <specialized-langinfo>)
 
-        for li in self._langinfo_from_norm_lang.values():
+        for li in list(self._langinfo_from_norm_lang.values()):
             if li.exts:
                 for ext in li.exts:
                     if not ext.startswith('.'):
@@ -489,7 +489,7 @@ class Database(object):
                         self._langinfo_from_ext[ext] = li
             if li.filename_patterns:
                 for pat in li.filename_patterns:
-                    if isinstance(pat, basestring):
+                    if isinstance(pat, str):
                         self._langinfo_from_filename[pat] = li
                     else:
                         self._langinfo_from_filename_re[pat] = li
@@ -519,7 +519,7 @@ class Database(object):
                 norm_komodo_lang = self._norm_lang_from_lang(li.komodo_name)
                 self._li_from_norm_komodo_lang[norm_komodo_lang] = li
             if li.specialization_hints_from_lang:
-                for lang, hint in li.specialization_hints_from_lang.items():
+                for lang, hint in list(li.specialization_hints_from_lang.items()):
                     self._specialization_hints_from_lang[lang] = (hint, li)
 
         self._magic_table.sort(key=operator.itemgetter(2))
@@ -529,8 +529,8 @@ class Database(object):
 
     def _load(self):
         """Load LangInfo classes in this module."""
-        for name, g in globals().items():
-            if isinstance(g, (types.ClassType, types.TypeType)) \
+        for name, g in list(globals().items()):
+            if isinstance(g, type) \
                and issubclass(g, LangInfo) and g is not LangInfo:
                 norm_lang = self._norm_lang_from_lang(g.name)
                 self._langinfo_from_norm_lang[norm_lang] = g(self)
@@ -540,7 +540,7 @@ class Database(object):
         for path in glob(join(d, "langinfo_*.py")):
             try:
                 module = _module_from_path(path)
-            except Exception, ex:
+            except Exception as ex:
                 log.warn("could not import `%s': %s", path, ex)
                 # import traceback
                 # traceback.print_exc()
@@ -548,7 +548,7 @@ class Database(object):
             for name in dir(module):
                 attr = getattr(module, name)
                 if (not name.startswith("_")   # skip internal bases
-                    and isinstance(attr, (types.ClassType, types.TypeType))
+                    and isinstance(attr, type)
                     and issubclass(attr, LangInfo)
                         and attr is not LangInfo):
                     norm_lang = self._norm_lang_from_lang(attr.name)

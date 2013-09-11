@@ -194,7 +194,7 @@ class PODLangInfo(LangInfo):
     exts = [".pod"]
     # http://search.cpan.org/~nwclark/perl-5.8.8/pod/perlpod.pod
     encoding_decl_pattern = re.compile(
-        r"^=encoding\s+(?P<encoding>[-\w.]+)", re.M)
+        br"^=encoding\s+(?P<encoding>[-\w.]+)", re.M)
 
 
 class ASN1LangInfo(LangInfo):

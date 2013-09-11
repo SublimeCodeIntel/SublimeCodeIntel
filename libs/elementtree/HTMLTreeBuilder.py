@@ -49,14 +49,14 @@
 # Tools to build element trees from HTML files.
 ##
 
-import htmlentitydefs
+import html.entities
 import re
 import string
 import sys
 import mimetools
-import StringIO
+import io
 
-import ElementTree
+from . import ElementTree
 
 AUTOCLOSE = "p", "li", "tr", "th", "td", "head", "body"
 IGNOREEND = "img", "hr", "meta", "link", "br"
@@ -67,7 +67,7 @@ else:
     is_not_ascii = re.compile(eval(r'u"[\u0080-\uffff]"')).search
 
 try:
-    from HTMLParser import HTMLParser
+    from html.parser import HTMLParser
 except ImportError:
     from sgmllib import SGMLParser
     # hack to use sgmllib's SGMLParser to emulate 2.2's HTMLParser
@@ -139,7 +139,7 @@ class HTMLTreeBuilder(HTMLParser):
             if http_equiv == "content-type" and content:
                 # use mimetools to parse the http header
                 header = mimetools.Message(
-                    StringIO.StringIO("%s: %s\n\n" % (http_equiv, content))
+                    io.StringIO("%s: %s\n\n" % (http_equiv, content))
                 )
                 encoding = header.getparam("charset")
                 if encoding:
@@ -179,13 +179,13 @@ class HTMLTreeBuilder(HTMLParser):
         if 0 <= char < 128:
             self.__builder.data(chr(char))
         else:
-            self.__builder.data(unichr(char))
+            self.__builder.data(chr(char))
 
     ##
     # (Internal) Handles entity references.
 
     def handle_entityref(self, name):
-        entity = htmlentitydefs.entitydefs.get(name)
+        entity = html.entities.entitydefs.get(name)
         if entity:
             if len(entity) == 1:
                 entity = ord(entity)
@@ -194,7 +194,7 @@ class HTMLTreeBuilder(HTMLParser):
             if 0 <= entity < 128:
                 self.__builder.data(chr(entity))
             else:
-                self.__builder.data(unichr(entity))
+                self.__builder.data(chr(entity))
         else:
             self.unknown_entityref(name)
 
@@ -204,7 +204,7 @@ class HTMLTreeBuilder(HTMLParser):
     def handle_data(self, data):
         if isinstance(data, type('')) and is_not_ascii(data):
             # convert to unicode, but only if necessary
-            data = unicode(data, self.encoding, "ignore")
+            data = str(data, self.encoding, "ignore")
         self.__builder.data(data)
 
     ##
