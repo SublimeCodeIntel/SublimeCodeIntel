@@ -164,6 +164,12 @@ log = logging.getLogger("textinfo")
 DEBUG_CHARDET_INFO = False  # gather chardet info
 
 
+def _to_str(s):
+    s = '%s' % s
+    if s.startswith("b'") and s.endswith("'") or s.startswith('b"') and s.endswith('"'):
+        return s[2:-1]
+    return s
+
 #---- module API
 def textinfo_from_filename(path):
     """Determine test info for the given path **using the filename only**.
@@ -286,7 +292,7 @@ class TextInfo(object):
                    % _one_line_summary_from_text(self.content, 30)
 
     def as_dict(self):
-        return dict((k, v) for k, v in self.__dict__.items()
+        return dict((k, v) for k, v in list(self.__dict__.items())
                     if not k.startswith('_'))
 
     def as_summary(self):
@@ -323,7 +329,7 @@ class TextInfo(object):
         # shebang now that we've successfully decoded the buffer.
         if self.langinfo is None:
             (self.has_xml_prolog, xml_version,
-             xml_encoding) = self._get_xml_prolog_info(head)
+             xml_encoding) = self._get_xml_prolog_info_s(head)
             if self.has_xml_prolog:
                 self.xml_version = xml_version
                 self.xml_encoding = xml_encoding
@@ -337,11 +343,11 @@ class TextInfo(object):
 
         # Extract Emacs local vars and Vi(m) modeline info and, if the
         # lang is still unknown, attempt to use them to determine it.
-        self.emacs_vars = self._get_emacs_head_vars(head)
-        self.emacs_vars.update(self._get_emacs_tail_vars(tail))
-        self.vi_vars = self._get_vi_vars(head)
+        self.emacs_vars = self._get_emacs_head_vars_s(head)
+        self.emacs_vars.update(self._get_emacs_tail_vars_s(tail))
+        self.vi_vars = self._get_vi_vars_s(head)
         if not self.vi_vars:
-            self.vi_vars = self._get_vi_vars(tail)
+            self.vi_vars = self._get_vi_vars_s(tail)
         if self.langinfo is None and "mode" in self.emacs_vars:
             li = lidb.langinfo_from_emacs_mode(self.emacs_vars["mode"])
             if li:
@@ -360,10 +366,10 @@ class TextInfo(object):
             if self.langinfo.conforms_to("XML"):
                 if not hasattr(self, "has_xml_prolog"):
                     (self.has_xml_prolog, self.xml_version,
-                     self.xml_encoding) = self._get_xml_prolog_info(head)
+                     self.xml_encoding) = self._get_xml_prolog_info_s(head)
                 (self.has_doctype_decl, self.doctype_decl,
                  self.doctype_name, self.doctype_public_id,
-                 self.doctype_system_id) = self._get_doctype_decl_info(head)
+                 self.doctype_system_id) = self._get_doctype_decl_info_s(head)
 
                 # If this is just plain XML, we try to use the doctype
                 # decl to choose a more specific XML lang.
@@ -378,7 +384,7 @@ class TextInfo(object):
             elif self.langinfo.conforms_to("HTML"):
                 (self.has_doctype_decl, self.doctype_decl,
                  self.doctype_name, self.doctype_public_id,
-                 self.doctype_system_id) = self._get_doctype_decl_info(head)
+                 self.doctype_system_id) = self._get_doctype_decl_info_s(head)
 
                 # Allow promotion to XHTML (or other HTML flavours) based
                 # on doctype.
@@ -393,7 +399,7 @@ class TextInfo(object):
                 # Look for XML prolog and promote HTML -> XHTML if it
                 # exists. Note that this wins over a plain HTML doctype.
                 (self.has_xml_prolog, xml_version,
-                 xml_encoding) = self._get_xml_prolog_info(head)
+                 xml_encoding) = self._get_xml_prolog_info_s(head)
                 if self.has_xml_prolog:
                     self.xml_version = xml_version
                     self.xml_encoding = xml_encoding
@@ -440,7 +446,7 @@ class TextInfo(object):
             return
 
         (has_doctype_decl, doctype_decl, doctype_name, doctype_public_id,
-         doctype_system_id) = self._get_doctype_decl_info(head_bytes)
+         doctype_system_id) = self._get_doctype_decl_info_b(head_bytes)
         if has_doctype_decl:
             li = lidb.langinfo_from_doctype(public_id=doctype_public_id,
                                             system_id=doctype_system_id)
@@ -510,7 +516,7 @@ class TextInfo(object):
                     log.debug("encoding: BOM encoding (%r) was *wrong*",
                               bom_encoding)
                     self._encoding_bozo(
-                        u"BOM encoding (%s) could not decode %s"
+                        "BOM encoding (%s) could not decode %s"
                         % (bom_encoding, self._accessor))
 
         head_bytes = self._accessor.head_bytes
@@ -553,7 +559,7 @@ class TextInfo(object):
             m = self.langinfo.conformant_attr("encoding_decl_pattern") \
                     .search(head_bytes)
             if m:
-                lang_encoding = m.group("encoding")
+                lang_encoding = m.group("encoding").decode('ascii')
                 norm_lang_encoding = _norm_encoding(lang_encoding)
                 if self._accessor.decode(norm_lang_encoding):
                     log.debug("encoding: encoding from lang-spec: %r",
@@ -564,13 +570,13 @@ class TextInfo(object):
                     log.debug("encoding: lang-spec encoding (%r) was *wrong*",
                               lang_encoding)
                     self._encoding_bozo(
-                        u"lang-spec encoding (%s) could not decode %s"
+                        "lang-spec encoding (%s) could not decode %s"
                         % (lang_encoding, self._accessor))
 
         # 5. XML prolog
         if self.langinfo and self.langinfo.conforms_to("XML"):
             has_xml_prolog, xml_version, xml_encoding \
-                = self._get_xml_prolog_info(head_bytes)
+                = self._get_xml_prolog_info_b(head_bytes)
             if xml_encoding is not None:
                 norm_xml_encoding = _norm_encoding(xml_encoding)
                 if self._accessor.decode(norm_xml_encoding):
@@ -582,13 +588,13 @@ class TextInfo(object):
                     log.debug("encoding: XML prolog encoding (%r) was *wrong*",
                               norm_xml_encoding)
                     self._encoding_bozo(
-                        u"XML prolog encoding (%s) could not decode %s"
+                        "XML prolog encoding (%s) could not decode %s"
                         % (norm_xml_encoding, self._accessor))
 
         # 6. HTML: Attempt to use Content-Type meta tag.
         if self.langinfo and self.langinfo.conforms_to("HTML"):
             has_http_content_type_info, http_content_type, http_encoding \
-                = self._get_http_content_type_info(head_bytes)
+                = self._get_http_content_type_info_b(head_bytes)
             if has_http_content_type_info and http_encoding:
                 norm_http_encoding = _norm_encoding(http_encoding)
                 if self._accessor.decode(norm_http_encoding):
@@ -601,16 +607,16 @@ class TextInfo(object):
                         "encoding: HTTP content-type encoding (%r) was *wrong*",
                         norm_http_encoding)
                     self._encoding_bozo(
-                        u"HTML content-type encoding (%s) could not decode %s"
+                        "HTML content-type encoding (%s) could not decode %s"
                         % (norm_http_encoding, self._accessor))
 
         # 7. Emacs-style local vars.
-        emacs_head_vars = self._get_emacs_head_vars(head_bytes)
-        emacs_encoding = emacs_head_vars.get("coding")
+        emacs_head_vars = self._get_emacs_head_vars_b(head_bytes)
+        emacs_encoding = emacs_head_vars.get(b"coding")
         if not emacs_encoding:
             tail_bytes = self._accessor.tail_bytes
-            emacs_tail_vars = self._get_emacs_tail_vars(tail_bytes)
-            emacs_encoding = emacs_tail_vars.get("coding")
+            emacs_tail_vars = self._get_emacs_tail_vars_b(tail_bytes)
+            emacs_encoding = emacs_tail_vars.get(b"coding")
         if emacs_encoding:
             norm_emacs_encoding = _norm_encoding(emacs_encoding)
             if self._accessor.decode(norm_emacs_encoding):
@@ -622,15 +628,15 @@ class TextInfo(object):
                 log.debug("encoding: Emacs coding var (%r) was *wrong*",
                           norm_emacs_encoding)
                 self._encoding_bozo(
-                    u"Emacs coding var (%s) could not decode %s"
+                    "Emacs coding var (%s) could not decode %s"
                     % (norm_emacs_encoding, self._accessor))
 
         # 8. Vi[m]-style local vars.
-        vi_vars = self._get_vi_vars(head_bytes)
-        vi_encoding = vi_vars.get("fileencoding") or vi_vars.get("fenc")
+        vi_vars = self._get_vi_vars_b(head_bytes)
+        vi_encoding = vi_vars.get(b"fileencoding") or vi_vars.get(b"fenc")
         if not vi_encoding:
-            vi_vars = self._get_vi_vars(self._accessor.tail_bytes)
-            vi_encoding = vi_vars.get("fileencoding") or vi_vars.get("fenc")
+            vi_vars = self._get_vi_vars_b(self._accessor.tail_bytes)
+            vi_encoding = vi_vars.get(b"fileencoding") or vi_vars.get(b"fenc")
         if vi_encoding:
             norm_vi_encoding = _norm_encoding(vi_encoding)
             if self._accessor.decode(norm_vi_encoding):
@@ -642,25 +648,25 @@ class TextInfo(object):
                 log.debug("encoding: Vi[m] coding var (%r) was *wrong*",
                           norm_vi_encoding)
                 self._encoding_bozo(
-                    u"Vi[m] coding var (%s) could not decode %s"
+                    "Vi[m] coding var (%s) could not decode %s"
                     % (norm_vi_encoding, self._accessor))
 
         # 9. Heuristic checks for UTF-16 without BOM.
         utf16_encoding = None
         head_odd_bytes = head_bytes[0::2]
         head_even_bytes = head_bytes[1::2]
-        head_markers = ["<?xml", "#!"]
+        head_markers = [b'<?xml', b'#!']
         for head_marker in head_markers:
             length = len(head_marker)
             if head_odd_bytes.startswith(head_marker) \
-               and head_even_bytes[0:length] == '\x00'*length:
+               and head_even_bytes[0:length] == b'\x00' * length:
                 utf16_encoding = "utf-16-le"
                 break
             elif head_even_bytes.startswith(head_marker) \
-                    and head_odd_bytes[0:length] == '\x00'*length:
+                    and head_odd_bytes[0:length] == b'\x00' * length:
                 utf16_encoding = "utf-16-be"
                 break
-        internal_markers = ["coding"]
+        internal_markers = [b'coding']
         for internal_marker in internal_markers:
             length = len(internal_marker)
             try:
@@ -668,14 +674,14 @@ class TextInfo(object):
             except ValueError:
                 pass
             else:
-                if head_even_bytes[idx:idx+length] == '\x00'*length:
+                if head_even_bytes[idx:idx+length] == b'\x00' * length:
                     utf16_encoding = "utf-16-le"
             try:
                 idx = head_even_bytes.index(internal_marker)
             except ValueError:
                 pass
             else:
-                if head_odd_bytes[idx:idx+length] == '\x00'*length:
+                if head_odd_bytes[idx:idx+length] == b'\x00' * length:
                     utf16_encoding = "utf-16-be"
         if utf16_encoding:
             if self._accessor.decode(utf16_encoding):
@@ -710,7 +716,7 @@ class TextInfo(object):
                 log.debug("encoding: %s fallback encoding (%r) was *wrong*",
                           fallback_lang, fallback_encoding)
                 self._encoding_bozo(
-                    u"%s fallback encoding (%s) could not decode %s"
+                    "%s fallback encoding (%s) could not decode %s"
                     % (fallback_lang, fallback_encoding, self._accessor))
 
         # 12. chardet (http://chardet.feedparser.org/)
@@ -772,7 +778,7 @@ class TextInfo(object):
         self.encoding_bozo_reasons.append(reason)
 
     # c.f. http://www.xml.com/axml/target.html#NT-prolog
-    _xml_prolog_pat = re.compile(
+    _xml_prolog_pat_s = re.compile(
         r'''<\?xml
             (   # strict ordering is reqd but we'll be liberal here
                 \s+version=['"](?P<ver>.*?)['"]
@@ -783,8 +789,22 @@ class TextInfo(object):
         ''',
         re.VERBOSE | re.DOTALL
     )
+    _xml_prolog_pat_b = re.compile(
+        br'''<\?xml
+            (   # strict ordering is reqd but we'll be liberal here
+                \s+version=['"](?P<ver>.*?)['"]
+            |   \s+encoding=['"](?P<enc>.*?)['"]
+            )+
+            .*? # other possible junk
+            \s*\?>
+        ''',
+        re.VERBOSE | re.DOTALL
+    )
 
-    def _get_xml_prolog_info(self, head_bytes):
+    def _get_xml_prolog_info(self, head_bytes,
+            _xml_prolog_pat,
+            _start,
+        ):
         """Parse out info from the '<?xml version=...' prolog, if any.
 
         Returns (<has-xml-prolog>, <xml-version>, <xml-encoding>). Examples:
@@ -796,34 +816,71 @@ class TextInfo(object):
         # Presuming an 8-bit encoding. If it is UTF-16 or UTF-32, then
         # that should have been picked up by an earlier BOM check or via
         # the subsequent heuristic check for UTF-16 without a BOM.
-        if not head_bytes.startswith("<?xml"):
+        if not head_bytes.startswith(_start):
             return (False, None, None)
 
         # Try to extract more info from the prolog.
-        match = self._xml_prolog_pat.match(head_bytes)
+        match = _xml_prolog_pat.match(head_bytes)
         if not match:
             if log.isEnabledFor(logging.DEBUG):
                 log.debug("`%s': could not match XML prolog: '%s'", self.path,
-                          _one_line_summary_from_text(head_bytes, 40))
+                          _one_line_summary_from_text(_to_str(head_bytes), 40))
             return (False, None, None)
         xml_version = match.group("ver")
         xml_encoding = match.group("enc")
         return (True, xml_version, xml_encoding)
 
-    _html_meta_tag_pat = re.compile("""
+    def _get_xml_prolog_info_s(self, head_bytes):
+        return self._get_xml_prolog_info(head_bytes,
+            self._xml_prolog_pat_s,
+            b'<?xml',
+        )
+
+    def _get_xml_prolog_info_b(self, head_bytes):
+        return self._get_xml_prolog_info(head_bytes,
+            self._xml_prolog_pat_b,
+            '<?xml',
+        )
+
+    _html_meta_tag_pat_s = re.compile(r"""
         (<meta
         (?:\s+[\w-]+\s*=\s*(?:".*?"|'.*?'))+  # attributes
         \s*/?>)
         """,
-                                    re.IGNORECASE | re.VERBOSE
-                                    )
-    _html_attr_pat = re.compile(
-        # Currently requiring XML attrs (i.e. quoted value).
-        '''(?:\s+([\w-]+)\s*=\s*(".*?"|'.*?'))'''
+        re.IGNORECASE | re.VERBOSE
     )
-    _http_content_type_splitter = re.compile(";\s*")
+    _html_meta_tag_pat_b = re.compile(br"""
+        (<meta
+        (?:\s+[\w-]+\s*=\s*(?:".*?"|'.*?'))+  # attributes
+        \s*/?>)
+        """,
+        re.IGNORECASE | re.VERBOSE
+    )
 
-    def _get_http_content_type_info(self, head_bytes):
+    _html_attr_pat_s = re.compile(
+        # Currently requiring XML attrs (i.e. quoted value).
+        r'''(?:\s+([\w-]+)\s*=\s*(".*?"|'.*?'))'''
+    )
+    _html_attr_pat_b = re.compile(
+        # Currently requiring XML attrs (i.e. quoted value).
+        br'''(?:\s+([\w-]+)\s*=\s*(".*?"|'.*?'))'''
+    )
+
+    _http_content_type_splitter_s = re.compile(r";\s*")
+    _http_content_type_splitter_b = re.compile(br";\s*")
+
+    def _get_http_content_type_info(self, head_bytes,
+            _html_meta_tag_pat,
+            _html_attr_pat,
+            _http_content_type_splitter,
+            _http_equiv,
+            _content,
+            _content_type,
+            _charset,
+            _empty,
+            _str1,
+            _str2,
+        ):
         """Returns info extracted from an HTML content-type meta tag if any.
         Returns (<has-http-content-type-info>, <content-type>, <charset>).
 
@@ -837,12 +894,12 @@ class TextInfo(object):
         # Otherwise we rely on `chardet` to cover us.
 
         # Parse out '<meta ...>' tags, then the attributes in them.
-        for meta_tag in self._html_meta_tag_pat.findall(head_bytes):
+        for meta_tag in _html_meta_tag_pat.findall(head_bytes):
             meta = dict((k.lower(), v[1:-1])
-                        for k, v in self._html_attr_pat.findall(meta_tag))
-            if "http-equiv" in meta \
-               and meta["http-equiv"].lower() == "content-type":
-                content = meta.get("content", "")
+                        for k, v in _html_attr_pat.findall(meta_tag))
+            if _http_equiv in meta \
+               and meta[_http_equiv].lower() == _content_type:
+                content = meta.get(_content, _empty)
                 break
         else:
             return (False, None, None)
@@ -850,16 +907,16 @@ class TextInfo(object):
         # We found a http-equiv="Content-Type" tag, parse its content
         # attribute value.
         parts = [
-            p.strip() for p in self._http_content_type_splitter.split(content)]
+            p.strip() for p in _http_content_type_splitter.split(content)]
         if not parts:
             return (False, None, None)
         content_type = parts[0] or None
         for p in parts[1:]:
-            if p.lower().startswith("charset="):
-                charset = p[len("charset="):]
-                if charset and charset[0] in ('"', "'"):
+            if p.lower().startswith(_charset):
+                charset = p[len(_charset):]
+                if charset and charset[0] in (_str1, _str2):
                     charset = charset[1:]
-                if charset and charset[-1] in ('"', "'"):
+                if charset and charset[-1] in (_str1, _str2):
                     charset = charset[:-1]
                 break
         else:
@@ -867,9 +924,36 @@ class TextInfo(object):
 
         return (True, content_type, charset)
 
+    def _get_http_content_type_info_s(self, head_bytes):
+        return self._get_http_content_type_info(head_bytes,
+            self._html_meta_tag_pat_s,
+            self._html_attr_pat_s,
+            self._http_content_type_splitter_s,
+            "http-equiv",
+            "content",
+            "content-type",
+            "charset=",
+            "",
+            "'",
+            '"',
+        )
+    def _get_http_content_type_info_b(self, head_bytes):
+        return self._get_http_content_type_info(head_bytes,
+            self._html_meta_tag_pat_b,
+            self._html_attr_pat_b,
+            self._http_content_type_splitter_b,
+            b"http-equiv",
+            b"content",
+            b"content-type",
+            b"charset=",
+            b"",
+            b"'",
+            b'"',
+        )
+
     # TODO: Note that this isn't going to catch the current HTML 5
     #      doctype:  '<!DOCTYPE html>'
-    _doctype_decl_re = re.compile(r'''
+    _doctype_decl_re_s = re.compile(r'''
         <!DOCTYPE
         \s+(?P<name>[a-zA-Z_:][\w:.-]*)
         \s+(?:
@@ -883,8 +967,27 @@ class TextInfo(object):
         (\s*\[.*?\])?
         \s*>
         ''', re.IGNORECASE | re.DOTALL | re.UNICODE | re.VERBOSE)
+    _doctype_decl_re_b = re.compile(br'''
+        <!DOCTYPE
+        \s+(?P<name>[a-zA-Z_:][\w:.-]*)
+        \s+(?:
+            SYSTEM\s+(["'])(?P<system_id_a>.*?)\2
+            |
+            PUBLIC
+            \s+(["'])(?P<public_id_b>.*?)\4
+            # HTML 3.2 and 2.0 doctypes don't include a system-id.
+            (?:\s+(["'])(?P<system_id_b>.*?)\6)?
+        )
+        (\s*\[.*?\])?
+        \s*>
+        ''', re.IGNORECASE | re.DOTALL | re.VERBOSE)
 
-    def _get_doctype_decl_info(self, head):
+    def _get_doctype_decl_info(self, head,
+            _doctype_decl_re,
+            _doctype,
+            _spaces,
+            _space,
+        ):
         """Parse out DOCTYPE info from the given XML or HTML content.
 
         Returns a tuple of the form:
@@ -914,9 +1017,9 @@ class TextInfo(object):
         proper XML. As well, we are only parsing out decls that reference
         an external ID, as opposed to those that define entities locally.
         """
-        if "<!DOCTYPE" not in head:  # quick out
+        if _doctype not in head:  # quick out
             return (False, None, None, None, None)
-        m = self._doctype_decl_re.search(head)
+        m = _doctype_decl_re.search(head)
         if not m:
             return (False, None, None, None, None)
 
@@ -925,14 +1028,41 @@ class TextInfo(object):
         system_id = d.get("system_id_a") or d.get("system_id_b")
         public_id = d.get("public_id_b")
         if public_id:
-            public_id = re.sub("\s+", ' ', public_id.strip())  # normalize
+            public_id = re.sub(_spaces, _space, public_id.strip())  # normalize
         return (True, m.group(0), name, public_id, system_id)
 
-    _emacs_vars_head_pat = re.compile("-\*-\s*(.*?)\s*-\*-")
+    def _get_doctype_decl_info_s(self, head):
+        return self._get_doctype_decl_info(head,
+            self._doctype_decl_re_s,
+            "<!DOCTYPE",
+            "\s+",
+            ' ',
+        )
 
-    _emacs_head_vars_cache = None
+    def _get_doctype_decl_info_b(self, head):
+        return self._get_doctype_decl_info(head,
+            self._doctype_decl_re_b,
+            b"<!DOCTYPE",
+            b"\s+",
+            b' ',
+        )
 
-    def _get_emacs_head_vars(self, head_bytes):
+    _emacs_vars_head_pat_s = re.compile(r'-\*-\s*(.*?)\s*-\*-')
+    _emacs_vars_head_pat_b = re.compile(br'-\*-\s*(.*?)\s*-\*-')
+
+    _emacs_head_vars_cache_s = None
+    _emacs_head_vars_cache_b = None
+
+    def _get_emacs_head_vars(self, head_bytes,
+            _emacs_vars_head_pat,
+            _one_liner,
+            _new_line,
+            _colon,
+            _semi_colon,
+            _str1,
+            _str2,
+            _mode,
+        ):
         """Return a dictionary of emacs-style local variables in the head.
 
         "Head" emacs vars on the ones in the '-*- ... -*-' one-liner.
@@ -945,31 +1075,28 @@ class TextInfo(object):
         # that should have been picked up by an earlier BOM check.
         # Otherwise we rely on `chardet` to cover us.
 
-        if self._emacs_head_vars_cache is not None:
-            return self._emacs_head_vars_cache
-
         # Search the head for a '-*-'-style one-liner of variables.
         emacs_vars = {}
-        if "-*-" in head_bytes:
-            match = self._emacs_vars_head_pat.search(head_bytes)
+        if _one_liner in head_bytes:
+            match = _emacs_vars_head_pat.search(head_bytes)
             if match:
                 emacs_vars_str = match.group(1)
-                if '\n' in emacs_vars_str:
+                if _new_line in emacs_vars_str:
                     raise ValueError("local variables error: -*- not "
                                      "terminated before end of line")
-                emacs_var_strs = [s.strip() for s in emacs_vars_str.split(';')
+                emacs_var_strs = [s.strip() for s in emacs_vars_str.split(_semi_colon)
                                   if s.strip()]
-                if len(emacs_var_strs) == 1 and ':' not in emacs_var_strs[0]:
+                if len(emacs_var_strs) == 1 and _colon not in emacs_var_strs[0]:
                     # While not in the spec, this form is allowed by emacs:
                     #   -*- Tcl -*-
                     # where the implied "variable" is "mode". This form
                     # is only allowed if there are no other variables.
-                    emacs_vars["mode"] = emacs_var_strs[0].strip()
+                    emacs_vars[_mode] = emacs_var_strs[0].strip()
                 else:
                     for emacs_var_str in emacs_var_strs:
                         try:
                             variable, value = emacs_var_str.strip().split(
-                                ':', 1)
+                                _colon, 1)
                         except ValueError:
                             log.debug("emacs variables error: malformed -*- "
                                       "line: %r", emacs_var_str)
@@ -979,13 +1106,41 @@ class TextInfo(object):
                         emacs_vars[variable.lower()] = value.strip()
 
         # Unquote values.
-        for var, val in emacs_vars.items():
-            if len(val) > 1 and (val.startswith('"') and val.endswith('"')
-               or val.startswith('"') and val.endswith('"')):
+        for var, val in list(emacs_vars.items()):
+            if len(val) > 1 and (val.startswith(_str1) and val.endswith(_str1)
+               or val.startswith(_str2) and val.endswith(_str2)):
                 emacs_vars[var] = val[1:-1]
 
-        self._emacs_head_vars_cache = emacs_vars
         return emacs_vars
+
+    def _get_emacs_head_vars_s(self, head_bytes):
+        if self._emacs_head_vars_cache_s is None:
+            self._emacs_head_vars_cache_s = self._get_emacs_head_vars(head_bytes,
+                self._emacs_vars_head_pat_s,
+                '-*-',
+                '\n',
+                ':',
+                ';',
+                '"',
+                "'",
+                'mode',
+            )
+        return self._emacs_head_vars_cache_s
+
+    def _get_emacs_head_vars_b(self, head_bytes):
+        if self._emacs_head_vars_cache_b is None:
+            self._emacs_head_vars_cache_b = self._get_emacs_head_vars(head_bytes,
+                self._emacs_vars_head_pat_b,
+                b'-*-',
+                b'\n',
+                b':',
+                b';',
+                b'"',
+                b"'",
+                b'mode',
+            )
+        return self._emacs_head_vars_cache_b
+
 
     # This regular expression is intended to match blocks like this:
     #    PREFIX Local Variables: SUFFIX
@@ -995,7 +1150,13 @@ class TextInfo(object):
     # - "[ \t]" is used instead of "\s" to specifically exclude newlines
     # - "(\r\n|\n|\r)" is used instead of "$" because the sre engine does
     #   not like anything other than Unix-style line terminators.
-    _emacs_vars_tail_pat = re.compile(r"""^
+    _emacs_vars_tail_pat_s = re.compile(r"""^
+        (?P<prefix>(?:[^\r\n|\n|\r])*?)
+        [\ \t]*Local\ Variables:[\ \t]*
+        (?P<suffix>.*?)(?:\r\n|\n|\r)
+        (?P<content>.*?\1End:)
+        """, re.IGNORECASE | re.MULTILINE | re.DOTALL | re.VERBOSE)
+    _emacs_vars_tail_pat_b = re.compile(br"""^
         (?P<prefix>(?:[^\r\n|\n|\r])*?)
         [\ \t]*Local\ Variables:[\ \t]*
         (?P<suffix>.*?)(?:\r\n|\n|\r)
@@ -1004,7 +1165,15 @@ class TextInfo(object):
 
     _emacs_tail_vars_cache = None
 
-    def _get_emacs_tail_vars(self, tail_bytes):
+    def _get_emacs_tail_vars(self, tail_bytes,
+            _emacs_vars_tail_pat,
+            _local_variables,
+            _continued_for,
+            _colon,
+            _space,
+            _str1,
+            _str2,
+        ):
         r"""Return a dictionary of emacs-style local variables in the tail.
 
         "Tail" emacs vars on the ones in the multi-line "Local
@@ -1029,11 +1198,11 @@ class TextInfo(object):
             return self._emacs_tail_vars_cache
 
         emacs_vars = {}
-        if "Local Variables" not in tail_bytes:
+        if _local_variables not in tail_bytes:
             self._emacs_tail_vars_cache = emacs_vars
             return emacs_vars
 
-        match = self._emacs_vars_tail_pat.search(tail_bytes)
+        match = _emacs_vars_tail_pat.search(tail_bytes)
         if match:
             prefix = match.group("prefix")
             suffix = match.group("suffix")
@@ -1067,14 +1236,14 @@ class TextInfo(object):
                 line = line.strip()
                 if continued_for:
                     variable = continued_for
-                    if line.endswith('\\'):
+                    if line.endswith(_continued_for):
                         line = line[:-1].rstrip()
                     else:
                         continued_for = None
-                    emacs_vars[variable] += ' ' + line
+                    emacs_vars[variable] += _space + line
                 else:
                     try:
-                        variable, value = line.split(':', 1)
+                        variable, value = line.split(_colon, 1)
                     except ValueError:
                         log.debug("local variables error: missing colon "
                                   "in local variables entry: '%s'" % line)
@@ -1083,7 +1252,7 @@ class TextInfo(object):
                     # allows "mode" (and not "Mode", "MoDe", etc.) in this
                     # block.
                     value = value.strip()
-                    if value.endswith('\\'):
+                    if value.endswith(_continued_for):
                         value = value[:-1].rstrip()
                         continued_for = variable
                     else:
@@ -1091,17 +1260,38 @@ class TextInfo(object):
                     emacs_vars[variable] = value
 
         # Unquote values.
-        for var, val in emacs_vars.items():
-            if len(val) > 1 and (val.startswith('"') and val.endswith('"')
-               or val.startswith('"') and val.endswith('"')):
+        for var, val in list(emacs_vars.items()):
+            if len(val) > 1 and (val.startswith(_str1) and val.endswith(_str1)
+               or val.startswith(_str2) and val.endswith(_str2)):
                 emacs_vars[var] = val[1:-1]
 
         self._emacs_tail_vars_cache = emacs_vars
         return emacs_vars
 
+    def _get_emacs_tail_vars_s(self, tail_bytes):
+        return self._get_emacs_tail_vars(tail_bytes,
+            self._emacs_vars_tail_pat_s,
+            "Local Variables",
+            '\\',
+            ':',
+            ' ',
+            '"',
+            "'",
+        )
+    def _get_emacs_tail_vars_b(self, tail_bytes):
+        return self._get_emacs_tail_vars(tail_bytes,
+            self._emacs_vars_tail_pat_b,
+            b"Local Variables",
+            b'\\',
+            b':',
+            b' ',
+            b'"',
+            b"'",
+        )
+
     # Note: It might nice if parser also gave which of 'vi, vim, ex' and
     # the range in the accessor.
-    _vi_vars_pats_and_splitters = [
+    _vi_vars_pats_and_splitters_s = [
         (re.compile(r'[ \t]+(vi|vim([<>=]?\d{3})?|ex):\s*set? (?P<rhs>.*?)(?<!\\):', re.M),
          re.compile(r'[ \t]+')),
         (re.compile(r'[ \t]+(vi|vim([<>=]?\d{3})?|ex):\s*(?P<rhs>.*?)$', re.M),
@@ -1109,9 +1299,24 @@ class TextInfo(object):
         (re.compile(r'^(vi|vim([<>=]?\d{3})?):\s*set? (?P<rhs>.*?)(?<!\\):', re.M),
          re.compile(r'[ \t]+')),
     ]
-    _vi_vars_cache = None
+    _vi_vars_pats_and_splitters_b = [
+        (re.compile(br'[ \t]+(vi|vim([<>=]?\d{3})?|ex):\s*set? (?P<rhs>.*?)(?<!\\):', re.M),
+         re.compile(br'[ \t]+')),
+        (re.compile(br'[ \t]+(vi|vim([<>=]?\d{3})?|ex):\s*(?P<rhs>.*?)$', re.M),
+         re.compile(br'[ \t:]+')),
+        (re.compile(br'^(vi|vim([<>=]?\d{3})?):\s*set? (?P<rhs>.*?)(?<!\\):', re.M),
+         re.compile(br'[ \t]+')),
+    ]
+    _vi_vars_cache_b = None
+    _vi_vars_cache_s = None
 
-    def _get_vi_vars(self, bytes):
+    def _get_vi_vars(self, bytes,
+            _vi_vars_pats_and_splitters,
+            _types,
+            _eq,
+            _colon,
+            _ecolon,
+        ):
         r"""Return a dict of Vi[m] modeline vars.
 
         See ":help modeline" in Vim for a spec.
@@ -1143,32 +1348,49 @@ class TextInfo(object):
         """
         # Presume 8-bit encoding... yada yada.
 
-        if self._vi_vars_cache is not None:
-            return self._vi_vars_cache
-
         vi_vars = {}
 
         # TODO: Consider reducing support to just "vi:" for speed. This
         #      function takes way too much time.
-        if "vi:" not in bytes and "ex:" not in bytes and "vim:" not in bytes:
-            self._vi_vars_cache = vi_vars
+        if not any(t in bytes for t in _types):
             return vi_vars
 
-        for pat, splitter in self._vi_vars_pats_and_splitters:
+        for pat, splitter in _vi_vars_pats_and_splitters:
             match = pat.search(bytes)
             if match:
                 for var_str in splitter.split(match.group("rhs")):
-                    if '=' in var_str:
-                        name, value = var_str.split('=', 1)
+                    if _eq in var_str:
+                        name, value = var_str.split(_eq, 1)
                         try:
                             vi_vars[name] = int(value)
                         except ValueError:
-                            vi_vars[name] = value.replace('\\:', ':')
+                            vi_vars[name] = value.replace(_ecolon, _colon)
                     else:
                         vi_vars[var_str] = None
                 break
-        self._vi_vars_cache = vi_vars
         return vi_vars
+
+    def _get_vi_vars_s(self, bytes):
+        if self._vi_vars_cache_s is None:
+            self._vi_vars_cache_s = self._get_vi_vars(bytes,
+                self._vi_vars_pats_and_splitters_s,
+                ['vi:', 'ex:', 'vim:'],
+                '=',
+                ':',
+                '\\:',
+            )
+        return self._vi_vars_cache_s
+
+    def _get_vi_vars_b(self, bytes):
+        if self._vi_vars_cache_b is None:
+            self._vi_vars_cache_b = self._get_vi_vars(bytes,
+                self._vi_vars_pats_and_splitters_b,
+                [b'vi:', b'ex:', b'vim:'],
+                b'=',
+                b':',
+                b'\\:',
+            )
+        return self._vi_vars_cache_b
 
     def _get_bom_info(self):
         r"""Returns (<has-bom>, <bom>, <bom-encoding>). Examples:
@@ -1321,11 +1543,11 @@ class Accessor(object):
         head_bytes = self.head_bytes
         try:
             head_bytes.decode(encoding, 'strict')
-        except LookupError, ex:
+        except LookupError as ex:
             log.debug("encoding lookup error: %r", encoding)
             self._unsuccessful_encodings.add(encoding)
             return False
-        except UnicodeError, ex:
+        except UnicodeError as ex:
             # If the decode failed in the last few bytes, it might be
             # because a multi-surrogate was cutoff by the head. Ignore
             # the error here, if it is truly not of this encoding, the
@@ -1339,7 +1561,7 @@ class Accessor(object):
                 return False
         try:
             self.text = self.bytes.decode(encoding, 'strict')
-        except UnicodeError, ex:
+        except UnicodeError as ex:
             self._unsuccessful_encodings.add(encoding)
             return False
         self.encoding = encoding
@@ -1351,7 +1573,7 @@ class PathAccessor(Accessor):
     (READ_NONE,             # _file==None, file not opened yet
      READ_HEAD,             # _bytes==<head bytes>
      READ_TAIL,             # _bytes==<head>, _bytes_tail==<tail>
-     READ_ALL) = range(4)   # _bytes==<all>, _bytes_tail==None, _file closed
+     READ_ALL) = list(range(4))   # _bytes==<all>, _bytes_tail==None, _file closed
     _read_state = READ_NONE  # one of the READ_* states
     _file = None
     _bytes = None
@@ -1443,7 +1665,7 @@ class PathAccessor(Accessor):
 
             if self._read_state == self.READ_ALL:
                 self.close()
-        except Exception, ex:
+        except Exception as ex:
             log.warn("Could not read file: %r due to: %r", self.path, ex)
             raise
 
@@ -1514,7 +1736,7 @@ def _regex_from_encoded_pattern(s):
             except KeyError:
                 raise ValueError("unsupported regex flag: '%s' in '%s' "
                                  "(must be one of '%s')"
-                                 % (char, s, ''.join(flag_from_char.keys())))
+                                 % (char, s, ''.join(list(flag_from_char.keys()))))
         return re.compile(s[1:idx], flags)
     else:  # not an encoded regex
         return re.compile(re.escape(s))
@@ -1545,7 +1767,7 @@ def _escaped_text_from_text(text, escapes="eol"):
     # - Add _escaped_html_from_text() with a similar call sig.
     import re
 
-    if isinstance(escapes, basestring):
+    if isinstance(escapes, str):
         if escapes == "eol":
             escapes = {'\r\n': "\\r\\n\r\n", '\n': "\\n\n", '\r': "\\r\r"}
         elif escapes == "whitespace":
@@ -1560,7 +1782,7 @@ def _escaped_text_from_text(text, escapes="eol"):
 
     # Sort longer replacements first to allow, e.g. '\r\n' to beat '\r' and
     # '\n'.
-    escapes_keys = escapes.keys()
+    escapes_keys = list(escapes.keys())
     try:
         escapes_keys.sort(key=lambda a: len(a), reverse=True)
     except TypeError:
@@ -1656,7 +1878,7 @@ def _walk(top, topdown=True, onerror=None, follow_symlinks=False):
     # left to visit.  That logic is copied here.
     try:
         names = os.listdir(top)
-    except OSError, err:
+    except OSError as err:
         if onerror is not None:
             onerror(err)
         return
@@ -1784,7 +2006,7 @@ def _paths_from_path_patterns(path_patterns, files=True, dirs="never",
         lexists, islink, realpath
     from glob import glob
 
-    assert not isinstance(path_patterns, basestring), \
+    assert not isinstance(path_patterns, str), \
         "'path_patterns' must be a sequence, not a string: %r" % path_patterns
     GLOB_CHARS = '*?['
 
@@ -1981,11 +2203,11 @@ def main(argv):
             ti = textinfo_from_path(path, encoding=opts.encoding,
                                     follow_symlinks=opts.follow_symlinks,
                                     quick_determine_lang=opts.quick_determine_lang)
-        except OSError, ex:
+        except OSError as ex:
             log.error("%s: %s", path, ex)
             continue
         if opts.format == "summary":
-            print ti.as_summary()
+            print(ti.as_summary())
         elif opts.format == "dict":
             d = ti.as_dict()
             if "text" in d:
@@ -2011,7 +2233,7 @@ if __name__ == "__main__":
         exc_info = sys.exc_info()
         if log.isEnabledFor(logging.DEBUG):
             import traceback
-            print
+            print()
             traceback.print_exception(*exc_info)
         else:
             if hasattr(exc_info[0], "__name__"):

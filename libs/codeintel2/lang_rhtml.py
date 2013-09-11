@@ -41,7 +41,7 @@ import os
 from os.path import (isfile, isdir, exists, dirname, abspath, splitext,
                      join, basename)
 import sys
-from cStringIO import StringIO
+from io import StringIO
 import logging
 import re
 import traceback

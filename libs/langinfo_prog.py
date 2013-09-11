@@ -49,7 +49,7 @@ class _PythonCommonLangInfo(LangInfo):
     exts = ['.py', '.pyw']
     default_encoding = "ascii"  # TODO: link to ref defining default encoding
     # http://www.python.org/dev/peps/pep-0263/
-    encoding_decl_pattern = re.compile(r"coding[:=]\s*(?P<encoding>[-\w.]+)")
+    encoding_decl_pattern = re.compile(br"coding[:=]\s*(?P<encoding>[-\w.]+)")
 
 # Where there's a conflict in extensions, put the main
 # LangInfo entry last.
@@ -97,7 +97,7 @@ class PerlLangInfo(LangInfo):
     #   use encoding::source "<encoding-name>";
     #   "This is like the encoding pragma, but done right."
     encoding_decl_pattern = re.compile(
-        r"""use\s+encoding(?:::source)?\s+(['"])(?P<encoding>[\w-]+)\1""")
+        br"""use\s+encoding(?:::source)?\s+(['"])(?P<encoding>[\w-]+)\1""")
 
 
 class PHPLangInfo(LangInfo):

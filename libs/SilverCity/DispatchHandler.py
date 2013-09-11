@@ -1,5 +1,5 @@
-import ScintillaConstants
-import Utils
+from . import ScintillaConstants
+from . import Utils
 
 
 def generate_handler_name(state):

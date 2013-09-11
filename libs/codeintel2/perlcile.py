@@ -156,7 +156,7 @@ def main(argv):
         opts, args = getopt.getopt(argv[1:], "Vvhf:cL:",
                                    ["version", "verbose", "help", "filename=", "md5=", "mtime=",
                                     "clock", "language="])
-    except getopt.GetoptError, ex:
+    except getopt.GetoptError as ex:
         log.error(str(ex))
         log.error("Try `perlcile --help'.")
         return 1
@@ -172,7 +172,7 @@ def main(argv):
             return
         elif opt in ("-V", "--version"):
             ver = '.'.join([str(part) for part in _version_])
-            print "perlcile %s" % ver
+            print("perlcile %s" % ver)
             return
         elif opt in ("-v", "--verbose"):
             numVerboses += 1
