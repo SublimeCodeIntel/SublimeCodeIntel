@@ -571,7 +571,8 @@ class PythonCITDLExtractorMixin(object):
     citdl_from_literal_type = {}
 
     def _citdl_expr_from_pos(self, buf, pos, implicit=False,
-                             include_forwards=False, DEBUG=False, trg=None):
+                             include_forwards=False, DEBUG=False, trg=None,
+                             array_as_attr=False):
 
         # PERF: Would dicts be faster for all of these?
         WHITESPACE = tuple(" \t\n\r\v\f")
@@ -707,9 +708,11 @@ class PythonCITDLExtractorMixin(object):
                 stack.append((ch, style, BLOCKS[ch], i))
                 i -= 1
                 num_lines = 0
+                content_styles = []
                 while i >= 0:
                     ch = accessor.char_at_pos(i)
                     style = accessor.style_at_pos(i)
+                    content_styles.append(style)
                     if DEBUG:
                         print "finding matching brace: ch %r (%s), stack %r"\
                               % (ch, ', '.join(buf.style_names_from_style_num(style)), stack)
@@ -728,15 +731,24 @@ class PythonCITDLExtractorMixin(object):
                         #       and style == stack[-1][1]:
                         last_frame = stack.pop()
                         if not stack:
+                            content_styles.pop()  # Drop the thing that matched
+                            if array_as_attr and \
+                                    all(style in string_styles for style in content_styles):
+                                prop = accessor.text_range(
+                                    i + 1, last_frame[3])
+                                if DEBUG:
+                                    print "Injecting %s" % (prop,)
+                                citdl_expr.append(prop)
                             if DEBUG:
                                 print "jump to matching brace at %d: %r" % (i, ch)
                             citdl_expr.append(ch)
-                            if trg:
+                            if trg and ch == "(":
                                 # save the text in params, in case the completion
                                 # needs to special-case things depending on the
                                 # argument.
-                                trg.extra["_params"] = accessor.text_range(
-                                    i + 1, last_frame[3])
+                                params = trg.extra.setdefault("_params", [])
+                                params.insert(0, accessor.text_range(
+                                    i + 1, last_frame[3]))
                             i -= 1
                             break
                     i -= 1

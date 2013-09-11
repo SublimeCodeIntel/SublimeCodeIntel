@@ -1,4 +1,5 @@
 #!python
+# encoding: utf-8
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -352,7 +353,7 @@ def parsePyFuncDoc(doc, fallbackCallSig=None, scope="?", funcname="?"):
 #---- debugging utilities
 
 def unmark_text(markedup_text):
-    """Parse text with potential markup as follows and return
+    u"""Parse text with potential markup as follows and return
     (<text>, <data-dict>).
 
         "<|>" indicates the current position (pos), defaults to the end
@@ -362,6 +363,9 @@ def unmark_text(markedup_text):
             of processing, if present.
         "<N>" is a numbered marker. N can be any of 0-99. These positions
             are returned as the associate number key in <data-dict>.
+
+    Note that the positions are in UTF-8 byte counts, not character counts.
+    This matches the behaviour of Scintilla positions.
 
     E.g.:
         >>> unmark_text('foo.<|>')
@@ -376,11 +380,13 @@ def unmark_text(markedup_text):
         ('os.path.join(', {'pos': 13, 'start_pos': 12})
         >>> unmark_text('abc<3>defghi<2>jk<4>lm<1>nopqrstuvwxyz')
         ('abcdefghijklmnopqrstuvwxyz', {1: 13, 2: 9, 3: 3, 4: 11, 'pos': 26})
+        >>> unmark_text('Ůɳíčóďé<|>')
+        ('Ůɳíčóďé', {'pos': 14})
 
     See the matching markup_text() below.
     """
     splitter = re.compile(r"(<(?:[\|\+\$\[\]<]|\d+)>)")
-    text = ""
+    text = u"" if isinstance(markup_text, unicode) else ""
     data = {}
     posNameFromSymbol = {
         "<|>": "pos",
@@ -389,18 +395,24 @@ def unmark_text(markedup_text):
         "<[>": "start_selection",
         "<]>": "end_selection",
     }
+
+    def byte_length(text):
+        if isinstance(text, unicode):
+            return len(text.encode("utf-8"))
+        return len(text)
+
     bracketed_digits_re = re.compile(r'<\d+>$')
     for token in splitter.split(markedup_text):
         if token in posNameFromSymbol:
-            data[posNameFromSymbol[token]] = len(text)
+            data[posNameFromSymbol[token]] = byte_length(text)
         elif token == "<<>":  # escape sequence
             text += "<"
         elif bracketed_digits_re.match(token):
-            data[int(token[1:-1])] = len(text)
+            data[int(token[1:-1])] = byte_length(text)
         else:
             text += token
     if "pos" not in data:
-        data["pos"] = len(text)
+        data["pos"] = byte_length(text)
     # sys.stderr.write(">> text:%r, data:%s\n" % (text, data))
     return text, data
 
@@ -419,19 +431,20 @@ def markup_text(text, pos=None, trg_pos=None, start_pos=None):
         positions_and_markers.append((start_pos, '<$>'))
     positions_and_markers.sort()
 
+    text = unicode(text).encode("utf-8")
     m_text = ""
     m_pos = 0
     for position, marker in positions_and_markers:
         m_text += text[m_pos:position] + marker
         m_pos = position
     m_text += text[m_pos:]
-    return m_text
+    return m_text.decode("utf-8")
 
 
 def lines_from_pos(unmarked_text, positions):
     """Get 1-based line numbers from positions
         @param unmarked_text {str} The text to examine
-        @param positions {dict or list of int} Positions to look up
+        @param positions {dict or list of int} Byte positions to look up
         @returns {dict or list of int} Matching line numbers (1-based)
     Given some text and either a list of positions, or a dict containing
     positions as values, return a matching data structure with positions
@@ -451,10 +464,10 @@ def lines_from_pos(unmarked_text, positions):
         >>> lines_from_pos(text, {"hello": 10, "moo": 20, "not": "an int"})
         {'moo': 1, 'hello': 1}
     """
-    lines = unmarked_text.splitlines(True)
+    lines = unicode(unmarked_text).splitlines(True)
     offsets = [0]
     for line in lines:
-        offsets.append(offsets[-1] + len(line))
+        offsets.append(offsets[-1] + len(line.encode("utf-8")))
     try:
         # assume a dict
         keys = positions.iterkeys()

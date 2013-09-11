@@ -1139,6 +1139,13 @@ class PHPTreeEvaluator(TreeEvaluator):
                              "yes: %s", first_token, scoperef, first_token_elem)
                     return ([(first_token_elem, scoperef)], 1)
 
+            if first_token == elem.get("name"):
+                # The element itself is the thing we wanted...
+                if self._return_with_hit((elem, scoperef), 1):
+                    self.log("_hits_from_first_part:: pt1: is '%s' accessible on %s? "
+                             "yes: %s", first_token, scoperef, elem)
+                    return ([(elem, scoperef)], 1)
+
             if elem.tag == "scope":
                 self.log("_hits_from_first_part:: checking namespace aliases")
                 imports = [child for child in elem if child.tag == "import"]

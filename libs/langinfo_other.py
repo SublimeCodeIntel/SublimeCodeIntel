@@ -143,7 +143,7 @@ class POVRayLangInfo(LangInfo):
     exts = [".pov"]
 
 
-class PORayLangInfo(LangInfo):
+class POGetTextLangInfo(LangInfo):
     name = "GetText"
     conforms_to_bases = ["Text"]
     exts = [".po"]

@@ -3149,7 +3149,7 @@ class PHPParser:
                         extends = self._getExtendsArgument(styles, text, p)
                         self.addInterface(namelist[
                                           0], extends, doc=self.comment)
-                elif keyword == "return":
+                elif keyword in ("return", "yield"):
                     # Returning value for a function call
                     #   return 123;
                     #   return $x;

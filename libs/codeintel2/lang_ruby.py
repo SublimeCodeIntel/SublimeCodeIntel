@@ -55,6 +55,7 @@ from SilverCity import ScintillaConstants
 from SilverCity.ScintillaConstants import (
     SCLEX_RUBY, SCE_RB_DEFAULT, SCE_RB_COMMENTLINE,
     SCE_RB_REGEX, SCE_RB_IDENTIFIER, SCE_RB_WORD, SCE_RB_OPERATOR,
+    SCE_RB_CLASSNAME, SCE_RB_DEFNAME, SCE_RB_MODULE_NAME,
     SCE_UDL_M_OPERATOR, SCE_UDL_SSL_DEFAULT, SCE_UDL_SSL_IDENTIFIER,
     SCE_UDL_SSL_OPERATOR, SCE_UDL_SSL_VARIABLE, SCE_UDL_SSL_WORD,
     SCE_UDL_TPL_OPERATOR
@@ -242,6 +243,12 @@ class _RubyStyleClassifier(_CommonStyleClassifier):
     def is_default_style(self, style):
         return style == SCE_RB_DEFAULT
 
+    def is_identifier_or_definition_style(self, style):
+        """ Check if a style is either a identifier reference or a definition
+        of a thing that can be referenced by an identifier """
+        return style in (SCE_RB_IDENTIFIER, SCE_RB_CLASSNAME,
+                         SCE_RB_DEFNAME, SCE_RB_MODULE_NAME)
+
     def __getattr__(self, name):
         return getattr(self.buf, name)
 
@@ -284,6 +291,9 @@ class _UDLStyleClassifier(_CommonStyleClassifier):
         return style == SCE_UDL_SSL_IDENTIFIER or style == SCE_UDL_SSL_WORD
 
     def is_identifier_style(self, style):
+        return style == SCE_UDL_SSL_IDENTIFIER
+
+    def is_identifier_or_definition_style(self, style):
         return style == SCE_UDL_SSL_IDENTIFIER
 
     def is_operator_style(self, style):
@@ -1278,7 +1288,7 @@ class RubyLangIntel(CitadelLangIntel,
             # Move pos forward until at the end of the current expression
             trg_length = 0
             curr_style = accessor.style_at_pos(last_pos)
-            if not styleClassifier.is_identifier_style(curr_style):
+            if not styleClassifier.is_identifier_or_definition_style(curr_style):
                 return None
             idx = pos
             while idx < buflen:

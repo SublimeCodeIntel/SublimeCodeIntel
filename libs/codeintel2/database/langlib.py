@@ -1318,35 +1318,25 @@ class LangZone(object):
 
         return langdirslib
 
-    def reportMemory(self, reporter, closure=None):
+    def reportMemory(self):
         """
-        Report on memory usage from this LangZone. See nsIMemoryMultiReporter
+        Report on memory usage from this LangZone.
+        @returns {dict} memory usage; keys are the paths, values are a dict of
+            "amount" -> number
+            "units" -> "bytes" | "count"
+            "desc" -> str description
         """
         log.debug("%s LangZone: reporting memory", self.lang)
-        from xpcom import components
-        kind_other = components.interfaces.nsIMemoryReporter.KIND_OTHER
-        units_count = components.interfaces.nsIMemoryReporter.UNITS_COUNT
-        process = ""
-        reporter.callback(process,
-                          "komodo /codeintel/langzone/%s/index-cache" % (
-                              self.lang,),
-                          kind_other,
-                          units_count,
-                          len(self._index_and_atime_from_dbsubpath),
-                          "Number of cached indices.",
-                          closure)
-
-        # also calculate the size in bytes
         import memutils
-        total_mem_usage = memutils.memusage(
-            self._index_and_atime_from_dbsubpath)
-        reporter.callback(process,
-                          "explicit/python/codeintel/%s/index-cache" % (
-                              self.lang,),
-                          components.interfaces.nsIMemoryReporter.KIND_HEAP,
-                          components.interfaces.nsIMemoryReporter.UNITS_BYTES,
-                          total_mem_usage,
-                          "The number of bytes of %s codeintel index caches." % (
-                              self.lang,),
-                          closure)
-        return total_mem_usage
+        return {
+            "komodo\\codeintel/langzone/%s/index-cache" % (self.lang,): {
+                "amount": len(self._index_and_atime_from_dbsubpath),
+                "units": "count",
+                "desc": "Number of cached indices.",
+            },
+            "explicit/python/codeintel/%s/index-cache" % (self.lang,): {
+                "amount": memutils.memusage(self._index_and_atime_from_dbsubpath),
+                "units": "bytes",
+                "desc": "The number of bytes of %s codeintel index caches." % (self.lang,),
+            },
+        }

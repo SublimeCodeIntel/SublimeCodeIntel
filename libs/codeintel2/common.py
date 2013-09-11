@@ -59,6 +59,8 @@ __all__ = [
     "CorruptDatabase", "NotFoundInDatabase", "CITDLError",
     "NoModuleEntry", "NoCIDBModuleEntry",
 
+    "LazyClassAttribute",
+
     "ENABLE_HEURISTICS",
     "_xpcom_",
 ]
@@ -72,6 +74,14 @@ import time
 import threading
 import logging
 import warnings
+
+try:
+    from zope.cachedescriptors.property import LazyClassAttribute
+except ImportError:
+    import warnings
+    warnings.warn("Unable to import zope.cachedescriptors.property")
+    # Fallback to regular properties.
+    LazyClassAttribute = property
 
 import SilverCity
 from SilverCity.Lexer import Lexer
@@ -265,7 +275,7 @@ class Trigger(object):
     lang = None  # e.g. "Python", "CSS"
     form = None  # TRG_FORM_CPLN or TRG_FORM_CALLTIP
     type = None  # e.g. "object-members"
-    pos = None
+    pos = None  # Trigger position, in bytes (of UTF 8)
     implicit = None
     # The number characters of the trigger. For most (but not all) triggers
     # there is a clear distinction between a trigger token and a preceding

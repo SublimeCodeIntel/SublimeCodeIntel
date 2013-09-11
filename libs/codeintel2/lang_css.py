@@ -67,10 +67,6 @@ from codeintel2.util import (OrdPunctLast, make_short_name_dict,
 from codeintel2.langintel import LangIntel, ParenStyleCalltipIntelMixin
 from codeintel2.udl import UDLBuffer, is_udl_css_style
 from codeintel2.accessor import AccessorCache
-from codeintel2 import constants_css3 as constants_css
-from codeintel2 import constants_css_microsoft_extensions
-from codeintel2 import constants_css_moz_extensions
-from codeintel2 import constants_css_webkit_extensions
 
 if _xpcom_:
     from xpcom.server import UnwrapObject
@@ -426,40 +422,61 @@ UDLCSSStyleClassifier = _UDLCSSStyleClassifier()
 class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
     lang = "CSS"
 
-    # CSS attributes:
-    #     key (string) is the css property (attribute) name
-    #     value (list) is the possible css property (attribute) values
-    CSS_ATTRIBUTES = constants_css.CSS_ATTR_DICT.copy()
-    CSS_ATTRIBUTES.update(
-        constants_css_microsoft_extensions.CSS_MICROSOFT_SPECIFIC_ATTRS_DICT)
-    CSS_ATTRIBUTES.update(
-        constants_css_moz_extensions.CSS_MOZ_SPECIFIC_ATTRS_DICT)
-    CSS_ATTRIBUTES.update(
-        constants_css_webkit_extensions.CSS_WEBKIT_SPECIFIC_ATTRS_DICT)
-    # Setup the names triggered for "property-names"
-    CSS_PROPERTY_NAMES = sorted(CSS_ATTRIBUTES.keys(), key=OrdPunctLast)
+    @LazyClassAttribute
+    def CSS_ATTRIBUTES(self):
+        # CSS attributes:
+        #     key (string) is the css property (attribute) name
+        #     value (list) is the possible css property (attribute) values
+        from codeintel2 import constants_css3 as constants_css
+        from codeintel2 import constants_css_microsoft_extensions
+        from codeintel2 import constants_css_moz_extensions
+        from codeintel2 import constants_css_webkit_extensions
+        attrs = constants_css.CSS_ATTR_DICT.copy()
+        attrs.update(
+            constants_css_microsoft_extensions.CSS_MICROSOFT_SPECIFIC_ATTRS_DICT)
+        attrs.update(constants_css_moz_extensions.CSS_MOZ_SPECIFIC_ATTRS_DICT)
+        attrs.update(
+            constants_css_webkit_extensions.CSS_WEBKIT_SPECIFIC_ATTRS_DICT)
+        return attrs
 
-    # Calltips for css property attributes
-    CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT = constants_css.CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.copy(
-    )
-    CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.update(
-        constants_css_microsoft_extensions.CSS_MICROSOFT_SPECIFIC_CALLTIP_DICT)
-    CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.update(
-        constants_css_moz_extensions.CSS_MOZ_SPECIFIC_CALLTIP_DICT)
-    CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.update(
-        constants_css_webkit_extensions.CSS_WEBKIT_SPECIFIC_CALLTIP_DICT)
+    @LazyClassAttribute
+    def CSS_PROPERTY_NAMES(self):
+        # Setup the names triggered for "property-names"
+        return sorted(self.CSS_ATTRIBUTES.keys(), key=OrdPunctLast)
 
-    # Tag names
-    CSS_HTML_TAG_NAMES = sorted(Keywords.hypertext_elements.split())
+    @LazyClassAttribute
+    def CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT(self):
+        # Calltips for css property attributes
+        from codeintel2 import constants_css3 as constants_css
+        from codeintel2 import constants_css_microsoft_extensions
+        from codeintel2 import constants_css_moz_extensions
+        from codeintel2 import constants_css_webkit_extensions
+        calltips = constants_css.CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT.copy()
+        calltips.update(
+            constants_css_microsoft_extensions.CSS_MICROSOFT_SPECIFIC_CALLTIP_DICT)
+        calltips.update(
+            constants_css_moz_extensions.CSS_MOZ_SPECIFIC_CALLTIP_DICT)
+        calltips.update(
+            constants_css_webkit_extensions.CSS_WEBKIT_SPECIFIC_CALLTIP_DICT)
+        return calltips
 
-    # pseudo-class-names
-    CSS_PSEUDO_CLASS_NAMES = sorted(
-        constants_css.CSS_PSEUDO_CLASS_NAMES, key=OrdPunctLast)
+    @LazyClassAttribute
+    def CSS_HTML_TAG_NAMES(self):
+        # Tag names
+        return sorted(Keywords.hypertext_elements.split())
 
-    # at rules
-    CSS_AT_RULE_NAMES = sorted(
-        ["import", "media", "charset", "font-face", "page", "namespace"],
-        key=OrdPunctLast)
+    @LazyClassAttribute
+    def CSS_PSEUDO_CLASS_NAMES(self):
+        # pseudo-class-names
+        from codeintel2 import constants_css3 as constants_css
+        return sorted(constants_css.CSS_PSEUDO_CLASS_NAMES, key=OrdPunctLast)
+
+    @LazyClassAttribute
+    def CSS_AT_RULE_NAMES(self):
+        # at rules
+        return sorted(
+            ["import", "media", "charset", "font-face", "page", "namespace"],
+            key=OrdPunctLast)
 
     def preceding_trg_from_pos(self, buf, pos, curr_pos):
         DEBUG = DebugStatus  # not using 'logging' system, because want to be fast
@@ -559,21 +576,21 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                         if DEBUG:
                             print " _trg_from_pos: space => property-values"
                         return Trigger("CSS", TRG_FORM_CPLN, "property-values",
-                                       pos, implicit, extra={"ac": ac})
+                                       pos, implicit)
                     elif styleClassifier.is_tag(last_style, ac):
                         if DEBUG:
                             print " _trg_from_pos: space => tag-names"
                         return Trigger("CSS", TRG_FORM_CPLN, "tag-names",
-                                       pos, implicit, extra={"ac": ac})
+                                       pos, implicit)
                     elif styleClassifier.is_identifier(last_style, ac):
                         if DEBUG:
                             print " _trg_from_pos: space => property-names"
                         return Trigger("CSS", TRG_FORM_CPLN, "property-names",
-                                       pos, implicit, extra={"ac": ac})
+                                       pos, implicit)
                 if DEBUG:
                     print " _trg_from_pos: couldn't resolve space, settling on property-names"
                 return Trigger("CSS", TRG_FORM_CPLN, "property-values",
-                               pos, implicit, extra={"ac": ac})
+                               pos, implicit)
 
             elif styleClassifier.is_operator(last_style, ac):
                 # anchors
@@ -581,7 +598,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                     print "  _trg_from_pos:: OPERATOR style"
                 if last_char == '#':
                     return Trigger("CSS", TRG_FORM_CPLN, "anchors",
-                                   pos, implicit, extra={"ac": ac})
+                                   pos, implicit)
 
                 elif last_char == ':':
                     try:
@@ -601,18 +618,18 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                         # complete for pseudo-class-names
                         return Trigger(
                             "CSS", TRG_FORM_CPLN, "pseudo-class-names",
-                            pos, implicit, extra={"ac": ac})
+                            pos, implicit)
                     else:
                     # if styleClassifier.is_identifier(style, ac):
                         # calltip for property-values
                         return Trigger(
                             "CSS", TRG_FORM_CALLTIP, "property-values",
-                            pos, implicit, extra={"ac": ac})
+                            pos, implicit)
 
                 # class-names
                 elif last_char == '.':
                     return Trigger("CSS", TRG_FORM_CPLN, "class-names",
-                                   pos, implicit, extra={"ac": ac})
+                                   pos, implicit)
 
                 # at-rule
                 elif last_char == '@':
@@ -620,7 +637,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                     # XXX - Should check not beyond first rule set
                     #     - Should check not within a rule block.
                     return Trigger("CSS", TRG_FORM_CPLN, "at-rule",
-                                   pos, implicit, extra={"ac": ac})
+                                   pos, implicit)
 
                 elif last_char == '/':
                     try:
@@ -656,7 +673,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                 except IndexError:
                     p = 0
                 return Trigger("CSS", TRG_FORM_CPLN, "tag-names",
-                               p, implicit, extra={"ac": ac})
+                               p, implicit)
 
             elif styleClassifier.is_identifier(last_style, ac):
                 if DEBUG:
@@ -684,7 +701,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                     except IndexError:
                         break
                 return Trigger("CSS", TRG_FORM_CPLN, "property-names",
-                               pos+1, implicit, extentLength=extentLength, extra={"ac": ac})
+                               pos+1, implicit, extentLength=extentLength)
 
             elif styleClassifier.is_value(last_style, ac):
                 p, ch, style = ac.getPrevPosCharStyle(
@@ -701,7 +718,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                 #       in straight CSS.
                 if last_char in WHITESPACE:
                     return Trigger("CSS", TRG_FORM_CPLN, "property-values",
-                                   last_pos+1, implicit, extra={"ac": ac})
+                                   last_pos+1, implicit)
                 elif ch in WHITESPACE or ch in ":,%)":
                     # Check to ensure this is not a pseudo-class! Bug:
                     #   http://bugs.activestate.com/show_bug.cgi?id=71073
@@ -719,7 +736,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                                 print "pseudo-class style found, no trigger."
                             return None
                     return Trigger("CSS", TRG_FORM_CPLN, "property-values",
-                                   p+1, implicit, extra={"ac": ac})
+                                   p+1, implicit)
                 # For explicit, we can also be inside a property already
                 if not implicit and isident(ch):
                     # If there is already part of a value there, we need to move
@@ -727,7 +744,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                     while isident(ch):
                         p, ch, style = ac.getPrevPosCharStyle()
                     return Trigger("CSS", TRG_FORM_CPLN, "property-values",
-                                   p+1, implicit, extra={"ac": ac})
+                                   p+1, implicit)
                 return None
 
             elif DEBUG:
@@ -768,9 +785,6 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
         # be blocked on this. If processing might be slow (e.g. scanning
         # a number of project files for appropriate anchors, etc.), then
         # this should be made asynchronous.
-        if _xpcom_:
-            trg = UnwrapObject(trg)
-            ctlr = UnwrapObject(ctlr)
         DEBUG = DebugStatus
         # DEBUG = True
         if DEBUG:

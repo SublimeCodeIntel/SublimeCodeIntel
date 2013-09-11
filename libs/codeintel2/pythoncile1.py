@@ -552,8 +552,16 @@ class AST2CIXVisitor:
         prop_var = None
         if node.decorators:
             for deco in node.decorators.nodes:
+                deco_name = getattr(deco, 'name', None)
                 prop_mode = None
-                if hasattr(deco, 'name') and deco.name == 'property':
+
+                if deco_name == 'staticmethod':
+                    attributes.append("__staticmethod__")
+                    continue
+                if deco_name == 'classmethod':
+                    attributes.append("__classmethod__")
+                    continue
+                if deco_name == 'property':
                     prop_mode = 'getter'
                 elif hasattr(deco, 'attrname') and deco.attrname in ('getter',
                                                                      'setter',
@@ -695,9 +703,14 @@ class AST2CIXVisitor:
         # Drop first "self" argument from class method signatures.
         # - This is a little bit of a compromise as the "self" argument
         #   should *sometimes* be included in a method's call signature.
-        if _isclass(parent) and sigArgs:
+        if _isclass(parent) and sigArgs and "__staticmethod__" not in attributes:
+            # Delete the first "self" argument.
             del sigArgs[0]
         fallbackSig += "(%s)" % (", ".join(sigArgs))
+        if "__staticmethod__" in attributes:
+            fallbackSig += " - staticmethod"
+        elif "__classmethod__" in attributes:
+            fallbackSig += " - classmethod"
         if node.doc:
             siglines, desclines = util.parsePyFuncDoc(node.doc, [fallbackSig])
             namespace["signature"] = "\n".join(siglines)

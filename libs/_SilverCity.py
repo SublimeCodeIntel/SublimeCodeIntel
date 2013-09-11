@@ -7,11 +7,11 @@ ARCH = 'x%d' % (struct.calcsize('P') * 8)
 
 platform = None
 
-try:
-    from _local_arch._SilverCity import *
-    platform = "Local arch"
-except ImportError:
-    if VERSION >= (3, 3):
+if VERSION >= (3, 3):
+    try:
+        from _local_arch._SilverCity import *
+        platform = "Local arch"
+    except ImportError:
         if PLATFORM == 'darwin':
             from _macosx_universal_py33._SilverCity import *
             platform = "MacOS X Universal"
@@ -29,7 +29,11 @@ except ImportError:
             elif ARCH == 'x32':
                 from _win32_py33._SilverCity import *
                 platform = "Windows 32 bits"
-    elif VERSION >= (2, 6):
+elif VERSION >= (2, 6):
+    try:
+        from _local_arch._SilverCity import *
+        platform = "Local arch"
+    except ImportError:
         if PLATFORM == 'darwin':
             from _macosx_universal_py26._SilverCity import *
             platform = "MacOS X Universal"

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<codeintel description="Mozilla XPCOM Components" name="XPCOM" version="2.0">
+  <file lang="JavaScript" path="xpcom">
+    <scope ilk="blob" lang="JavaScript" name="xpcom">
+      <!-- The contents of the Components object is generated at runtime via
+         - reflection of the running Komodo instance; see xpcomJSElements.py
+         - and koCodeIntelXPCOMSupport.py
+         -->
+      <variable doc="XPCOM base object" name="Components" />
+      <!-- Frequent aliases for things hanging off Components; note that these
+         - are only here to be found in toplevelnames_index.  They are actually
+         - re-created in xpcomJSElements.py.
+         -->
+      <variable name="Cc" citdl="Components.classes"/>
+      <variable name="CC" citdl="Components.classes"/>
+      <variable name="Ci" citdl="Components.interfaces"/>
+      <variable name="CI" citdl="Components.interfaces"/>
+      <variable name="Cu" citdl="Components.utils"/>
+      <variable name="CU" citdl="Components.utils"/>
+    </scope>
+  </file>
+</codeintel>

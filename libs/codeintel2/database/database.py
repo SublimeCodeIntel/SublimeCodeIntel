@@ -448,8 +448,11 @@ class Database(object):
         self.acquire_lock()
         try:
             log.debug("fs-write: create db skeleton in '%s'", self.base_dir)
-            if not exists(self.base_dir):
+            try:
                 os.makedirs(self.base_dir)
+            except:  # in case we had a race somewhere
+                if not isdir(self.base_dir):
+                    raise
             open(join(self.base_dir, "README.txt"), 'w').write(dedent("""
                 This is a database for the Code Intelligence system (a
                 subsystem of SublimeCodeIntel). Do NOT modify anything in here

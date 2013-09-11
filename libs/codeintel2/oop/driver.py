@@ -18,15 +18,14 @@ from codeintel2.database.database import Database, DatabaseError
 import codeintel2.environment
 import collections
 import functools
-import hashlib
 import imp
 import itertools
 import json
 import logging
 import os.path
+import Queue
 import shutil
 import sys
-import textinfo
 import threading
 import traceback
 import uuid
@@ -81,6 +80,33 @@ class CommandHandler(object):
         raise NotImplementedError
 
 
+class LoggingHandler(logging.Handler):
+    """Log handler class to forward messages to the main process"""
+
+    def __init__(self, driver):
+        logging.Handler.__init__(self)
+        self._driver = driver
+
+    def emit(self, record):
+        """Emit a record.  Do this over the driver's normal pipe."""
+        try:
+            if record.levelno < logging.WARNING:
+                # Don't log info/debug records. We can look at codeinte.log for
+                # those.  This gets especially bad when logging what's being
+                # sent over the wire...
+                return
+            self._driver.send(request=None,
+                              command="report-message",
+                              type="logging",
+                              name=record.name,
+                              message=self.format(record),
+                              level=record.levelno)
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError(record)
+
+
 class Driver(threading.Thread):
     """
     Out-of-process codeintel2 driver
@@ -89,8 +115,11 @@ class Driver(threading.Thread):
     """
 
     # static
+    _instance = None
     _command_handler_map = collections.defaultdict(list)
-    """Registered command handlers"""
+    """Registered command handlers; the key is the command name (a str), and the
+    value is a list of command handler instances or (for lazy handlers) a
+    single-element tuple containing the callable to get the real handler."""
     _default_handler = None
     """The default (core) command handler; instance of a CoreHandler"""
     _builtin_commands = {}
@@ -98,6 +127,9 @@ class Driver(threading.Thread):
 
     def __init__(self, db_base_dir=None, fd_in=sys.stdin, fd_out=sys.stdout):
         threading.Thread.__init__(self, name="Codeintel OOP Driver")
+        assert Driver._instance is None, "Driver should be a singleton"
+        Driver._instance = self
+        logging.root.addHandler(LoggingHandler(self))
         self.daemon = True
 
         self.fd_in = fd_in
@@ -107,6 +139,11 @@ class Driver(threading.Thread):
         self.buffers = {}  # path to Buffer objects
         self.next_buffer = 0
         self.active_request = None
+
+        self.send_queue = Queue.Queue()
+        self.send_thread = threading.Thread(target=self._send_proc)
+        self.send_thread.daemon = True
+        self.send_thread.start()
 
         self.queue = collections.deque()
         self.queue_cv = threading.Condition()
@@ -125,18 +162,99 @@ class Driver(threading.Thread):
         log.debug("using db base dir %s", db_base_dir)
         self.mgr = Manager(db_base_dir=db_base_dir,
                            db_catalog_dirs=[],
+                           db_event_reporter=self._DBEventReporter(self),
                            env=self.env,
                            on_scan_complete=self._on_scan_complete)
         self.mgr.initialize()
 
     def _on_scan_complete(self, scan_request):
-        if scan_request.status == "changed":
+        if scan_request.status in ("changed", "skipped"):
             # Send unsolicited response about the completed scan
             buf = scan_request.buf
             self.send(request=None,
                       path=buf.path,
                       language=buf.lang,
                       command="scan-complete")
+
+    class _DBEventReporter(object):
+        def __init__(self, driver):
+            self.driver = driver
+            self.log = log.getChild("DBEventReporter")
+            self.debug = self.log.debug
+
+            # directories being scanned (completed or not)
+            # key is unicode path, value is number of times it's active
+            self._dirs = collections.defaultdict(int)
+            # directories which are complete (unicode path)
+            self._completed_dirs = set()
+
+        def send(self, **kwargs):
+            self.driver.send(request=None, command="report-message", **kwargs)
+
+        def __call__(self, message):
+            """Old-style status messages before long-running jobs
+            @param msg {str or None} The message to display
+            """
+            if len(self._dirs):
+                return  # ignore old-style db events if we're doing a scan
+            self.debug("db event: %s", message)
+            self.send(message=message)
+
+        def onScanStarted(self, description, dirs=set()):
+            """Called when a directory scan is about to start
+            @param description {unicode} A string suitable for showing the user
+                about the upcoming operation
+            @param dirs {set of unicode} The directories about to be scanned
+            """
+            self.debug("scan started: %s (%s dirs)", description, len(dirs))
+
+            assert dirs, "onScanStarted expects non-empty directories"
+            if not dirs:  # empty set - we shouldn't have gotten here, but be nice
+                return
+            for dir_path in dirs:
+                self._dirs[dir_path] += 1
+            self.send(type="scan-progress", message=description,
+                      completed=len(self._completed_dirs),
+                      total=len(self._dirs))
+
+        def onScanDirectory(self, description, dir_path, current=None, total=None):
+            """Called when a directory is being scanned (out of possibly many)
+            @param description {unicode} A string suitable for showing the user
+                    regarding the progress
+            @param dir {unicode} The directory currently being scanned
+            @param current {int} The current progress
+            @param total {int} The total number of directories to scan in this
+                    request
+            """
+            self.debug("scan directory: %s (%s %s/%s)",
+                       description, dir_path, current, total)
+
+            assert dir_path, "onScanDirectory got no directory"
+            if dir_path:
+                self._completed_dirs.add(dir_path)
+            self.send(type="scan-progress", message=description,
+                      completed=len(self._completed_dirs),
+                      total=len(self._dirs))
+
+        def onScanComplete(self, dirs=set(), scanned=set()):
+            """Called when a scan operation is complete
+            @param dirs {set of unicode} The directories that were intially
+                   requested to be scanned (as pass in onScanStarted)
+            @param scanned {set of unicode} Directories which were successfully
+                   scanned.  This may be a subset of dirs if the scan was
+                   aborted.
+            """
+            self.debug("scan complete: scanned %r/%r dirs",
+                       len(scanned), len(dirs))
+
+            for dir_path in dirs:
+                self._dirs[dir_path] -= 1
+                if not self._dirs[dir_path]:
+                    del self._dirs[dir_path]
+                    self._completed_dirs.discard(dir_path)
+            self.send(
+                type="scan-progress", completed=len(self._completed_dirs),
+                total=len(self._dirs))
 
     REQUEST_DEFAULT = object()
 
@@ -154,8 +272,19 @@ class Driver(threading.Thread):
         elif data["success"] is None:
             del data["success"]
         buf = json.dumps(data, separators=(',', ':'))
-        log.debug("sending: [%s]", buf)
-        self.fd_out.write(str(len(buf)) + buf)
+        buf_len = str(len(buf))
+        log.debug("sending: %s:[%s]", buf_len, buf)
+        self.send_queue.put(buf)
+
+    def _send_proc(self):
+        while True:
+            buf = self.send_queue.get()
+            try:
+                buf_len = str(len(buf))
+                self.fd_out.write(buf_len)
+                self.fd_out.write(buf)
+            finally:
+                self.send_queue.task_done()
 
     def fail(self, request=REQUEST_DEFAULT, **kwargs):
         kwargs = kwargs.copy()
@@ -201,7 +330,8 @@ class Driver(threading.Thread):
                 except OSError:
                     # Can't read the file
                     buf = self.mgr.buf_from_content("", lang, path=path)
-                assert not request.path.startswith("<")
+                assert not request.path.startswith("<"), \
+                    "Can't create an unsaved buffer with no text"
 
         if request.get("text") is not None:
             # overwrite the buffer contents if we have new ones
@@ -252,13 +382,14 @@ class Driver(threading.Thread):
         catalog_dirs = request.get("catalog-dirs", None)
         if catalog_dirs is not None:
             self.mgr.db.catalog_dirs.extend(catalog_dirs)
+            catalog_dirs = self.mgr.db.catalog_dirs
         lexer_dirs = request.get("lexer-dirs", [])
         codeintel2.udl.UDLLexer.add_extra_lexer_dirs(lexer_dirs)
         module_dirs = request.get("module-dirs", [])
         if module_dirs:
             self.mgr._register_modules(module_dirs)
         if catalog_dirs is not None:
-            self.mgr.db.get_catalogs_zone().update()
+            self.mgr.db.get_catalogs_zone().catalog_dirs = catalog_dirs
 
     def do_load_extension(self, request):
         """Load an extension that, for example, might provide additional
@@ -377,6 +508,28 @@ class Driver(threading.Thread):
                     # The default handler can deal with this, put it at the end
                     handlers.append(self._default_handler)
                 for handler in handlers:
+                    if isinstance(handler, tuple):
+                        try:
+                            real_handler = handler[0]()
+                        except Exception as ex:
+                            log.exception(
+                                "Failed to get lazy handler for %s", command)
+                            real_handler = None
+                        if real_handler is None:
+                            # Handler failed to instantiate, drop it
+                            try:
+                                self._command_handler_map[
+                                    "command"].remove(handler)
+                            except ValueError:
+                                pass  # ... shouldn't happen, but tolerate it
+                            continue
+                        for handlers in self._command_handler_map.values():
+                            try:
+                                handlers[handlers.index(
+                                    handler)] = real_handler
+                            except ValueError:
+                                pass  # handler not in this list
+                        handler = real_handler
                     if handler.canHandleRequest(request):
                         handler.handleRequest(request, self)
                         break
@@ -398,13 +551,31 @@ class Driver(threading.Thread):
         for command in handlerInstance.supportedCommands:
             cls._command_handler_map[command].append(handlerInstance)
 
+    @classmethod
+    def registerLazyCommandHandler(cls, supported_commands, constructor):
+        """Register a lazy command handler
+        @param supported_commands {iterable} The commands to handle; each
+            element should be a str of the command name.
+        @param constructor {callable} Function to be called to get the real
+            command handler; it should take no arguments and return a command
+            handler instance.  It may return None if the command is not
+            available; it will not be asked again.
+        """
+        for command in supported_commands:
+            cls._command_handler_map[command].append((constructor,))
+
+    @classmethod
+    def getInstance(cls):
+        """Get the singleton instance of the driver"""
+        return Driver._instance
+
 
 class CoreHandler(CommandHandler):
     """The default command handler for core commands.
     This class is a stateless singleton.  (Other command handlers don't have to
     be)."""
 
-    _DEFAULT_LANGS = ["JavaScript", "Ruby", "Perl", "PHP", "Python", "Python3"]
+    _stdlib_langs = None
 
     def __init__(self):
         supportedCommands = set()
@@ -435,17 +606,18 @@ class CoreHandler(CommandHandler):
             state, details = driver.mgr.db.upgrade_info()
             if state == Database.UPGRADE_NOT_NECESSARY:
                 # we _might_ need to deal with the stdlib stuff.
+                # assume that having one stdlib per language is good enough
                 std_libs = driver.mgr.db.get_stdlibs_zone()
-                for lang in self._DEFAULT_LANGS:
+                std_lib_langs = set()
+                for lang in self._get_stdlib_langs(driver):
                     for ver, name in std_libs.vers_and_names_from_lang(lang):
                         lib_path = os.path.join(std_libs.base_dir, name)
-                        if not os.path.exists(lib_path):
-                            log.debug("lib %s does not exist", lib_path)
-                            driver.send(state="preload-needed")
+                        if os.path.exists(lib_path):
                             break
                     else:
-                        continue
-                    break
+                        log.debug("no stdlib found for %s", lang)
+                        driver.send(state="preload-needed")
+                        break
                 else:
                     driver.send(state="ready")
             elif state == Database.UPGRADE_NECESSARY:
@@ -505,10 +677,10 @@ class CoreHandler(CommandHandler):
             progress_max = 80
             stdlibs_zone.preload(progress_callback)
         else:
-            try:
-                langs = request.languages
-            except AttributeError:
-                langs = dict(zip(self._DEFAULT_LANGS, itertools.repeat(None)))
+            langs = request.get("languages", None)
+            if not langs:
+                langs = dict(zip(self._get_stdlib_langs(driver),
+                                 itertools.repeat(None)))
             progress_base = 5
             progress_incr = (80 - progress_base) / len(
                 langs)  # stage 1 goes up to 80%
@@ -538,7 +710,9 @@ class CoreHandler(CommandHandler):
                     message="Pre-loading catalogs...")
         progress_base = 80
         progress_max = 100
-        catalogs_zone = self.mgr.db.get_catalogs_zone()
+        catalogs_zone = driver.mgr.db.get_catalogs_zone()
+        catalogs = request.get("catalogs",
+                               driver.env.get_pref("codeintel_selected_catalogs", None))
         catalogs_zone.update(request.get("catalogs"),
                              progress_cb=progress_callback)
 
@@ -556,8 +730,20 @@ class CoreHandler(CommandHandler):
         elif typ == "multilang":
             driver.send(languages=filter(driver.mgr.is_multilang,
                                          driver.mgr.buf_class_from_lang.keys()))
+        elif typ == "stdlib-supported":
+            driver.send(languages=self._get_stdlib_langs(driver))
         else:
             raise RequestFailure(message="Unknown language type %s" % (typ,))
+
+    def _get_stdlib_langs(self, driver):
+        if self._stdlib_langs is None:
+            stdlibs_zone = driver.mgr.db.get_stdlibs_zone()
+            langs = set()
+            for lang in driver.mgr.buf_class_from_lang.keys():
+                if stdlibs_zone.vers_and_names_from_lang(lang):
+                    langs.add(lang)
+            self._stdlib_langs = sorted(langs)
+        return self._stdlib_langs
 
     def do_get_language_info(self, request, driver):
         try:
@@ -604,6 +790,10 @@ class CoreHandler(CommandHandler):
         buf = driver.get_buffer(request)
         if not driver.mgr.is_citadel_lang(buf.lang):
             driver.send()  # Nothing to do here
+            return
+        if not hasattr(buf, "scan"):
+            driver.send()  # Can't scan this buffer (e.g. Text)
+            return
         priority = request.get("priority", codeintel2.common.PRIORITY_CURRENT)
         mtime = request.get("mtime")
         if mtime is not None:
@@ -619,7 +809,7 @@ class CoreHandler(CommandHandler):
                                                       priority,
                                                       mtime=mtime,
                                                       on_complete=on_complete)
-        if priority >= codeintel2.common.PRIORITY_CURRENT:
+        if priority <= codeintel2.common.PRIORITY_IMMEDIATE:
             delay = 0
         else:
             delay = 1.5
@@ -657,7 +847,7 @@ class CoreHandler(CommandHandler):
         except AttributeError:
             driver.fail(message="No trigger to evaluate")
             return
-        ctlr = controller.OOPEvalController(driver, request)
+        ctlr = controller.OOPEvalController(driver, request, trg)
         log.debug("evaluating trigger: %s", trg.to_dict())
         buf.async_eval_at_trg(trg, ctlr)
 
@@ -667,6 +857,27 @@ class CoreHandler(CommandHandler):
                                                 request.calltip,
                                                 request.curr_pos)
         driver.send(start=start, end=end)
+
+    def do_set_xml_catalogs(self, request, driver):
+        catalogs = request["catalogs"]
+        import koXMLDatasetInfo
+        datasetHandler = koXMLDatasetInfo.getService()
+        datasetHandler.setCatalogs(catalogs)
+        driver.send(request=request)
+
+    def do_get_xml_catalogs(self, request, driver):
+        import koXMLDatasetInfo
+        public = set()
+        system = set()
+        datasetHandler = koXMLDatasetInfo.getService()
+        for catalog in datasetHandler.resolver.catalogMap.values():
+            public.update(catalog.public.keys())
+            system.update(catalog.system.keys())
+        namespaces = datasetHandler.resolver.getWellKnownNamspaces().keys()
+        driver.send(request=request,
+                    public=sorted(public),
+                    system=sorted(system),
+                    namespaces=sorted(namespaces))
 
 Driver._default_handler = CoreHandler()
 
@@ -807,3 +1018,10 @@ class Environment(codeintel2.environment.Environment):
         environment or preferences.
         """
         return bool(self._env or self._prefs)
+
+
+def _get_memory_reporter():
+    from .memory_reporter import MemoryCommandHandler
+    return MemoryCommandHandler()
+Driver.registerLazyCommandHandler(("memory-report",), _get_memory_reporter)
+del _get_memory_reporter

@@ -355,7 +355,10 @@ class Manager(threading.Thread, Queue):
         programming languages. For example RHTML can have Ruby and
         JavaScript content, HTML can have JavaScript content.
         """
-        return issubclass(self.buf_class_from_lang[lang], UDLBuffer)
+        try:
+            return issubclass(self.buf_class_from_lang[lang], UDLBuffer)
+        except KeyError:
+            return False  # This typically happens if lang is Text
 
     def is_xml_lang(self, lang):
         try:

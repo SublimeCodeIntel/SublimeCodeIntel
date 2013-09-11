@@ -49,10 +49,18 @@ perl_keywords = \
     "use utime values vec wait waitpid wantarray warn when while write "\
     "x xor y"
 
+# False None True are not strictly keywords in python2... but treat them as so.
 python_keywords = \
-    "and assert break class continue def del elif else except " \
-    "exec finally for from global if import in is lambda None not or pass print " \
-    "raise return try while yield"
+    "False None True " \
+    "and as assert break class continue def del elif else except " \
+    "exec finally for from global if import in is lambda not or pass print " \
+    "raise return try while with yield"
+
+python3_keywords = \
+    "False None True " \
+    "and as assert break class continue def del elif else except " \
+    "finally for from global if import in is lambda not or pass " \
+    "raise return try while with yield"
 
 ruby_keywords = \
     "__FILE__ and def end in or self unless __LINE__ begin "\

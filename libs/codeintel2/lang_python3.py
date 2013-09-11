@@ -6,6 +6,7 @@
 
 import logging
 
+from codeintel2.common import LazyClassAttribute
 from codeintel2.lang_python import (PythonLexer, PythonLangIntel,
                                     PythonImportsEvaluator, PythonBuffer,
                                     PythonImportHandler, PythonCILEDriver)
@@ -28,6 +29,11 @@ class Python3LangIntel(PythonLangIntel):
     lang = lang
     interpreterPrefName = "python3"
     extraPathsPrefName = "python3ExtraPaths"
+
+    @LazyClassAttribute
+    def keywords(self):
+        from SilverCity.Keywords import python3_keywords
+        return python3_keywords.split(" ")
 
 
 class Python3Buffer(PythonBuffer):

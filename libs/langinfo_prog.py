@@ -113,6 +113,8 @@ class PHPLangInfo(LangInfo):
     #      and the XML prolog encoding check.
 
     keywords = set([
+        # new to php 5.5
+        "finally", "yield",
         # new to php 5.4
         "insteadof", "trait",
         # new to php 5.3
@@ -259,6 +261,7 @@ class CPlusPlusLangInfo(LangInfo):
     exts = [
         ".c++", ".cpp", ".cxx",
         ".h", ".h++", ".hpp", ".hxx",
+        ".inl",  # Inline C++ files.
         ".xs",  # Perl extension modules. *Are* they legal C++?
     ]
 

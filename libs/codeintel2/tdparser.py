@@ -515,6 +515,8 @@ def py_expr_grammar():
         while 1:
             val = None
             type = None
+            check_annotation = False
+            check_default_value = False
             if self.token.id == "*":
                 arg = self.token
                 self.advance("*")
@@ -523,21 +525,33 @@ def py_expr_grammar():
                 else:
                     arg = self.advance_name()
                     arg.value = "*" + arg.value
+                    check_annotation = True
             elif self.token.id == "**":
                 self.advance("**")
                 arg = self.advance_name()
                 arg.value = "**" + arg.value
+                check_annotation = True
             else:
                 arg = self.advance_name()
+                check_annotation = True
+                check_default_value = True
 
-                if self.token.id == "=":
-                    self.advance("=")
-                    val = self.expression()
+            if check_default_value and self.token.id == "=":
+                self.advance("=")
+                val = self.expression()
+                check_default_value = False
 
-                if not in_lambda:
-                    if self.token.id == ":":
-                        self.advance(":")
-                        type = self.expression()
+            if not in_lambda:
+                if check_annotation and self.token.id == ":":
+                    self.advance(":")
+                    type = self.expression()
+                    if check_default_value and self.token.id == "=":
+                        self.advance("=")
+                        val = self.expression()
+
+            if self.token.id == "->":
+                self.advance("->")
+                self.expression()
 
             arglist.append((arg, val, type))
 

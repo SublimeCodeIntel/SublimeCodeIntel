@@ -37,16 +37,15 @@
 
 """Completion evaluation code for JavaScript"""
 
+import logging
 import types
 import re
 from pprint import pformat
+from itertools import chain
 
 from codeintel2.common import *
 from codeintel2.util import indent
 from codeintel2.tree import TreeEvaluator
-
-if _xpcom_:
-    from xpcom import components
 
 
 class CandidatesForTreeEvaluator(TreeEvaluator):
@@ -82,12 +81,64 @@ class CandidatesForTreeEvaluator(TreeEvaluator):
         return elem
 
     def _tokenize_citdl_expr(self, expr):
-        for tok in expr.split('.'):
-            if tok.endswith('()'):
-                yield tok[:-2]
-                yield '()'
+        chars = iter(zip(expr, chain(expr[1:], (None,))))
+        buffer = []
+
+        def get_pending_token():
+            if buffer:
+                yield "".join(buffer)
+            del buffer[:]
+
+        def get_quoted_string(ch):
+            quote = ch
+            local_buffer = []
+            for ch, next in chars:
+                # print "quote: quote=[%s] ch=[%s] next=[%s] token=%r" % (
+                #    quote, ch, next, local_buffer)
+                if ch == "\\":
+                    local_buffer.append(chars.next()[0])
+                elif ch == quote:
+                    if local_buffer:
+                        yield "".join(local_buffer)
+                    break
+                else:
+                    local_buffer.append(ch)
+
+        BLOCK_MAP = {"(": ")", "[": "]"}
+
+        for ch, next in chars:
+            # print "ch=[%s] next=[%s] token=%r" % (ch, next, buffer)
+            if ch in ('"', "'"):  # quoted string
+                for token in get_pending_token():
+                    yield token
+                for token in get_quoted_string(ch):
+                    yield token
+            elif ch == ".":
+                for token in get_pending_token():
+                    yield token
+                buffer = []
+            elif ch in BLOCK_MAP:
+                block = [ch, BLOCK_MAP[ch]]
+                emit = ch in ("[",)
+                for token in get_pending_token():
+                    yield token
+                if next == block[1]:
+                    chars.next()  # consume close quote
+                    yield block[0] + block[1]
+                elif next in ('"', "'"):  # quoted string
+                    chars.next()  # consume open bracket
+                    next_tokens = list(get_quoted_string(next))
+                    ch, next = chars.next()
+                    if ch == block[1] and emit:
+                        for next_token in next_tokens:
+                            yield next_token
+                    else:
+                        yield block[0] + block[1]
+
             else:
-                yield tok
+                buffer.append(ch)
+        if buffer:
+            yield "".join(buffer)
 
     def _join_citdl_expr(self, tokens):
         return '.'.join(tokens).replace('.()', '()')
@@ -98,7 +149,6 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         self.log_start()
         start_scoperef = self.get_start_scoperef()
         self.info("start scope is %r", start_scoperef)
-        _add_xpcom_blob(self.built_in_blob)
 
         if self.trg.type == "names":
             cplns = list(self._completion_names_from_scope(self.expr,
@@ -118,7 +168,6 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         self.log_start()
         start_scoperef = self.get_start_scoperef()
         self.info("start scope is %r", start_scoperef)
-        _add_xpcom_blob(self.built_in_blob)
         hits = self._hits_from_citdl(self.expr, start_scoperef)
         if not hits:
             raise CodeIntelError("No calltips found")
@@ -128,7 +177,6 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         self.log_start()
         start_scoperef = self.get_start_scoperef()
         self.info("start scope is %r", start_scoperef)
-        _add_xpcom_blob(self.built_in_blob)
         hits = self._hits_from_citdl(self.expr, start_scoperef, defn_only=True)
         if not hits:
             raise CodeIntelError("No definitions found")
@@ -400,8 +448,10 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
     def _hits_from_citdl(self, expr, scoperef, defn_only=False):
         with self._check_infinite_recursion(expr):
 
-            if "[" in expr:
+            if "[]" in expr:
                 # TODO: We cannot resolve array type inferences yet.
+                # Note that we do allow arrays types with a string key, since
+                # that's an alternative form for property access
                 raise CodeIntelError(
                     "no type-inference yet for arrays: %r" % expr)
 
@@ -429,14 +479,19 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                             new_hits += self._hits_from_call(elem, scoperef)
                         except CodeIntelError, ex:
                             self.warn("could resolve call on %r: %s", elem, ex)
-                    else:
-                        try:
-                            new_hit = self._hit_from_getattr(
-                                elem, scoperef, token)
-                        except CodeIntelError, ex:
-                            self.warn(str(ex))
+                        continue
+                    try:
+                        new_hit = self._hit_from_getattr(
+                            elem, scoperef, token)
+                    except CodeIntelError, ex:
+                        if token == "prototype" and elem.get("ilk") == "class":
+                            self.debug("_hits_from_citdl: using class %r for "
+                                       "its prototype", elem)
+                            new_hits.append((elem, scoperef))
                         else:
-                            new_hits.append(new_hit)
+                            self.warn(str(ex))
+                    else:
+                        new_hits.append(new_hit)
                 hits = new_hits
 
             # Resolve any variable type inferences.
@@ -558,7 +613,10 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
         if elem.get("name") == "require" and \
            scoperef[0] is self.built_in_blob and \
            not scoperef[1]:
-            requirename = self.trg.extra.get("_params")
+            try:
+                requirename = self.trg.extra.get("_params", []).pop(0)
+            except IndexError:
+                requirename = None
             if requirename is not None:
                 import codeintel2.lang_javascript
                 requirename = codeintel2.lang_javascript.Utils.unquoteJsString(
@@ -568,6 +626,25 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                 hits = self._hits_from_commonjs_require(requirename, scoperef)
                 if len(hits) > 0:
                     return hits
+
+        resolver = getattr(elem, "resolve", None)
+        try:
+            param = self.trg.extra.get("_params", []).pop(0)
+        except IndexError:
+            param = None
+        if resolver and param is not None:
+            try:
+                self.log("Attempting to use extra resolver %r param %r",
+                         resolver, param)
+                hits = resolver(evlr=self, action="call", scoperef=scoperef,
+                                param=param)
+                if hits:
+                    return hits
+            except:
+                self.log("Extra resolver %r: Failed to resolve %s",
+                         resolver, scoperef)
+        else:
+            self.log("_hits_from_call: no resolver on %r", elem)
 
         citdl = elem.get("returns")
         if not citdl:
@@ -756,13 +833,6 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
             self.log("_hit_from_first_part: found elem: %s %r at %r",
                      elem.get("ilk") or elem.tag, elem.get("name"),
                      scoperef[1])
-            # Special handling for xpcom components
-            if elem == _g_xpcom_components_elem and len(tokens) > 2 and \
-               tokens[1] == "interfaces":
-                self.log("Ensuring xpcom interface is loaded: %r",
-                         tokens[2])
-                _xpcom_iid_to_cix(tokens[2])
-                # Let it continue below, to find the proper cix element
 
         if (elem is None            # first token wasn't found
             or not scoperef[1]      # first token was found at global level
@@ -932,194 +1002,3 @@ class JavaScriptTreeEvaluator(CandidatesForTreeEvaluator):
                     all_completions[name] = ilk
 
         return [(ilk, name) for name, ilk in all_completions.items()]
-
-
-#####################################
-# Devel work
-#####################################
-
-# Dictionary of already created xpcom wrappers, used so we do not keep
-# creating xpcom instances / services
-from ciElementTree import Element, SubElement, dump
-
-if _xpcom_:
-    from xpcom import xpt
-    _xpcom_ = True
-    from gencix_utils import *
-
-    # Dictionary of known xpcom types and what they map to in JavaScript
-    javascript_type_from_xpt_tag = {
-        xpt.T_I8: "Number",
-        xpt.T_I16: "Number",
-        xpt.T_I32: "Number",
-        xpt.T_I64: "Number",
-        xpt.T_U8: "Number",
-        xpt.T_U16: "Number",
-        xpt.T_U32: "Number",
-        xpt.T_U64: "Number",
-        xpt.T_FLOAT: "Number",
-        xpt.T_DOUBLE: "Number",
-        xpt.T_BOOL: "Boolean",
-        xpt.T_CHAR: "String",
-        xpt.T_WCHAR: "String",
-        xpt.T_VOID: "void",
-        xpt.T_IID: None,
-        xpt.T_DOMSTRING: "DOMString",
-        xpt.T_CHAR_STR: "String",
-        xpt.T_WCHAR_STR: "String",
-        xpt.T_INTERFACE: None,
-        xpt.T_INTERFACE_IS: None,
-        xpt.T_ARRAY: "Array",
-        xpt.T_PSTRING_SIZE_IS: None,
-        xpt.T_PWSTRING_SIZE_IS: None,
-        # These are missing from xpt, when these cross the xpconnect boundary
-        # they are converted into unicode strings automatically. See:
-        # http://developer.mozilla.org/en/docs/XPCOM_string_guide#IDL_String_types
-        23: "String",  # T_UTF8STRING
-        24: "String",  # T_CSTRING
-        25: "String",  # T_ASTRING
-    }
-
-    def process_xpcom_arguments(m):
-        args = []
-        returntype = None
-        param_count = 1
-        for param in m.params:
-            t = xpt.TypeDescriber(param.type_desc[0], param)
-            if t.tag in (xpt.T_INTERFACE, ):
-                arg_type = t.Describe()
-            elif t.tag in (xpt.T_ARRAY, ):
-                arg_type = "Array"
-            else:
-                arg_type = javascript_type_from_xpt_tag.get(t.tag, "unknown")
-
-            if param.IsIn():
-                args.append("in %s" % (arg_type))
-                param_count += 1
-            elif param.IsRetval():
-                if t.tag in (xpt.T_INTERFACE, ):
-                    returntype = "Components.interfaces.%s" % (arg_type)
-                else:
-                    returntype = arg_type
-            elif param.IsOut():
-                args.append("out %s" % (arg_type))
-                param_count += 1
-        return args, returntype
-
-    def iid_to_cix(iid):
-        elem = Element("scope", name=iid, ilk="class")
-        try:
-            interface = xpt.Interface(iid)
-        except:
-            print "No interface with iid: %r" % (iid, )
-        else:
-            # Filter out non-xpcom methods
-            methods = [m for m in interface.methods if not m.IsNotXPCOM()]
-            getters = [m for m in methods if m.IsGetter()]
-            getters += [m for m in methods if m.IsSetter()]
-            methods = [m for m in methods if not m.IsGetter() and
-                                              not m.IsSetter()]
-
-            for m in getters:
-                args, returntype = process_xpcom_arguments(m)
-                variable_elem = elem.names.get(m.name)
-                # Don't override an existing element.
-                if variable_elem is None:
-                    variable_elem = SubElement(elem, "variable", name=m.name,
-                                               citdl=returntype)
-                # Else, this must be a setter, which does not have a type.
-            for m in methods:
-                # print m.name
-                func_elem = SubElement(elem, "scope", name=m.name,
-                                       ilk="function")
-                args, returntype = process_xpcom_arguments(m)
-                signature = "%s(%s)" % (m.name, ", ".join(args))
-                if returntype is not None:
-                    func_elem.attrib["returns"] = returntype
-                    signature += " => %s" % (returntype, )
-                func_elem.attrib["signature"] = signature
-            for c in interface.constants:
-                # XXX: assuming all constants are integers, I am yet to see a
-                #      case where this is not true...
-                variable_elem = SubElement(elem, "variable", name=c.name,
-                                           citdl="Number",
-                                           attributes="constant")
-        return elem
-
-
-# Globals used for holding the xpcom cix information, the base xpcom structure
-# is generated once per run, then interface details are added on demand.
-_g_xpcom_interfaces_elem = None
-_g_xpcom_components_elem = None
-# The map of iid to xpcom cix element.
-_g_xpcom_cix_for_iid = {}
-
-
-def _add_xpcom_blob(built_in_blob):
-    global _g_xpcom_components_elem
-    global _g_xpcom_interfaces_elem
-    if _xpcom_:
-        if _g_xpcom_components_elem is None:
-            # create the blob to hold xpcom data
-            # print "Building xpcom cix wrapper for the first time"
-            _g_xpcom_components_elem = SubElement(built_in_blob, "variable",
-                                         citdl="Object", name="Components")
-            xpcComponents = iid_to_cix("nsIXPCComponents")
-
-            elem_classes = None
-            for elem in xpcComponents:
-                if elem.get("name") == "classes":
-                    # print "Found the classes elem: %r" % (elem, )
-                    elem.attrib["citdl"] = "Object"
-                    elem_classes = elem
-                elif elem.get("name") == "interfaces":
-                    # print "Found the interfaces elem: %r" % (elem, )
-                    elem.attrib["citdl"] = "Object"
-                    _g_xpcom_interfaces_elem = elem
-                _g_xpcom_components_elem.append(elem)
-
-            # Add Components.interfaces data
-            for interface in components.interfaces.keys():
-                elem = SubElement(_g_xpcom_interfaces_elem, "scope",
-                                  ilk="class", name=interface)
-
-            # Add Components.classes data
-            for klass in components.classes.keys():
-                elem = SubElement(elem_classes, "variable", name=klass)
-
-            # Add some common aliases
-            for alias_name in ("CI", "Ci", ):
-                SubElement(built_in_blob, "variable",
-                           citdl="Components.interfaces", name=alias_name)
-            for alias_name in ("CC", "Cc", ):
-                SubElement(built_in_blob, "variable",
-                           citdl="Components.classes", name=alias_name)
-            for alias_name in ("CU", "Cu", ):
-                SubElement(built_in_blob, "variable",
-                           citdl="Components.utils", name=alias_name)
-        # This check is necessary as sometimes a blob will be cached and
-        # will already contain the Components elem.
-        elif built_in_blob.names.get("Components") is None:
-            built_in_blob.append(_g_xpcom_components_elem)
-
-
-def _xpcom_iid_to_cix(iid):
-    """Return a cix element containg the xpcom interface for the given iid."""
-    if not _xpcom_:
-        return None
-    if not iid:
-        # Default to nsISupports, all xpcom components support this.
-        iid = "nsISupports"
-    # Try and get it from the cached interfaces.
-    elem = _g_xpcom_cix_for_iid.get(iid)
-    if elem is None:
-        # Else, we load it up.
-        elem = iid_to_cix(iid)
-        # Remove the dummy place holder element if there is one, this is here
-        # only to provide support for "Components.interfaces.<|>" completions.
-        if iid in _g_xpcom_interfaces_elem.names:
-            _g_xpcom_interfaces_elem.remove(
-                _g_xpcom_interfaces_elem.names[iid])
-        _g_xpcom_interfaces_elem.append(elem)
-        _g_xpcom_cix_for_iid[iid] = elem
-    return elem

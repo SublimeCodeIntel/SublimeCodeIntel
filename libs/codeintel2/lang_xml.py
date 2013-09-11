@@ -302,10 +302,8 @@ class XMLLangIntel(LangIntel):
 
     def async_eval_at_trg(self, buf, trg, ctlr):
         if _xpcom_:
-            if hasattr(trg, "_comobj_"):
-                trg = UnwrapObject(trg)
-            if hasattr(ctlr, "_comobj_"):
-                ctlr = UnwrapObject(ctlr)
+            trg = UnwrapObject(trg)
+            ctlr = UnwrapObject(ctlr)
 
         cplns = None
         ctlr.start(buf, trg)

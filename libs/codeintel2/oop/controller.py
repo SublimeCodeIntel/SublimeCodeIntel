@@ -16,7 +16,7 @@ class OOPEvalController(EvalController):
     have_errors = have_warnings = False
     silent = False
 
-    def __init__(self, driver=None, request=None, *args, **kwargs):
+    def __init__(self, driver=None, request=None, trg=None, *args, **kwargs):
         """Create an eval controller
         @param driver {Driver} The OOP driver instance to communicate via
         @param request {Request} The request causing the evaluation
@@ -26,14 +26,19 @@ class OOPEvalController(EvalController):
 
         self.driver = driver
         self.request = request
+        self.trg = trg
         self.silent = request.get("silent", False)
         self.keep_existing = request.get("keep_existing", self.keep_existing)
 
-        # Set up a logger to record any errors
-        # Note that the output will be discarded if there it no error
+        # Set up a *new* logger to record any errors
+        # Note that the output will be discarded if there is no error
         self.log_stream = cStringIO.StringIO()
         self.log_hndlr = logging.StreamHandler(self.log_stream)
-        self.log = logging.getLogger("codeintel.evaluator")
+        loggerClass = logging.Logger.manager.loggerClass
+        if not loggerClass:
+            loggerClass = logging.getLoggerClass()
+        self.log = loggerClass("codeintel.evaluator")
+        self.log.manager = logging.Logger.manager
         self.log.propagate = False
         self.log.addHandler(self.log_hndlr)
         self.best_msg = (0, "")
@@ -72,21 +77,23 @@ class OOPEvalController(EvalController):
         log.debug("done: %s %s", reason,
                   "(aborted)" if self.is_aborted() else "")
 
+        retrigger = self.trg.retriggerOnCompletion if self.trg else False
+
         if self.cplns:
             # Report completions
-            self.driver.send(cplns=self.cplns, request=self.request)
+            self.driver.send(cplns=self.cplns, request=self.request,
+                             retrigger=retrigger)
         elif self.calltips:
-            self.driver.send(calltip=self.calltips[0], request=self.request)
+            self.driver.send(calltip=self.calltips[0], request=self.request,
+                             retrigger=retrigger)
         elif self.defns:
             # We can't exactly serialize blobs directly...
             def defn_serializer(defn):
                 return defn.__dict__
             self.driver.send(defns=map(defn_serializer, self.defns or []),
-                             request=self.request)
+                             request=self.request, retrigger=retrigger)
         elif self.is_aborted():
             pass  # already reported the abort
-        elif self.silent:
-            pass  # don't output any errors
         elif self.best_msg[0]:
             try:
                 msg = "No %s found" % (self.desc,)
@@ -103,7 +110,11 @@ class OOPEvalController(EvalController):
                     "problem logging eval failure: self.log=%r", self.log_entries)
                 msg = "error evaluating '%s'" % desc
             self.driver.fail(request=self.request, message=msg)
+        else:
+            # ERROR
+            self.driver.fail(request=self.request, msg=reason)
 
+        self.log = log  # If we have any more problems, put it in the main log
         self.log_stream.close()
         EvalController.done(self, reason)
 

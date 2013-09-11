@@ -94,9 +94,6 @@ class CatalogsZone(object):
         if catalog_dirs is None:
             catalog_dirs = []
         assert isinstance(catalog_dirs, list)
-        std_catalog_dir = join(dirname(dirname(abspath(__file__))), "catalogs")
-        if std_catalog_dir not in catalog_dirs:
-            catalog_dirs.append(std_catalog_dir)
         self.catalog_dirs = catalog_dirs
 
         self.base_dir = join(self.db.base_dir, "db", "catalogs")
@@ -159,6 +156,27 @@ class CatalogsZone(object):
                 missing_selections.append(selection)
         log.debug("_res_ids_from_selections: res_ids=%r", res_ids)
         return tuple(res_ids), missing_selections
+
+    @LazyClassAttribute
+    def _std_catalog_dir(cls):
+        return join(dirname(dirname(abspath(__file__))), "catalogs")
+
+    _catalog_dirs = None
+
+    @property
+    def catalog_dirs(self):
+        return self._catalog_dirs
+
+    @catalog_dirs.setter
+    def catalog_dirs(self, value):
+        assert not isinstance(value, basestring), \
+            "catalog_dirs must be an iterable, not a string"
+        catalog_dirs = list(value)
+        if self._std_catalog_dir not in catalog_dirs:
+            catalog_dirs.append(self._std_catalog_dir)
+        self._catalog_dirs = catalog_dirs
+        # cause a rescan next time we try to get a catalog lib
+        self._have_updated_at_least_once = False
 
     def get_lib(self, lang, selections=None):
         """Return a CatalogLib for the given lang and selections."""
@@ -255,32 +273,27 @@ class CatalogsZone(object):
         finally:
             self._lock.release()
 
-    def reportMemory(self, reporter, closure=None):
+    def reportMemory(self):
         """
-        Report on memory usage from this CatalogsZone. See nsIMemoryMultiReporter
+        Report on memory usage from this CatalogsZone.
+        @returns {dict} memory usage; keys are the paths, values are a dict of
+            "amount" -> number
+            "units" -> "bytes" | "count"
+            "desc" -> str description
         """
         log.debug("CatalogsZone: reporting memory")
-
         import memutils
-        from xpcom import components
-        process = ""
 
         total_mem_usage = 0
+        result = {}
         for lang, blob_and_atime_from_blobname in self._blob_and_atime_from_blobname_from_lang_cache.items():
-            for blobname, blob_and_atime in blob_and_atime_from_blobname.items():
-                blob, atime = blob_and_atime
-                blob_mem_usage = memutils.memusage(blob)
-                total_mem_usage += blob_mem_usage
-                reporter.callback(process,
-                                  "explicit/python/codeintel/%s/catalog/%s" % (
-                                      lang, blobname),
-                                  components.interfaces.nsIMemoryReporter.KIND_HEAP,
-                                  components.interfaces.nsIMemoryReporter.UNITS_BYTES,
-                                  blob_mem_usage,
-                                  "The number of bytes of %s codeintel %s catalog blobs." % (
-                                      lang, blobname),
-                                  closure)
-        return total_mem_usage
+            for blobname, [blob, atime] in blob_and_atime_from_blobname.items():
+                result["explicit/python/codeintel/%s/catalog/%s" % (lang, blobname)] = {
+                    "amount": memutils.memusage(blob),
+                    "units": "bytes",
+                    "desc": "The number of bytes of %s codeintel %s catalog blobs." % (lang, blobname),
+                }
+        return result
 
     def avail_catalogs(self, selections=None):
         """Generate a list of available catalogs.
@@ -922,9 +935,12 @@ class CatalogLib(object):
 #---- internal support routines
 def _elem_from_scoperef(scoperef):
     """A scoperef is (<blob>, <lpath>). Return the actual elem in
-    the <blob> ciElementTree being referred to.
+    the <blob> ciElementTree being referred to.  Returns None if not found.
     """
     elem = scoperef[0]
     for lname in scoperef[1]:
-        elem = elem.names[lname]
+        try:
+            elem = elem.names[lname]
+        except KeyError:
+            return None
     return elem

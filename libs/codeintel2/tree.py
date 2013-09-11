@@ -456,6 +456,8 @@ class TreeEvaluator(CitadelEvaluator):
                 obj = self._eval_import_getattr(obj, token,
                                                 self._join_citdl_expr(tokens[:i+2]))
             else:
+                # XXX marky: this code does not appear to be used!
+                # (nobody seems to define _eval_getattr)
                 obj = self._eval_getattr(obj, token,
                                          self._join_citdl_expr(tokens[:i+2]))
 

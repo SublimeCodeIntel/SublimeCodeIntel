@@ -245,23 +245,23 @@ class StdLib(object):
 
     def reportMemory(self, reporter, closure=None):
         """
-        Report on memory usage from this StdLib. See nsIMemoryMultiReporter
+        Report on memory usage from this StdLib.
+        @returns {dict} memory usage; keys are the paths, values are a dict of
+            "amount" -> number
+            "units" -> "bytes" | "count"
+            "desc" -> str description
         """
         log.debug("%s StdLib %s: reporting memory", self.lang, self.name)
         import memutils
-        from xpcom import components
-        total_mem_usage = memutils.memusage(self._blob_from_blobname)
-        total_mem_usage += memutils.memusage(
-            self._blob_imports_from_prefix_cache)
-        reporter.callback("",  # process id
-                          "explicit/python/codeintel/%s/stdlib/%s" % (
-                              self.lang, self.name),
-                          components.interfaces.nsIMemoryReporter.KIND_HEAP,
-                          components.interfaces.nsIMemoryReporter.UNITS_BYTES,
-                          total_mem_usage,
-                          "The number of bytes of %s codeintel stdlib %s blobs." % (
-                              self.lang, self.name),
-                          closure)
+        return {
+            "explicit/python/codeintel/%s/stdlib/%s" % (self.lang, self.name): {
+                "amount": memutils.memusage(self._blob_from_blobname) +
+                memutils.memusage(
+                    self._blob_imports_from_prefix_cache),
+                "units": "bytes",
+                "desc": "The number of bytes of %s codeintel stdlib %s blobs." % (self.lang, self.name),
+            }
+        }
         return total_mem_usage
 
 
@@ -341,15 +341,19 @@ class StdLibsZone(object):
         """
         pass
 
-    def reportMemory(self, reporter, closure=None):
+    def reportMemory(self):
         """
-        Report on memory usage from this StdLibZone. See nsIMemoryMultiReporter
+        Report on memory usage from this StdLibZone.
+        @returns {dict} memory usage; keys are the paths, values are a dict of
+            "amount" -> number
+            "units" -> "bytes" | "count"
+            "desc" -> str description
         """
         log.debug("StdLibZone: reporting memory")
-        total_mem_usage = 0
+        result = {}
         for stdlib in self._stdlib_from_stdlib_ver_and_name.values():
-            total_mem_usage += stdlib.reportMemory(reporter, closure)
-        return total_mem_usage
+            result.update(stdlib.reportMemory())
+        return result
 
     def get_lib(self, lang, ver_str=None):
         """Return a view into the stdlibs zone for a particular language
