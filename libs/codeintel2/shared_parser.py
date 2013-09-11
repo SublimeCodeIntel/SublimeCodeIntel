@@ -74,7 +74,7 @@ class CommonClassifier:
         elif callback:
             return callback(tok)
         else:
-            return self._quote_patterns.values()
+            return list(self._quote_patterns.values())
 
     def is_identifier_or_keyword(self, tok):
         return self.is_identifier(tok, True)

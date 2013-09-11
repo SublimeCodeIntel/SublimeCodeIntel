@@ -38,7 +38,7 @@ import os
 import sys
 import time
 import types
-if sys.platform != "win32":
+if sys.platform != "win32" or sys.version_info[:2] >= (3, 0):
     import signal  # used by kill() method on Linux/Mac
 import logging
 import threading
@@ -54,7 +54,7 @@ try:
 except ImportError:
     # Not available on Windows - fallback to using regular subprocess module.
     from subprocess import Popen, PIPE
-    if sys.platform != "win32":
+    if sys.platform != "win32" or sys.version_info[:2] >= (3, 0):
         log.warn(
             "Could not import subprocess32 module, falling back to subprocess module")
 
@@ -77,7 +77,7 @@ class ProcessError(Exception):
 
 
 # Check if this is Windows NT and above.
-if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
+if sys.platform == "win32" and sys.getwindowsversion()[3] == 2 and sys.version_info[:2] < (3, 0):
 
     import winprocess
     from subprocess import pywintypes, list2cmdline, STARTUPINFO
@@ -118,7 +118,7 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
                            errread, errwrite):
             """Execute program (MS Windows version)"""
 
-            if not isinstance(args, types.StringTypes):
+            if not isinstance(args, str):
                 args = list2cmdline(args)
 
             # Process startup details
@@ -135,7 +135,7 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
                 startupinfo.wShowWindow = SW_HIDE
                 comspec = os.environ.get("COMSPEC", "cmd.exe")
                 args = comspec + " /c " + args
-                if (GetVersion() >= 0x80000000L or
+                if (GetVersion() >= 0x80000000 or
                         os.path.basename(comspec).lower() == "command.com"):
                     # Win9x, or using command.com on NT. We need to
                     # use the w9xpopen intermediate program. For more
@@ -171,7 +171,7 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
                                                  env,
                                                  cwd,
                                                  startupinfo)
-            except pywintypes.error, e:
+            except pywintypes.error as e:
                 # Translate pywintypes.error to WindowsError, which is
                 # a subclass of OSError.  FIXME: We should really
                 # translate errno using _sys_errlist (or simliar), but
@@ -265,22 +265,23 @@ class ProcessOpen(Popen):
                     # http://bugs.activestate.com/show_bug.cgi?id=75467
                     cmd = '"%s"' % (cmd, )
 
-            # XXX - subprocess needs to be updated to use the wide string API.
-            # subprocess uses a Windows API that does not accept unicode, so
-            # we need to convert all the environment variables to strings
-            # before we make the call. Temporary fix to bug:
-            #   http://bugs.activestate.com/show_bug.cgi?id=72311
-            if env:
-                encoding = sys.getfilesystemencoding()
-                _enc_env = {}
-                for key, value in env.items():
-                    try:
-                        _enc_env[key.encode(encoding)] = value.encode(encoding)
-                    except UnicodeEncodeError:
-                        # Could not encode it, warn we are dropping it.
-                        log.warn("Could not encode environment variable %r "
-                                 "so removing it", key)
-                env = _enc_env
+            if sys.version_info[:2] < (3, 0):
+                # XXX - subprocess needs to be updated to use the wide string API.
+                # subprocess uses a Windows API that does not accept unicode, so
+                # we need to convert all the environment variables to strings
+                # before we make the call. Temporary fix to bug:
+                #   http://bugs.activestate.com/show_bug.cgi?id=72311
+                if env:
+                    encoding = sys.getfilesystemencoding()
+                    _enc_env = {}
+                    for key, value in env.items():
+                        try:
+                            _enc_env[key.encode(encoding)] = value.encode(encoding)
+                        except UnicodeEncodeError:
+                            # Could not encode it, warn we are dropping it.
+                            log.warn("Could not encode environment variable %r "
+                                     "so removing it", key)
+                    env = _enc_env
 
             if flags is None:
                 flags = CREATE_NO_WINDOW
@@ -361,7 +362,7 @@ class ProcessOpen(Popen):
     @classmethod
     def _needToHackAroundStdHandles(cls):
         if cls.__needToHackAroundStdHandles is None:
-            if sys.platform != "win32":
+            if sys.platform != "win32" or sys.version_info[:2] >= (3, 0):
                 cls.__needToHackAroundStdHandles = False
             else:
                 from _subprocess import GetStdHandle, STD_INPUT_HANDLE
@@ -446,7 +447,7 @@ class ProcessOpen(Popen):
             # Use the parent call.
             try:
                 return Popen.wait(self)
-            except OSError, ex:
+            except OSError as ex:
                 # If the process has already ended, that is fine. This is
                 # possible when wait is called from a different thread.
                 if ex.errno != 10:  # No child process
@@ -520,7 +521,7 @@ class ProcessOpen(Popen):
                     os.killpg(self.pid, sig)
                 else:
                     os.kill(self.pid, sig)
-            except OSError, ex:
+            except OSError as ex:
                 if ex.errno != 3:
                     # Ignore:   OSError: [Errno 3] No such process
                     raise

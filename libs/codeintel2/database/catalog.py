@@ -44,7 +44,7 @@ import os
 from os.path import (join, dirname, exists, expanduser, splitext, basename,
                      split, abspath, isabs, isdir, isfile, normpath,
                      normcase)
-import cPickle as pickle
+import pickle as pickle
 import threading
 import time
 from hashlib import md5
@@ -53,11 +53,11 @@ import fnmatch
 from glob import glob
 from pprint import pprint, pformat
 import logging
-from cStringIO import StringIO
+from io import StringIO
 import codecs
 import copy
 import weakref
-import Queue
+import queue
 
 import ciElementTree as ET
 from codeintel2.common import *
@@ -136,7 +136,7 @@ class CatalogsZone(object):
         """
         if self._res_ids_from_selector_cache is None:
             cache = self._res_ids_from_selector_cache = {}
-            for cix_area_path, res_data in self.res_index.items():
+            for cix_area_path, res_data in list(self.res_index.items()):
                 cix_path = AreaResource(cix_area_path).path
                 res_id = res_data[0]
                 cache[normpath(normcase(cix_path))] = [res_id]
@@ -149,10 +149,10 @@ class CatalogsZone(object):
         res_ids = []
         missing_selections = []
         for selector, selection \
-                in self._selection_from_selector(selections).items():
+                in list(self._selection_from_selector(selections).items()):
             try:
                 res_ids += self._res_ids_from_selector_cache[selector]
-            except KeyError, ex:
+            except KeyError as ex:
                 missing_selections.append(selection)
         log.debug("_res_ids_from_selections: res_ids=%r", res_ids)
         return tuple(res_ids), missing_selections
@@ -169,7 +169,7 @@ class CatalogsZone(object):
 
     @catalog_dirs.setter
     def catalog_dirs(self, value):
-        assert not isinstance(value, basestring), \
+        assert not isinstance(value, str), \
             "catalog_dirs must be an iterable, not a string"
         catalog_dirs = list(value)
         if self._std_catalog_dir not in catalog_dirs:
@@ -180,7 +180,7 @@ class CatalogsZone(object):
 
     def get_lib(self, lang, selections=None):
         """Return a CatalogLib for the given lang and selections."""
-        assert not isinstance(selections, basestring),\
+        assert not isinstance(selections, str),\
             "catalog lib 'selections' must be None or a sequence, not %r: %r"\
             % (type(selections), selections)
         if not self._have_updated_at_least_once:
@@ -266,8 +266,8 @@ class CatalogsZone(object):
             log.info("catalog: culling memory")
             now = time.time()
             for lang, blob_and_atime_from_blobname \
-                    in self._blob_and_atime_from_blobname_from_lang_cache.items():
-                for blobname, (blob, atime) in blob_and_atime_from_blobname.items():
+                    in list(self._blob_and_atime_from_blobname_from_lang_cache.items()):
+                for blobname, (blob, atime) in list(blob_and_atime_from_blobname.items()):
                     if now - atime > 300.0:  # >5 minutes since last access
                         del blob_and_atime_from_blobname[blobname]
         finally:
@@ -286,8 +286,8 @@ class CatalogsZone(object):
 
         total_mem_usage = 0
         result = {}
-        for lang, blob_and_atime_from_blobname in self._blob_and_atime_from_blobname_from_lang_cache.items():
-            for blobname, [blob, atime] in blob_and_atime_from_blobname.items():
+        for lang, blob_and_atime_from_blobname in list(self._blob_and_atime_from_blobname_from_lang_cache.items()):
+            for blobname, [blob, atime] in list(blob_and_atime_from_blobname.items()):
                 result["explicit/python/codeintel/%s/catalog/%s" % (lang, blobname)] = {
                     "amount": memutils.memusage(blob),
                     "units": "bytes",
@@ -327,7 +327,7 @@ class CatalogsZone(object):
                     elif elem.tag == "file":
                         lang = elem.get("lang")
                         break
-            except ET.XMLParserError, ex:
+            except ET.XMLParserError as ex:
                 log.warn("%s: error reading catalog, skipping it (%s)",
                          cix_path, ex)
                 continue
@@ -377,7 +377,7 @@ class CatalogsZone(object):
                 except:
                     log.exception("error in progress_cb (ignoring)")
             res_name_from_res_path = dict(  # this is our checklist
-                (p, v[2]) for p, v in self.res_index.items())
+                (p, v[2]) for p, v in list(self.res_index.items()))
             todos = []
             log.info("updating %s: %d catalog dir(s)", self,
                      len(self.catalog_dirs))
@@ -401,12 +401,12 @@ class CatalogsZone(object):
                     #              catalog_info["name"])
                     del res_name_from_res_path[res.area_path]  # tick it off
 
-            for res_area_path, res_name in res_name_from_res_path.items():
+            for res_area_path, res_name in list(res_name_from_res_path.items()):
                 # remove this obsolete CIX file
                 try:
                     todos.append(("remove", AreaResource(
                         res_area_path), res_name))
-                except ValueError, ex:
+                except ValueError as ex:
                     # Skip resources in unknown areas. This is primarily to
                     # allow debugging/testing (when the set of registered
                     # path_areas may not include the set when running in
@@ -468,7 +468,7 @@ class CatalogsZone(object):
                         #    more intelligently if possible.
                         self._remove_res(res)
                         self._add_res(res)
-                except DatabaseError, ex:
+                except DatabaseError as ex:
                     log.warn("%s (skipping)" % ex)
 
             if progress_cb:
@@ -502,7 +502,7 @@ class CatalogsZone(object):
     def _new_res_id(self):
         if self._existing_res_ids_cache is None:
             self._existing_res_ids_cache \
-                = dict((d[0], True) for d in self.res_index.values())
+                = dict((d[0], True) for d in list(self.res_index.values()))
         while True:
             if self._new_res_id_counter not in self._existing_res_ids_cache:
                 new_res_id = self._new_res_id_counter
@@ -515,9 +515,9 @@ class CatalogsZone(object):
         LEN_PREFIX = self.db.LEN_PREFIX
         res_id, last_updated, name, res_data = self.res_index[res.area_path]
         # res_data: {lang -> blobname -> ilk -> toplevelnames}
-        for lang, tfifb in res_data.items():
+        for lang, tfifb in list(res_data.items()):
             dbfile_and_res_id_from_blobname = self.blob_index[lang]
-            for blobname, toplevelnames_from_ilk in tfifb.items():
+            for blobname, toplevelnames_from_ilk in list(tfifb.items()):
                 # Update 'blob_index' for $lang.
                 dbfile, res_id = dbfile_and_res_id_from_blobname[blobname]
                 del dbfile_and_res_id_from_blobname[blobname]
@@ -530,7 +530,7 @@ class CatalogsZone(object):
                         log.debug("fs-write: remove catalog %s blob file '%s'",
                                   lang, basename(path))
                         os.remove(path)
-                except EnvironmentError, ex:
+                except EnvironmentError as ex:
                     # XXX If get lots of these, then try harder. Perhaps
                     #    creating a zombies area, or creating a list of
                     #    them: self.db.add_zombie(dbpath).
@@ -543,14 +543,14 @@ class CatalogsZone(object):
                 # toplevelname_index:   {lang -> ilk -> toplevelname -> res_id -> blobnames}
                 # toplevelprefix_index: {lang -> ilk -> prefix -> res_id ->
                 # toplevelnames}
-                for ilk, toplevelnames in toplevelnames_from_ilk.iteritems():
+                for ilk, toplevelnames in toplevelnames_from_ilk.items():
                     try:
                         bfrft = self.toplevelname_index[lang][ilk]
                         for toplevelname in toplevelnames:
                             del bfrft[toplevelname][res_id]
                             if not bfrft[toplevelname]:
                                 del bfrft[toplevelname]
-                    except KeyError, ex:
+                    except KeyError as ex:
                         self.db.corruption("CatalogsZone._remove_res",
                                            "error removing top-level names of ilk '%s' for "
                                            "'%s' resource from toplevelname_index: %s"
@@ -564,7 +564,7 @@ class CatalogsZone(object):
                             del tfrfp[prefix][res_id]
                             if not tfrfp[prefix]:
                                 del tfrfp[prefix]
-                    except KeyError, ex:
+                    except KeyError as ex:
                         self.db.corruption("CatalogsZone._remove_res",
                                            "error removing top-level name of ilk '%s' for "
                                            "'%s' resource from toplevelprefix_index: %s"
@@ -577,7 +577,7 @@ class CatalogsZone(object):
         cix_path = res.path
         try:
             tree = tree_from_cix_path(cix_path)
-        except ET.XMLParserError, ex:
+        except ET.XMLParserError as ex:
             log.warn("could not load `%s' into catalog (skipping): %s",
                      cix_path, ex)
             return
@@ -596,7 +596,7 @@ class CatalogsZone(object):
             tfifb = res_data.setdefault(lang, {})
             toplevelnames_from_ilk = tfifb.setdefault(blobname, {})
             if lang in self.db.import_everything_langs:
-                for toplevelname, elem in blob.names.iteritems():
+                for toplevelname, elem in blob.names.items():
                     ilk = elem.get("ilk") or elem.tag
                     if ilk not in toplevelnames_from_ilk:
                         toplevelnames_from_ilk[ilk] = set([toplevelname])
@@ -609,7 +609,7 @@ class CatalogsZone(object):
             # toplevelnames}
             bfrftfi = self.toplevelname_index.setdefault(lang, {})
             tfrfpfi = self.toplevelprefix_index.setdefault(lang, {})
-            for ilk, toplevelnames in toplevelnames_from_ilk.iteritems():
+            for ilk, toplevelnames in toplevelnames_from_ilk.items():
                 bfrft = bfrftfi.setdefault(ilk, {})
                 tfrfp = tfrfpfi.setdefault(ilk, {})
                 for toplevelname in toplevelnames:
@@ -801,7 +801,7 @@ class CatalogLib(object):
             else:
                 matches = filter_blobnames_for_prefix(
                     (bn
-                     for bn, (f, res_id) in dbfile_and_res_id_from_blobname.items()
+                     for bn, (f, res_id) in list(dbfile_and_res_id_from_blobname.items())
                      if res_id in self.selection_res_id_set),
                     prefix,
                     self.import_handler.sep)
@@ -818,18 +818,18 @@ class CatalogLib(object):
         # blobnames}
         if self.lang in self.catalogs_zone.toplevelname_index:
             for i, potential_bfrft \
-                    in self.catalogs_zone.toplevelname_index[self.lang].iteritems():
+                    in self.catalogs_zone.toplevelname_index[self.lang].items():
                 if ilk is not None and i != ilk:
                     continue
                 if toplevelname not in potential_bfrft:
                     continue
                 potential_bfr = potential_bfrft[toplevelname]
                 if self.selection_res_id_set is None:
-                    for blobnames in potential_bfr.itervalues():
+                    for blobnames in potential_bfr.values():
                         for blobname in blobnames:
                             yield blobname
                 else:
-                    for res_id, blobnames in potential_bfr.iteritems():
+                    for res_id, blobnames in potential_bfr.items():
                         if res_id not in self.selection_res_id_set:
                             continue
                         for blobname in blobnames:
@@ -886,14 +886,14 @@ class CatalogLib(object):
                         if self.selection_res_id_set is None:
                             cplns += [(ilk, t) for t in bfrft]
                         else:
-                            cplns += [(ilk, t) for t, bfr in bfrft.iteritems()
+                            cplns += [(ilk, t) for t, bfr in bfrft.items()
                                       if self.selection_res_id_set.intersection(bfr)]
                 elif self.selection_res_id_set is None:
-                    for i, bfrft in toplevelname_index[self.lang].iteritems():
+                    for i, bfrft in toplevelname_index[self.lang].items():
                         cplns += [(i, t) for t in bfrft]
                 else:  # ilk=None, have a selection set
-                    for i, bfrft in toplevelname_index[self.lang].iteritems():
-                        cplns += [(i, t) for t, bfr in bfrft.iteritems()
+                    for i, bfrft in toplevelname_index[self.lang].items():
+                        cplns += [(i, t) for t, bfr in bfrft.items()
                                   if self.selection_res_id_set.intersection(bfr)]
         else:
             # Use 'toplevelprefix_index':
@@ -908,21 +908,21 @@ class CatalogLib(object):
                     else:
                         if self.selection_res_id_set is None:
                             cplns += [(ilk, t)
-                                      for toplevelnames in tfr.itervalues()
+                                      for toplevelnames in tfr.values()
                                       for t in toplevelnames]
                         else:
                             cplns += [(ilk, t)
                                       for r in self.selection_res_id_set.intersection(tfr)
                                       for t in tfr[r]]
                 elif self.selection_res_id_set is None:
-                    for i, tfrfp in toplevelprefix_index[self.lang].iteritems():
+                    for i, tfrfp in toplevelprefix_index[self.lang].items():
                         if prefix not in tfrfp:
                             continue
                         cplns += [(i, t)
-                                  for toplevelnames in tfrfp[prefix].itervalues()
+                                  for toplevelnames in tfrfp[prefix].values()
                                   for t in toplevelnames]
                 else:  # ilk=None, have a selection set
-                    for i, tfrfp in toplevelprefix_index[self.lang].iteritems():
+                    for i, tfrfp in toplevelprefix_index[self.lang].items():
                         if prefix not in tfrfp:
                             continue
                         tfr = tfrfp[prefix]

@@ -106,7 +106,6 @@ __all__ = [
 # structure, and convert it from and to XML.
 ##
 
-import string
 import sys
 import re
 
@@ -135,7 +134,7 @@ class _SimpleElementPath:
         return result
 
 try:
-    import ElementPath
+    from . import ElementPath
 except ImportError:
     # FIXME: issue warning in this case?
     ElementPath = _SimpleElementPath()
@@ -396,7 +395,7 @@ class _ElementInterface:
     # @defreturn list of strings
 
     def keys(self):
-        return self.attrib.keys()
+        return list(self.attrib.keys())
 
     ##
     # Gets element attributes, as a sequence.  The attributes are
@@ -406,7 +405,7 @@ class _ElementInterface:
     # @defreturn list of (string, string) tuples
 
     def items(self):
-        return self.attrib.items()
+        return list(self.attrib.items())
 
     ##
     # Creates a tree iterator.  The iterator loops over this element
@@ -683,7 +682,7 @@ class ElementTree:
         elif tag is ProcessingInstruction:
             file.write("<?%s?>" % _escape_cdata(node.text, encoding))
         else:
-            items = node.items()
+            items = list(node.items())
             xmlns_items = []  # new namespaces in this scope
             try:
                 if isinstance(tag, QName) or tag[:1] == "{":
@@ -812,7 +811,7 @@ def _encode_entity(text, pattern=_escape):
             if text is None:
                 text = "&#%d;" % ord(char)
             append(text)
-        return string.join(out, "")
+        return "".join(out)
     try:
         return _encode(pattern.sub(escape_entities, text), "ascii")
     except TypeError:
@@ -823,7 +822,7 @@ def _encode_entity(text, pattern=_escape):
 # (or "utf-16")
 
 
-def _escape_cdata(text, encoding=None, replace=string.replace):
+def _escape_cdata(text, encoding=None, replace=str.replace):
     # escape character data
     try:
         if encoding:
@@ -839,7 +838,7 @@ def _escape_cdata(text, encoding=None, replace=string.replace):
         _raise_serialization_error(text)
 
 
-def _escape_attrib(text, encoding=None, replace=string.replace):
+def _escape_attrib(text, encoding=None, replace=str.replace):
     # escape attribute value
     try:
         if encoding:
@@ -864,7 +863,7 @@ def fixtag(tag, namespaces):
     # tag and namespace declaration, if any
     if isinstance(tag, QName):
         tag = tag.text
-    namespace_uri, tag = string.split(tag[1:], "}", 1)
+    namespace_uri, tag = tag[1:].split("}", 1)
     prefix = namespaces.get(namespace_uri)
     if prefix is None:
         prefix = _namespace_map.get(namespace_uri)
@@ -951,7 +950,7 @@ class iterparse:
                     append((event, None))
                 parser.EndNamespaceDeclHandler = handler
 
-    def next(self):
+    def __next__(self):
         while 1:
             try:
                 item = self._events[self._index]
@@ -982,7 +981,7 @@ class iterparse:
             return self
     except NameError:
         def __getitem__(self, index):
-            return self.next()
+            return next(self)
 
 ##
 # Parses an XML document from a string constant.  This function can
@@ -1044,7 +1043,7 @@ def tostring(element, encoding=None):
     file = dummy()
     file.write = data.append
     ElementTree(element).write(file, encoding)
-    return string.join(data, "")
+    return "".join(data)
 
 ##
 # Generic element structure builder.  This builder converts a sequence
@@ -1084,7 +1083,7 @@ class TreeBuilder:
     def _flush(self):
         if self._data:
             if self._last is not None:
-                text = string.join(self._data, "")
+                text = "".join(self._data)
                 if self._tail:
                     assert self._last.tail is None, "internal error (tail)"
                     self._last.tail = text
@@ -1207,7 +1206,7 @@ class XMLTreeBuilder:
         fixname = self._fixname
         tag = fixname(tag)
         attrib = {}
-        for key, value in attrib_in.items():
+        for key, value in list(attrib_in.items()):
             attrib[fixname(key)] = self._fixtext(value)
         return self._target.start(tag, attrib)
 
@@ -1246,7 +1245,7 @@ class XMLTreeBuilder:
             if prefix == ">":
                 self._doctype = None
                 return
-            text = string.strip(text)
+            text = text.strip()
             if not text:
                 return
             self._doctype.append(text)

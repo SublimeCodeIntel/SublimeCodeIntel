@@ -54,7 +54,7 @@ class _BaseMemoryCommandHandler(CommandHandler):
             except:
                 log.exception("Failed to report memory for zone %r", zone)
 
-        for path, data in results.items():
+        for path, data in list(results.items()):
             if path.startswith("explicit/python"):
                 if data["units"] == "bytes":
                     total -= data["amount"]
@@ -231,7 +231,7 @@ elif sys.platform.startswith("linux"):
             try:
                 with open("/proc/self/statm", "r") as f:
                     vsize, rss = f.read().split()[:2]
-                    return long(vsize, 10) * self.libc.getpagesize()
+                    return int(vsize, 10) * self.libc.getpagesize()
             except Exception as ex:
                 log.exception("Failed to get vsize: %r", ex)
 
@@ -239,7 +239,7 @@ elif sys.platform.startswith("linux"):
             try:
                 with open("/proc/self/statm", "r") as f:
                     vsize, rss = f.read().split()[:2]
-                    return long(rss, 10) * self.libc.getpagesize()
+                    return int(rss, 10) * self.libc.getpagesize()
             except Exception as ex:
                 log.exception("Failed to get rss: %r", ex)
 

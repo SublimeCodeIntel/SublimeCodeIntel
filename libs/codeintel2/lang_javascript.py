@@ -60,7 +60,7 @@ import sys
 import types
 import logging
 import operator
-from cStringIO import StringIO
+from io import StringIO
 import weakref
 from glob import glob
 from collections import deque
@@ -216,7 +216,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
         # calltip if we find a function open paren "(" and function identifier
         #   http://bugs.activestate.com/show_bug.cgi?id=93864
         if DEBUG:
-            print "Arg separater found, looking for start of function, pos: %r" % (pos, )
+            print("Arg separater found, looking for start of function, pos: %r" % (pos, ))
         ac.getPrevPosCharStyle()
         # Move back to the open paren of the function
         paren_count = 0
@@ -226,23 +226,23 @@ class JavaScriptLangIntel(CitadelLangIntel,
             p, c, style = ac.getPrecedingPosCharStyle(
                 ignore_styles=jsClassifier.comment_styles)
             if DEBUG:
-                print '  p: %r, ch: %r, st: %d' % (p, c, style)
+                print('  p: %r, ch: %r, st: %d' % (p, c, style))
             loopcount = 0
             while style == jsClassifier.operator_style and loopcount < 10:
                 loopcount += 1
                 if c == ")":
                     paren_count += 1
                     if DEBUG:
-                        print '    paren_count: %r' % (paren_count, )
+                        print('    paren_count: %r' % (paren_count, ))
                 elif c == "(":
                     if DEBUG:
-                        print '    paren_count: %r' % (paren_count, )
+                        print('    paren_count: %r' % (paren_count, ))
                     if paren_count == 0:
                         # We found the open brace of the func
                         trg_from_pos = p+1
                         p, ch, style = ac.getPrevPosCharStyle()
                         if DEBUG:
-                            print "  function start found, pos: %d" % (p, )
+                            print("  function start found, pos: %d" % (p, ))
                         if style in jsClassifier.ignore_styles:
                             # Find previous non-ignored style then
                             p, c, style = ac.getPrecedingPosCharStyle(
@@ -267,14 +267,14 @@ class JavaScriptLangIntel(CitadelLangIntel,
                 elif c in ";{}":
                     # Gone too far and noting was found
                     if DEBUG:
-                        print "  no function found, hit stop char: %s at p: %d" % (c, p)
+                        print("  no function found, hit stop char: %s at p: %d" % (c, p))
                     return None
                 p, c, style = ac.getPrevPosCharStyle()
                 if DEBUG:
-                    print '  p: %r, ch: %r, st: %d' % (p, c, style)
+                    print('  p: %r, ch: %r, st: %d' % (p, c, style))
         # Did not find the function open paren
         if DEBUG:
-            print "  no function found, ran out of chars to look at, p: %d" % (p,)
+            print("  no function found, ran out of chars to look at, p: %d" % (p,))
         return None
 
     def trg_from_pos(self, buf, pos, implicit=True,
@@ -301,9 +301,9 @@ class JavaScriptLangIntel(CitadelLangIntel,
         last_char = accessor.char_at_pos(last_pos)
         last_style = accessor.style_at_pos(last_pos)
         if DEBUG:
-            print "  last_pos: %s" % last_pos
-            print "  last_ch: %r" % last_char
-            print "  last_style: %r" % last_style
+            print("  last_pos: %s" % last_pos)
+            print("  last_ch: %r" % last_char)
+            print("  last_style: %r" % last_style)
 
         if (jsClassifier.is_udl and last_char == '/'
             and last_pos > 0 and accessor.char_at_pos(last_pos-1) == '<'
@@ -324,7 +324,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
             min_p = max(
                 0, p - 50)      # Don't bother looking more than 50 chars
             if DEBUG:
-                print "Checking match for jsdoc completions"
+                print("Checking match for jsdoc completions")
             while p >= min_p and \
                     accessor.style_at_pos(p) in jsClassifier.comment_styles:
                 ch = accessor.char_at_pos(p)
@@ -339,10 +339,10 @@ class JavaScriptLangIntel(CitadelLangIntel,
             else:
                 # Nothing found in the specified range
                 if DEBUG:
-                    print "trg_from_pos: not a jsdoc"
+                    print("trg_from_pos: not a jsdoc")
                 return None
             if DEBUG:
-                print "Matched trigger for jsdoc completion"
+                print("Matched trigger for jsdoc completion")
             return Trigger(lang, TRG_FORM_CPLN,
                            "jsdoc-tags", pos, implicit)
 
@@ -353,7 +353,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
             min_p = max(
                 0, p - 50)      # Don't bother looking more than 50 chars
             if DEBUG:
-                print "Checking match for jsdoc calltip"
+                print("Checking match for jsdoc calltip")
             ch = None
             ident_found_pos = None
             while p >= min_p and \
@@ -368,25 +368,25 @@ class JavaScriptLangIntel(CitadelLangIntel,
                         ident_found_pos = p+1
                     else:
                         if DEBUG:
-                            print "No jsdoc, whitespace not preceeded by an " \
-                                  "identifer"
+                            print("No jsdoc, whitespace not preceeded by an " \
+                                  "identifer")
                         return None
                 elif ch == "@":
                     # This is what we've been looking for!
                     jsdoc_field = accessor.text_range(p+2, ident_found_pos+1)
                     if DEBUG:
-                        print "Matched trigger for jsdoc calltip: '%s'" % (jsdoc_field, )
+                        print("Matched trigger for jsdoc calltip: '%s'" % (jsdoc_field, ))
                     return Trigger(lang, TRG_FORM_CALLTIP,
                                    "jsdoc-tags", ident_found_pos, implicit,
                                    jsdoc_field=jsdoc_field)
                 elif not _isident(ch):
                     if DEBUG:
-                        print "No jsdoc, identifier not preceeded by an '@'"
+                        print("No jsdoc, identifier not preceeded by an '@'")
                     # Not whitespace, not a valid tag then
                     return None
             # Nothing found in the specified range
             if DEBUG:
-                print "No jsdoc, ran out of characters to look at."
+                print("No jsdoc, ran out of characters to look at.")
 
         elif last_char not in self.trg_chars:
             # Check if this could be a 'complete-names' trigger, this is
@@ -397,7 +397,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
             if last_pos >= 2 and (last_style == jsClassifier.identifier_style or
                                   last_style == jsClassifier.keyword_style):
                 if DEBUG:
-                    print "Checking for 'names' three-char-trigger"
+                    print("Checking for 'names' three-char-trigger")
                 # The previous two characters must be the same style.
                 p = last_pos - 1
                 min_p = max(0, p - 1)
@@ -405,8 +405,8 @@ class JavaScriptLangIntel(CitadelLangIntel,
                 while p >= min_p:
                     if accessor.style_at_pos(p) != last_style:
                         if DEBUG:
-                            print "No 'names' trigger, inconsistent style: " \
-                                  "%d, pos: %d" % (accessor.style_at_pos(p), p)
+                            print("No 'names' trigger, inconsistent style: " \
+                                  "%d, pos: %d" % (accessor.style_at_pos(p), p))
                         break
                     citdl_expr += accessor.char_at_pos(p)
                     p -= 1
@@ -419,8 +419,8 @@ class JavaScriptLangIntel(CitadelLangIntel,
                         if style == last_style:
                             if implicit:
                                 if DEBUG:
-                                    print "No 'names' trigger, third char " \
-                                          "style: %d, pos: %d" % (style, p)
+                                    print("No 'names' trigger, third char " \
+                                          "style: %d, pos: %d" % (style, p))
                                 return None
                             else:
                                 # explicit can be longer than 3-chars, skip over
@@ -449,8 +449,8 @@ class JavaScriptLangIntel(CitadelLangIntel,
                             ch = accessor.char_at_pos(p)
                             if ch == ".":
                                 if DEBUG:
-                                    print "No 'names' trigger, third char " \
-                                          "is a dot"
+                                    print("No 'names' trigger, third char " \
+                                          "is a dot")
                                 return None
                             elif style == jsClassifier.keyword_style:
                                 p, prev_text = ac.getTextBackWithStyle(
@@ -459,19 +459,19 @@ class JavaScriptLangIntel(CitadelLangIntel,
                                     # We don't trigger after function, this is
                                     # defining a new item that does not exist.
                                     if DEBUG:
-                                        print "No 'names' trigger, preceeding "\
-                                              "text is 'function'"
+                                        print("No 'names' trigger, preceeding "\
+                                              "text is 'function'")
                                     return None
                     if DEBUG:
-                        print "triggering 'javascript-complete-names' at " \
-                              "pos: %d" % (last_pos - 2, )
+                        print("triggering 'javascript-complete-names' at " \
+                              "pos: %d" % (last_pos - 2, ))
 
                     return Trigger(self.lang, TRG_FORM_CPLN,
                                    "names", last_pos - 2, implicit,
                                    citdl_expr="".join(reversed(citdl_expr)))
             if DEBUG:
-                print "trg_from_pos: no: %r is not in %r" % (
-                    last_char, "".join(self.trg_chars), )
+                print("trg_from_pos: no: %r is not in %r" % (
+                    last_char, "".join(self.trg_chars), ))
             return None
 
         elif last_style == jsClassifier.operator_style:
@@ -492,8 +492,8 @@ class JavaScriptLangIntel(CitadelLangIntel,
                 elif style not in jsClassifier.ignore_styles:
                     # Else, wrong style for calltip
                     if DEBUG:
-                        print "not a trigger: unexpected style: %d at pos: %d" \
-                              % (style, p)
+                        print("not a trigger: unexpected style: %d at pos: %d" \
+                              % (style, p))
                     return None
                 p -= 1
             else:
@@ -555,7 +555,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
             if prev_char == '[':
                 # We're good to go.
                 if DEBUG:
-                    print "Matched trigger for array completions"
+                    print("Matched trigger for array completions")
                 return Trigger(lang, TRG_FORM_CPLN,
                                "array-members", pos, implicit,
                                bracket_pos=prev_pos, trg_char=last_char)
@@ -566,9 +566,9 @@ class JavaScriptLangIntel(CitadelLangIntel,
                                preceding_trg_terminators=None, DEBUG=False):
         DEBUG = False
         if DEBUG:
-            print "pos: %d" % (pos, )
-            print "ch: %r" % (buf.accessor.char_at_pos(pos), )
-            print "curr_pos: %d" % (curr_pos, )
+            print("pos: %d" % (pos, ))
+            print("ch: %r" % (buf.accessor.char_at_pos(pos), ))
+            print("curr_pos: %d" % (curr_pos, ))
 
         # Check if we can match on either of the 3-character trigger or on the
         # normal preceding_trg_terminators.
@@ -612,9 +612,9 @@ class JavaScriptLangIntel(CitadelLangIntel,
                         buf, prev_pos + 4, implicit=False)
 
         if DEBUG:
-            print "trg: %r" % (trg, )
-            print "names_trigger: %r" % (names_trigger, )
-            print "last_trg_type: %r" % (self._last_trg_type, )
+            print("trg: %r" % (trg, ))
+            print("names_trigger: %r" % (names_trigger, ))
+            print("last_trg_type: %r" % (self._last_trg_type, ))
 
         if names_trigger:
             if not trg:
@@ -632,19 +632,19 @@ class JavaScriptLangIntel(CitadelLangIntel,
             # Check if there is a JSDoc to provide a calltip for, example:
             #       /** @param foobar {sometype} This is field for <|>
             if DEBUG:
-                print "\njs preceding_trg_from_pos::jsdoc: check for calltip"
+                print("\njs preceding_trg_from_pos::jsdoc: check for calltip")
             comment = accessor.text_range(max(0, curr_pos-200), curr_pos)
             at_idx = comment.rfind("@")
             if at_idx >= 0:
                 if DEBUG:
-                    print "\njs preceding_trg_from_pos::jsdoc: contains '@'"
+                    print("\njs preceding_trg_from_pos::jsdoc: contains '@'")
                 space_idx = comment[at_idx:].find(" ")
                 if space_idx >= 0:
                     # Trigger after the space character.
                     trg_pos = (curr_pos - len(
                         comment)) + at_idx + space_idx + 1
                     if DEBUG:
-                        print "\njs preceding_trg_from_pos::jsdoc: calltip at %d" % (trg_pos, )
+                        print("\njs preceding_trg_from_pos::jsdoc: calltip at %d" % (trg_pos, ))
                     trg = self.trg_from_pos(buf, trg_pos, implicit=False)
 
         if trg:
@@ -689,7 +689,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
         else:
             try:
                 citdl_expr = self.citdl_expr_from_trg(buf, trg)
-            except CodeIntelError, ex:
+            except CodeIntelError as ex:
                 ctlr.error(str(ex))
                 ctlr.done("error")
                 return
@@ -899,7 +899,7 @@ class JavaScriptBuffer(CitadelBuffer):
         """
         DEBUG = False
         if DEBUG:
-            print "scoperef_from_pos: look for line %d in %r" % (line, blob)
+            print("scoperef_from_pos: look for line %d in %r" % (line, blob))
 
         best_fit_lpath = None
         for scope, lpath in _walk_js_scopes(blob):
@@ -910,23 +910,23 @@ class JavaScriptBuffer(CitadelBuffer):
             # Note: not sure the fallback is correct.
             end = int(scope.get("lineend", start))
             if DEBUG:
-                print "scoperef_from_pos:    scope %r (%r-%r)?"\
-                      % (scope, start, end),
+                print("scoperef_from_pos:    scope %r (%r-%r)?"\
+                      % (scope, start, end), end=' ')
             if line < start:
                 if DEBUG:
-                    print "no, before start"
+                    print("no, before start")
                 continue
             elif line > end:
                 if DEBUG:
-                    print "no, after end"
+                    print("no, after end")
                 continue
             elif line <= end:
                 if DEBUG:
-                    print "yes, could be"
+                    print("yes, could be")
                 best_fit_lpath = lpath
             else:
                 if DEBUG:
-                    print "no, passed end"
+                    print("no, passed end")
                 if best_fit_lpath is not None:
                     break
         if best_fit_lpath is not None:
@@ -944,7 +944,8 @@ class JavaScriptImportHandler(ImportHandler):
     def setCorePath(self, compiler=None, extra=None):
         self.corePath = []
 
-    def _findScannableFiles(self, (files, searchedDirs), dirname, names):
+    def _findScannableFiles(self, xxx_todo_changeme, dirname, names):
+        (files, searchedDirs) = xxx_todo_changeme
         if sys.platform.startswith("win"):
             cpath = dirname.lower()
         else:
@@ -987,7 +988,7 @@ class JavaScriptImportHandler(ImportHandler):
         # TODO: log the fs-stat'ing a la codeintel.db logging.
         try:
             names = os.listdir(dir)
-        except OSError, ex:
+        except OSError as ex:
             return {}
         dirs, nondirs = set(), set()
         for name in names:
@@ -1185,8 +1186,7 @@ class JSObject:
         return self.name.startswith("(anonymous")
 
     def addClassRef(self, baseclass):
-        assert isinstance(baseclass, (
-            str, unicode)), "baseclass %r is not a str" % (baseclass,)
+        assert isinstance(baseclass, str), "baseclass %r is not a str" % (baseclass,)
         if baseclass not in self.classrefs:
             self.classrefs.append(baseclass)
 
@@ -1263,7 +1263,7 @@ class JSObject:
             bestCount = 0
             bestType = None
             for rtype in self.returnTypes:
-                if isinstance(rtype, (str, unicode)):
+                if isinstance(rtype, str):
                     count = d.get(rtype, 0) + 1
                     d[rtype] = count
                     if count > bestCount:
@@ -1294,7 +1294,7 @@ class JSObject:
             result.append("%s%s %s" % (" " * depth, self.cixname, self.name))
         for attrname in ("classes", "members", "functions", "variables"):
             d = getattr(self, attrname, {})
-            for v in d.values():
+            for v in list(d.values()):
                 result += v.outline(depth + 2)
         return result
 
@@ -1362,7 +1362,7 @@ class JSObject:
 
         # Additional meta-data.
         if self.metadata:
-            for key, value in self.metadata.items():
+            for key, value in list(self.metadata.items()):
                 cixobject.attrib[key] = value
 
         # Add the type information, JSDoc overrides whatever the ciler found
@@ -1370,7 +1370,7 @@ class JSObject:
             # Convert the value into a standard name
             addCixType(cixobject, standardizeJSType(jsdoc.type))
         elif self.type:
-            assert isinstance(self.type, (str, unicode)), \
+            assert isinstance(self.type, str), \
                 "self.type %r is not a str" % (self.type)
             addCixType(cixobject, standardizeJSType(self.type))
 
@@ -1403,12 +1403,12 @@ class JSObject:
                     addClassRef(cixobject, baseclass)
 
         # Note that arguments must be kept in the order they were defined.
-        variables = self.variables.values()
+        variables = list(self.variables.values())
         arguments = [x for x in variables if isinstance(x, JSArgument)]
         variables = [x for x in variables if not isinstance(x, JSArgument)]
         allValues = sorted(arguments, key=operator.attrgetter("pos", "name")) + \
-            sorted(self.functions.values() + self.members.values() +
-                   self.classes.values() + variables +
+            sorted(list(self.functions.values()) + list(self.members.values()) +
+                   list(self.classes.values()) + variables +
                    self.anonymous_functions,
                    key=operator.attrgetter("line", "name"))
 
@@ -1483,7 +1483,7 @@ class JSArgument(JSVariable):
             result.append("%sargument %s" % (" " * depth, self.name))
         for attrname in ("classes", "members", "functions", "variables"):
             d = getattr(self, attrname, {})
-            for v in d.values():
+            for v in list(d.values()):
                 result += v.outline(depth + 2)
         return result
 
@@ -1598,7 +1598,7 @@ class JSFile:
         result = ["File: %r" % (self.name)]
         for attrname in ("classes", "functions", "variables"):
             d = getattr(self, attrname, {})
-            for v in d.values():
+            for v in list(d.values()):
                 result += v.outline(2)
         return result
 
@@ -1650,7 +1650,7 @@ class JSFile:
         """
         # print "Looking for varType:%r in scope:%r" % (varType,
         # scopeStack[-1].name)
-        assert not varType or isinstance(varType, (str, unicode)), \
+        assert not varType or isinstance(varType, str), \
             "varType %r is not a string" % varType
         if depth < 10 and varType:
             # Don't look any further if it's a known type
@@ -1694,7 +1694,7 @@ class JSFile:
                 # print "Found scope"
                 if isinstance(foundScope, JSVariable):
                     # print "Recursively searching scope"
-                    assert foundScope.type is None or isinstance(foundScope.type, (str, unicode)), \
+                    assert foundScope.type is None or isinstance(foundScope.type, str), \
                         "foundScope %r has invalid type %r" % (
                             foundScope, foundScope.type)
                     foundScope = self._lookupVariableType(
@@ -1720,13 +1720,13 @@ class JSFile:
             if hasattr(jstype, "classes"):
                 # Recursive lookup for the class variables
                 self._lookupVariableTypes(
-                    jstype.classes.values(), scopeStack + [jstype])
+                    list(jstype.classes.values()), scopeStack + [jstype])
             if hasattr(jstype, "functions"):
                 # Recursive lookup for the function variables
                 self._lookupVariableTypes(
-                    jstype.functions.values(), scopeStack + [jstype])
+                    list(jstype.functions.values()), scopeStack + [jstype])
             if hasattr(jstype, "variables"):
-                for jsvariable in jstype.variables.values():
+                for jsvariable in list(jstype.variables.values()):
                     varType = jsvariable.type
                     if varType:
                         actualType = self._lookupVariableType(
@@ -1748,7 +1748,7 @@ class JSFile:
                     returnType = jstype.returnTypes[i]
                     # print "Looking up function return type: %r" %
                     # (returnType, )
-                    if isinstance(returnType, (str, unicode)):
+                    if isinstance(returnType, str):
                         actualType = self._lookupVariableType(
                             returnType, jstype, scopeStack + [jstype])
                         if actualType and actualType != jstype:
@@ -1776,10 +1776,10 @@ class JSFile:
                         "Making function:%r the constructor for class:%r",
                         jsfunc.name, jsobject.name)
                     jsfunc.attributes.append("__ctor__")
-        allObjects = jsobject.functions.values() + jsobject.classes.values() + \
-            jsobject.variables.values()
+        allObjects = list(jsobject.functions.values()) + list(jsobject.classes.values()) + \
+            list(jsobject.variables.values())
         if not isinstance(jsobject, JSFile):
-            allObjects += jsobject.members.values()
+            allObjects += list(jsobject.members.values())
         for subobj in allObjects:
             self._updateClassConstructors(subobj)
 
@@ -1820,8 +1820,8 @@ class JSFile:
         @param cixmodule {Element} The <scope type="blob"> to write to
         """
         # Sort and include contents
-        allValues = self.functions.values() + self.variables.values() + \
-            self.classes.values() + self.anonymous_functions
+        allValues = list(self.functions.values()) + list(self.variables.values()) + \
+            list(self.classes.values()) + self.anonymous_functions
         for v in sorted(allValues, key=operator.attrgetter("line", "name")):
             if not v.isHidden:
                 v.toElementTree(cixmodule)
@@ -1964,7 +1964,7 @@ class JavaScriptCiler:
                 self.currentScope.lineend = self.lineno
                 if isinstance(self.currentScope, JSClass) and \
                    len(self.currentScope.functions) == 1:
-                    jsfunc = self.currentScope.functions.values()[0]
+                    jsfunc = list(self.currentScope.functions.values())[0]
                     if jsfunc.depth == self.depth and jsfunc.lineend == -1:
                         jsfunc.lineend = self.lineno
                         log.debug("Setting lineend: %d for scope %r",
@@ -2600,7 +2600,7 @@ class JavaScriptCiler:
                 jsclass.line = jsfunc.line
             # Copy over non-local variables from the function to the class,
             # all the local variables stay inside the function scope.
-            for varName, v in jsfunc.variables.items():
+            for varName, v in list(jsfunc.variables.items()):
                 isLocal = "__local__" in v.attributes or isinstance(
                     v, JSArgument)
                 if not isLocal:
@@ -2618,15 +2618,15 @@ class JavaScriptCiler:
             parent.variables.pop(var.name, None)
 
         # Copy across all non-local members, bug 88549.
-        for name, jsobject in jsfunc.variables.items():
+        for name, jsobject in list(jsfunc.variables.items()):
             if '__local__' not in jsobject.attributes and not isinstance(jsobject, JSArgument):
                 jsclass.variables[name] = jsobject
                 jsfunc.variables.pop(name, None)
-        for name, jsobject in jsfunc.functions.items():
+        for name, jsobject in list(jsfunc.functions.items()):
             if '__local__' not in jsobject.attributes:
                 jsclass.functions[name] = jsobject
                 jsfunc.functions.pop(name, None)
-        for name, jsobject in jsfunc.classes.items():
+        for name, jsobject in list(jsfunc.classes.items()):
             if '__local__' not in jsobject.attributes:
                 jsclass.classes[name] = jsobject
                 jsfunc.classes.pop(name, None)
@@ -3395,7 +3395,7 @@ class JavaScriptCiler:
                         # "alias" to a primitive
                         varType = TYPE_VARIABLE
                 varType_mapping = dict([(
-                    v, k) for k, v in globals().items() if k.startswith("TYPE_")])
+                    v, k) for k, v in list(globals().items()) if k.startswith("TYPE_")])
                 log.debug("_variableHandler:: varType:%r, typeNames:%r, args:%r, p: %d", varType_mapping.get(
                     varType, varType), typeNames, args, p)
                 if varType == TYPE_FUNCTION:
@@ -3698,7 +3698,7 @@ class JavaScriptCiler:
         for fieldname in ('classes', 'members', 'variables', 'functions', ):
             d_obj = getattr(jsobject, fieldname, {})
             d_oth = getattr(jsother, fieldname, {})
-            for name, jsobj in d_obj.items():
+            for name, jsobj in list(d_obj.items()):
                 # Check the parents are not the same.
                 if jsobj.parent == jsother:
                     parent = jsobj.parent
@@ -3719,7 +3719,7 @@ class JavaScriptCiler:
         d_members = getattr(jsother, "members", {})
         d_variables = getattr(jsother, "variables", {})
 
-        for name, jsobj in d_variables.items():
+        for name, jsobj in list(d_variables.items()):
             if name in d_members:
                 # Decide which one to keep then, remove the variable and then
                 # replace the member with the best choice.

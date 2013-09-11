@@ -263,13 +263,13 @@ class CitadelBuffer(Buffer):
         scan_tree = None
         try:
             scan_tree = cile_driver.scan_purelang(self)
-        except CodeIntelError, ex:
+        except CodeIntelError as ex:
             exc_info = sys.exc_info()
             exc_class, exc, tb = sys.exc_info()
             tb_path, tb_lineno, tb_func = traceback.extract_tb(tb)[-1][:3]
             scan_error = "%s (%s:%s in %s)" % (
                 exc, tb_path, tb_lineno, tb_func)
-        except Exception, ex:
+        except Exception as ex:
             msg = "unexpected error scanning `%s'" % basename(self.path)
             log.exception(msg)
             exc_info = sys.exc_info()
@@ -379,13 +379,13 @@ class BinaryBuffer(CitadelBuffer):
         scan_tree = None
         try:
             scan_tree = cile_driver.scan_binary(self)
-        except CodeIntelError, ex:
+        except CodeIntelError as ex:
             exc_info = sys.exc_info()
             exc_class, exc, tb = sys.exc_info()
             tb_path, tb_lineno, tb_func = traceback.extract_tb(tb)[-1][:3]
             scan_error = "%s (%s:%s in %s)" % (
                 exc, tb_path, tb_lineno, tb_func)
-        except Exception, ex:
+        except Exception as ex:
             msg = "unexpected error scanning `%s'" % basename(self.path)
             log.exception(msg)
             exc_info = sys.exc_info()
@@ -741,7 +741,7 @@ class Citadel(object):
         return lang in self._is_citadel_cpln_from_lang
 
     def get_citadel_cpln_langs(self):
-        return self._is_citadel_cpln_from_lang.keys()
+        return list(self._is_citadel_cpln_from_lang.keys())
 
     def finalize(self):
         pass
