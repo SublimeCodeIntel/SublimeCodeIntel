@@ -1517,7 +1517,16 @@ def _convert3to2(src):
 
 def _convert2to3(src):
     # print foo => print_(foo)
-    src = _rx(r'\bprint\b([^\n]*)').sub(r'print_(\1)', src)
+    src = _rx(r'\bprint\s+([^(][^\n]*)').sub(r'print_(\1)', src)
+
+    # raise et, ei, tb => raise et(ei).with_traceback(tb)
+    src = _rx(r'\braise\s+([^(),]+?)\s*,\s*([^(),]+?)\s*,\s*([^(),]+?)(?=\s|\n|$)').sub(r'raise \1(\2).with_traceback(\3)', src)
+
+    # raise et, ei, tb => raise et(ei).with_traceback(tb)
+    src = _rx(r'\braise\s+([^(),]+?)\s*,\s*([^(),]+?)(?=\s|\n|$)').sub(r'raise \1 as \2', src)
+
+    # 0123 => 0o123
+    src = _rx(r'\b0(\d+)').sub(r'0[oO]\1', src)
 
     return src
 
@@ -1648,7 +1657,7 @@ def scan_et(content, filename, md5sum=None, mtime=None, lang="Python"):
     # funky *whitespace* at the end of the file.
     content = content.rstrip() + '\n'
 
-    if lang == 'Python2':
+    if lang == 'Python':
         # Make Python2 code as compatible with pythoncile's Python3
         # parser as neessary for codeintel purposes.
         content = _convert2to3(content)
@@ -1670,6 +1679,7 @@ def scan_et(content, filename, md5sum=None, mtime=None, lang="Python"):
         if _gClockIt:
             sys.stdout.write(" (parse:%.3fs)" % (_gClock() - _gStartTime))
     except SyntaxError as ex:
+        log.warning("%s Syntax Error in %r: %s", lang, path, str(ex))
         file = ET.Element('file', _et_attrs(dict(lang=lang,
                                                  path=path,
                                                  error=str(ex))))
