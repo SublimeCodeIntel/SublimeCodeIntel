@@ -5,12 +5,12 @@ VERSION = sys.version_info[:2]
 PLATFORM = sys.platform
 ARCH = 'x%d' % (struct.calcsize('P') * 8)
 
-platform = None
-
 if VERSION >= (3, 3):
     from iElementTree import *
     from iElementTree import _patched_for_komodo_
 elif VERSION >= (2, 6):
+	platform = None
+
 	try:
 	    from _local_arch.ciElementTree import *
 	    platform = "Local arch"
@@ -33,5 +33,5 @@ elif VERSION >= (2, 6):
 	            from _win32_py26.ciElementTree import *
 	            platform = "Windows 32 bits"
 
-if not platform:
-    raise ImportError("Could not find a suitable ciElementTree binary for your platform and architecture.")
+	if not platform:
+	    raise ImportError("Could not find a suitable ciElementTree binary for your platform and architecture.")

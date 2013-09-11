@@ -1,7 +1,5 @@
 class Lexer:
     def tokenize_by_style(self, buffer, call_back=None):
-        if isinstance(buffer, str):
-            buffer = buffer.decode('utf8')
         if call_back is not None:
             return self._lexer.tokenize_by_style(
                 buffer,
