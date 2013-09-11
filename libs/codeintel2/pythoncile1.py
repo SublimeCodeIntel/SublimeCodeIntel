@@ -109,7 +109,7 @@ class PythonCILEError(CILEError):
 
 #---- global data
 _version_ = (0, 3, 0)
-log = logging.getLogger("pythoncile")
+log = logging.getLogger("codeintel.pythoncile")
 # log.setLevel(logging.DEBUG)
 util.makePerformantLogger(log)
 
