@@ -137,7 +137,7 @@ CSS_MICROSOFT_DATA = {
 
 CSS_MICROSOFT_SPECIFIC_ATTRS_DICT = {}
 CSS_MICROSOFT_SPECIFIC_CALLTIP_DICT = {}
-for attr, details in CSS_MICROSOFT_DATA.items():
+for attr, details in list(CSS_MICROSOFT_DATA.items()):
     values = details.get("values", {})
     versions = details.get("versions", [])
     attr_completions = sorted(values.keys())
@@ -152,7 +152,7 @@ for attr, details in CSS_MICROSOFT_DATA.items():
         desc_lines = textwrap.wrap(description, width=60)
         if values:
             desc_lines.append("")
-            for value, attr_desc in values.items():
+            for value, attr_desc in list(values.items()):
                 attr_desc = "  %r: %s" % (value, attr_desc)
                 attr_desc_lines = textwrap.wrap(attr_desc, width=50)
                 for i in range(len(attr_desc_lines)):

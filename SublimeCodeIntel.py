@@ -82,7 +82,7 @@ import sublime
 import sublime_plugin
 import threading
 import logging
-from cStringIO import StringIO
+from io import StringIO
 
 CODEINTEL_HOME_DIR = os.path.expanduser(os.path.join('~', '.codeintel'))
 __file__ = os.path.normpath(os.path.abspath(__file__))
@@ -542,7 +542,7 @@ def codeintel_callbacks(force=False):
     global _ci_next_savedb_, _ci_next_cullmem_
     __lock_.acquire()
     try:
-        views = QUEUE.values()
+        views = list(QUEUE.values())
         QUEUE.clear()
     finally:
         __lock_.release()
@@ -551,7 +551,7 @@ def codeintel_callbacks(force=False):
             callback(view, *args, **kwargs)
         sublime.set_timeout(_callback, 0)
     # saving and culling cached parts of the database:
-    for folders_id in _ci_mgr_.keys():
+    for folders_id in list(_ci_mgr_.keys()):
         mgr = codeintel_manager(folders_id)
         now = time.time()
         if now >= _ci_next_savedb_ or force:
@@ -725,7 +725,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 v = [p.strip() for p in config.get(conf, []) + folders if p.strip()]
                 config[conf] = os.pathsep.join(set(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join(project_base_dir, p)) if project_base_dir else p for p in v if p.strip()))
             for conf, p in config.items():
-                if isinstance(p, basestring) and p.startswith('~'):
+                if isinstance(p, str) and p.startswith('~'):
                     config[conf] = os.path.expanduser(p)
 
             # Setup environment variables
