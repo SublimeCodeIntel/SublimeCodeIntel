@@ -789,7 +789,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                            elem_ilk, classref)
                 try:
                     subhit = self._hit_from_citdl(classref, scoperef)
-                except CodeIntelError, ex:
+                except CodeIntelError as ex:
                     # Continue with what we *can* resolve.
                     self.warn(str(ex))
                 else:
@@ -877,7 +877,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                         new_hit, nconsumed \
                             = self._hit_from_getattr(remaining_tokens, *hit)
                     remaining_tokens = remaining_tokens[nconsumed:]
-                except CodeIntelError, ex:
+                except CodeIntelError as ex:
                     self.debug("error %s", ex)
                 if new_hit:
                     new_hits.append(new_hit)
@@ -1247,7 +1247,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                                                 tokens, blob, (blob, []))
                             if hit:
                                 return hit, nconsumed
-                        except CodeIntelError, e:
+                        except CodeIntelError as e:
                             self.debug("_hit_from_elem_imports:: "
                                        "_hit_from_getattr could not resolve: "
                                        "%r on %r", tokens, blob)
@@ -1285,7 +1285,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                         try:
                             if hit and self._return_with_hit(hit, 1):
                                 return hit, nconsumed
-                        except CodeIntelError, e:
+                        except CodeIntelError as e:
                             self.debug("_hit_from_elem_imports:: ie: "
                                        "_hit_from_getattr could not resolve: "
                                        "%r on %r", tokens, blob)
@@ -1368,7 +1368,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                                      '.'.join(tokens[:nconsumed]), scoperef,
                                      hit[0])
                             return hit, nconsumed
-                    except CodeIntelError, e:
+                    except CodeIntelError as e:
                         pass  # don't freak out: we'll try the next classref
         elif ilk == "blob":
             attr = elem.names.get(first_token)
@@ -1537,7 +1537,7 @@ class PHPTreeEvaluator(TreeEvaluator):
 
     def _make_shortname_lookup_citdl_dict(self, citdl_type, namelist, length=1):
         d = make_short_name_dict(namelist, length=length)
-        for key, values in d.items():
+        for key, values in list(d.items()):
             d[key] = self._convertListToCitdl(citdl_type, values)
         return d
 
@@ -1557,7 +1557,7 @@ class PHPTreeEvaluator(TreeEvaluator):
             if childnode.tag == tagname:
                 doesMatch = True
                 if attributes:
-                    for attrname, attrvalue in attributes.items():
+                    for attrname, attrvalue in list(attributes.items()):
                         if childnode.get(attrname) != attrvalue:
                             doesMatch = False
                             break
@@ -1610,7 +1610,7 @@ class PHPTreeEvaluator(TreeEvaluator):
         # we don't get a recursive import situation
         imported_blobs = {}
         self._get_all_import_blobs_dict_for_elem(elem, imported_blobs)
-        blobs = imported_blobs.values()
+        blobs = list(imported_blobs.values())
         self.debug(
             "_get_all_import_blobs_for_elem:: Imported blobs: %r", blobs)
         return blobs

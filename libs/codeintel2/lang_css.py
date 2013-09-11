@@ -42,7 +42,7 @@ from os.path import isfile, isdir, exists, dirname, abspath, splitext, join
 import sys
 import stat
 import string
-from cStringIO import StringIO
+from io import StringIO
 import logging
 import traceback
 from pprint import pprint
@@ -251,16 +251,16 @@ class _UDLCSSStyleClassifier(_StraightCSSStyleClassifier):
         p, ch, style = ac.getPrecedingPosCharStyle(style,
                                                    ignore_styles=self.ignore_styles)
         if DEBUG:
-            print "  _is_html_style_attribute:: Prev style: %d, ch: %r" % (
-                  style, ch, )
+            print("  _is_html_style_attribute:: Prev style: %d, ch: %r" % (
+                  style, ch, ))
         if style == SCE_UDL_M_OPERATOR:
             p, ch, style = ac.getPrecedingPosCharStyle(style,
                                                        ignore_styles=self.ignore_styles)
             if style == SCE_UDL_M_ATTRNAME:
                 p, name = ac.getTextBackWithStyle(style)
                 if DEBUG:
-                    print "  _is_html_style_attribute:: HTML Attribute: %r" % (
-                          name, )
+                    print("  _is_html_style_attribute:: HTML Attribute: %r" % (
+                          name, ))
                 if name == "style":
                     # Remember this is a html style attribute
                     ac.is_html_style_attribute = True
@@ -278,20 +278,20 @@ class _UDLCSSStyleClassifier(_StraightCSSStyleClassifier):
             # DEBUG = True
             pcs = ac.getCurrentPosCharStyle()
             if DEBUG:
-                print "  is_identifier:: pcs: %r" % (pcs, )
+                print("  is_identifier:: pcs: %r" % (pcs, ))
             try:
                 # Check that the preceding character before the identifier
                 ppcs = ac.getPrecedingPosCharStyle(pcs[2],
                                                    ignore_styles=self.ignore_styles)
                 if DEBUG:
-                    print "  is_identifier:: ppcs: %r" % (ppcs, )
+                    print("  is_identifier:: ppcs: %r" % (ppcs, ))
                 if self.is_operator(ppcs[2]) and ppcs[1] in "{;":
                     return True
                 elif ppcs[2] == SCE_UDL_M_STRING and \
                         self._is_html_style_attribute(ac, ppcs[2]):
                     return True
                 if DEBUG:
-                    print "  is_identifier:: Not an identifier style"
+                    print("  is_identifier:: Not an identifier style")
             finally:
                 # Reset the accessor back to the current position
                 ac.resetToPosition(pcs[0])
@@ -301,7 +301,7 @@ class _UDLCSSStyleClassifier(_StraightCSSStyleClassifier):
         ac = accessorCacheBack
         if ac is not None:
             pcs = ac.getCurrentPosCharStyle()
-            print "  is_class:: pcs: %r" % (pcs, )
+            print("  is_class:: pcs: %r" % (pcs, ))
             if self.is_operator(pcs[2]) and pcs[1] in ">.;}{":
                 return True
             try:
@@ -311,7 +311,7 @@ class _UDLCSSStyleClassifier(_StraightCSSStyleClassifier):
                 ppcs = ac.getPrecedingPosCharStyle(pcs[2],
                                                    ignore_styles=self.ignore_styles)
                 if DEBUG:
-                    print "  is_class:: ppcs: %r" % (ppcs, )
+                    print("  is_class:: ppcs: %r" % (ppcs, ))
                 if ppcs[2] in self.identifier_styles:
                     ppcs = ac.getPrecedingPosCharStyle(ppcs[2],
                                                        ignore_styles=self.ignore_styles)
@@ -324,7 +324,7 @@ class _UDLCSSStyleClassifier(_StraightCSSStyleClassifier):
                         (self.is_operator(ppcs[2]) and ppcs[1] in "};"):
                     return True
                 if DEBUG:
-                    print "  is_class:: Not a class style"
+                    print("  is_class:: Not a class style")
             finally:
                 # Reset the accessor back to the current position
                 ac.resetToPosition(pcs[0])
@@ -355,18 +355,18 @@ class _UDLCSSStyleClassifier(_StraightCSSStyleClassifier):
                                 # http://bugs.activestate.com/show_bug.cgi?id=58637
                                 continue
                             if DEBUG:
-                                print "  is_tag:: Not a tag operator ch: %s" % (ch)
+                                print("  is_tag:: Not a tag operator ch: %s" % (ch))
                             return False
                         elif not self.is_css_style(style):
                             if DEBUG:
-                                print "  is_tag:: Not a css style: %d, ch: %r" % (style, ch, )
+                                print("  is_tag:: Not a css style: %d, ch: %r" % (style, ch, ))
                             if style == SCE_UDL_M_STRING and \
                                self._is_html_style_attribute(ac, style):
                                 return False
                             return True
                         elif style not in self.identifier_styles:
                             if DEBUG:
-                                print "  is_tag:: Not a tag style, style: %d" % (style)
+                                print("  is_tag:: Not a tag style, style: %d" % (style))
                             return False
                         # else: # Thats okay, we'll keep going
                 finally:
@@ -442,7 +442,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
     @LazyClassAttribute
     def CSS_PROPERTY_NAMES(self):
         # Setup the names triggered for "property-names"
-        return sorted(self.CSS_ATTRIBUTES.keys(), key=OrdPunctLast)
+        return sorted(list(self.CSS_ATTRIBUTES.keys()), key=OrdPunctLast)
 
     @LazyClassAttribute
     def CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT(self):
@@ -483,8 +483,8 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
         # DEBUG = True # not using 'logging' system, because want to be fast
 
         if DEBUG:
-            print "\npreceding_trg_from_pos -- pos: %d, curr_pos: %d" % (
-                pos, curr_pos, )
+            print("\npreceding_trg_from_pos -- pos: %d, curr_pos: %d" % (
+                pos, curr_pos, ))
         if isinstance(buf, UDLBuffer):
             styleClassifier = UDLCSSStyleClassifier
         else:
@@ -494,7 +494,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                                      implicit=False, DEBUG=DEBUG,
                                      ac=ac, styleClassifier=styleClassifier)
         if DEBUG:
-            print "  currTrg: %r" % (currTrg, )
+            print("  currTrg: %r" % (currTrg, ))
 
         # If we're not looking for a previous trigger, or else the current
         # trigger position is for a calltip, then do not look any further.
@@ -505,7 +505,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
         ac.resetToPosition(pos+1)
         p, ch, style = ac.getPrevPosCharStyle()
         if DEBUG:
-            print "  preceding_trg_from_pos: p: %r, ch: %r, style: %r" % (p, ch, style)
+            print("  preceding_trg_from_pos: p: %r, ch: %r, style: %r" % (p, ch, style))
         min_p = max(0, p - 200)
         ignore_styles = styleClassifier.comment_styles + \
             styleClassifier.string_styles + \
@@ -514,23 +514,23 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
             p, ch, style = ac.getPrecedingPosCharStyle(
                 style, ignore_styles=ignore_styles, max_look_back=100)
             if DEBUG:
-                print "  preceding_trg_from_pos: Trying preceding p: %r, ch: %r, style: %r" % (p, ch, style)
+                print("  preceding_trg_from_pos: Trying preceding p: %r, ch: %r, style: %r" % (p, ch, style))
             if ch and (isident(ch) or ch in ":( \t"):
                 trg = self._trg_from_pos(buf, p+1, implicit=False, DEBUG=DEBUG,
                                          ac=ac, styleClassifier=styleClassifier)
                 if trg is not None:
                     if DEBUG:
-                        print "trg: %r" % (trg, )
+                        print("trg: %r" % (trg, ))
                     if currTrg is not None:
                         if currTrg.type != trg.type:
                             if DEBUG:
-                                print "  Next trigger is a different type, ending search"
+                                print("  Next trigger is a different type, ending search")
                             return None
                         elif currTrg.form != trg.form:
                             return trg
                         elif DEBUG:
-                            print "  Found same trigger again, continuing " \
-                                  "looking for a different trigger"
+                            print("  Found same trigger again, continuing " \
+                                  "looking for a different trigger")
                     else:
                         return trg
         return None
@@ -538,8 +538,8 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
     def _trg_from_pos(self, buf, pos, implicit=True, DEBUG=False, ac=None, styleClassifier=None):
         # DEBUG = True # not using 'logging' system, because want to be fast
         if DEBUG:
-            print "\n----- CSS _trg_from_pos(pos=%r, implicit=%r) -----"\
-                  % (pos, implicit)
+            print("\n----- CSS _trg_from_pos(pos=%r, implicit=%r) -----"\
+                  % (pos, implicit))
         try:
             if pos == 0:
                 return None
@@ -556,9 +556,9 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
 
             last_pos, last_char, last_style = ac.getPrevPosCharStyle()
             if DEBUG:
-                print "  _trg_from_pos:: last_pos: %s" % last_pos
-                print "  last_char: %r" % last_char
-                print "  last_style: %s" % last_style
+                print("  _trg_from_pos:: last_pos: %s" % last_pos)
+                print("  last_char: %r" % last_char)
+                print("  last_style: %s" % last_style)
 
             # The easy ones are triggering after any of '#.[: '.
             # For speed, let's get the common ' ' out of the way. The only
@@ -566,7 +566,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
 
             if styleClassifier.is_default(last_style):
                 if DEBUG:
-                    print "  _trg_from_pos:: Default style: %d, ch: %r" % (last_style, last_char)
+                    print("  _trg_from_pos:: Default style: %d, ch: %r" % (last_style, last_char))
                 # Move backwards resolving ambiguity, default on "property-
                 # values"
                 min_pos = max(0, pos - 200)
@@ -574,28 +574,28 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                     last_pos, last_char, last_style = ac.getPrevPosCharStyle()
                     if styleClassifier.is_operator(last_style, ac) or styleClassifier.is_value(last_style, ac):
                         if DEBUG:
-                            print " _trg_from_pos: space => property-values"
+                            print(" _trg_from_pos: space => property-values")
                         return Trigger("CSS", TRG_FORM_CPLN, "property-values",
                                        pos, implicit)
                     elif styleClassifier.is_tag(last_style, ac):
                         if DEBUG:
-                            print " _trg_from_pos: space => tag-names"
+                            print(" _trg_from_pos: space => tag-names")
                         return Trigger("CSS", TRG_FORM_CPLN, "tag-names",
                                        pos, implicit)
                     elif styleClassifier.is_identifier(last_style, ac):
                         if DEBUG:
-                            print " _trg_from_pos: space => property-names"
+                            print(" _trg_from_pos: space => property-names")
                         return Trigger("CSS", TRG_FORM_CPLN, "property-names",
                                        pos, implicit)
                 if DEBUG:
-                    print " _trg_from_pos: couldn't resolve space, settling on property-names"
+                    print(" _trg_from_pos: couldn't resolve space, settling on property-names")
                 return Trigger("CSS", TRG_FORM_CPLN, "property-values",
                                pos, implicit)
 
             elif styleClassifier.is_operator(last_style, ac):
                 # anchors
                 if DEBUG:
-                    print "  _trg_from_pos:: OPERATOR style"
+                    print("  _trg_from_pos:: OPERATOR style")
                 if last_char == '#':
                     return Trigger("CSS", TRG_FORM_CPLN, "anchors",
                                    pos, implicit)
@@ -605,11 +605,11 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                         p, ch, style = ac.getPrevPosCharStyle(
                             ignore_styles=styleClassifier.ignore_styles)
                         if DEBUG:
-                            print "  _trg_from_pos:: Looking at p: %d, ch: %r, style: %d" % (p, ch, style)
+                            print("  _trg_from_pos:: Looking at p: %d, ch: %r, style: %d" % (p, ch, style))
                     except IndexError:
                         style = None
                     if DEBUG:
-                        print "  _trg_from_pos:: style: %r" % (style)
+                        print("  _trg_from_pos:: style: %r" % (style))
                     if style is None or \
                        not styleClassifier.is_identifier(style, ac):
                     # if style is None or \
@@ -656,18 +656,18 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
             elif styleClassifier.is_tag(last_style, ac):
                 # We trigger on tag names of specified length >= 1 char
                 if DEBUG:
-                    print "  _trg_from_pos:: TAG style"
+                    print("  _trg_from_pos:: TAG style")
                 p, ch, style = last_pos, last_char, last_style
                 try:
                     while p >= 0:
                         if DEBUG:
-                            print "  _trg_from_pos:: Looking at p: %d, ch: %r, style: %d" % (p, ch, style)
+                            print("  _trg_from_pos:: Looking at p: %d, ch: %r, style: %d" % (p, ch, style))
                         if not isident(ch):
                             p += 1
                             break
                         elif style != last_style:
                             if DEBUG:
-                                print "  _trg_from_pos:: Current style is not a tag: %d" % (style)
+                                print("  _trg_from_pos:: Current style is not a tag: %d" % (style))
                             return None
                         p, ch, style = ac.getPrevPosCharStyle()
                 except IndexError:
@@ -677,7 +677,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
 
             elif styleClassifier.is_identifier(last_style, ac):
                 if DEBUG:
-                    print "  _trg_from_pos:: IDENTIFIER style"
+                    print("  _trg_from_pos:: IDENTIFIER style")
                 # property-names
                 # print "here", accessor.text_range(0, pos)
                 # We trigger on identifier names with any length >= 1 char
@@ -707,10 +707,10 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                 p, ch, style = ac.getPrevPosCharStyle(
                     ignore_styles=styleClassifier.comment_styles)
                 if DEBUG:
-                    print "  _trg_from_pos:: VALUE style"
-                    print "  _trg_from_pos::   p: %s" % p
-                    print "  _trg_from_pos::   ch: %r" % ch
-                    print "  _trg_from_pos::   style: %s" % style
+                    print("  _trg_from_pos:: VALUE style")
+                    print("  _trg_from_pos::   p: %s" % p)
+                    print("  _trg_from_pos::   ch: %r" % ch)
+                    print("  _trg_from_pos::   style: %s" % style)
                     ac.dump()
                 # Implicit triggering only happens on a whitespace character
                 # after any one of these ":,%) " characters
@@ -727,13 +727,13 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                         pp, pch, pstyle = ac.getPrevPosCharStyle(
                             ignore_styles=styleClassifier.ignore_styles)
                         if DEBUG:
-                            print "pp: %d, pch: %r, pstyle: %d" % (pp, pch,
-                                                                   pstyle)
+                            print("pp: %d, pch: %r, pstyle: %d" % (pp, pch,
+                                                                   pstyle))
                         if not styleClassifier.is_identifier(pstyle, ac):
                             # This is likely a pseudo-class definition then,
                             # no trigger here.
                             if DEBUG:
-                                print "pseudo-class style found, no trigger."
+                                print("pseudo-class style found, no trigger.")
                             return None
                     return Trigger("CSS", TRG_FORM_CPLN, "property-values",
                                    p+1, implicit)
@@ -748,7 +748,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                 return None
 
             elif DEBUG:
-                print "  _trg_from_pos:: Unexpected style: %d, ch: %r" % (last_style, last_char)
+                print("  _trg_from_pos:: Unexpected style: %d, ch: %r" % (last_style, last_char))
 
             # XXX "at-property-names" - Might be used later
             # elif last_style == SCE_CSS_DIRECTIVE:
@@ -768,7 +768,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
             pass
 
         if DEBUG:
-            print "----- CSS trg_from_pos() -----"
+            print("----- CSS trg_from_pos() -----")
         return None
 
     def trg_from_pos(self, buf, pos, implicit=True, ac=None):
@@ -788,8 +788,8 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
         DEBUG = DebugStatus
         # DEBUG = True
         if DEBUG:
-            print "\n----- async_eval_at_trg(trg=%r) -----"\
-                  % (trg)
+            print("\n----- async_eval_at_trg(trg=%r) -----"\
+                  % (trg))
 
         # Setup the AccessorCache
         extra = trg.extra
@@ -800,11 +800,11 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
             if isinstance(extra, dict):
                 ac = extra.get("ac", None)
                 if ac and DEBUG:
-                    print "  _async_eval_at_trg:: Trigger had existing AC"
+                    print("  _async_eval_at_trg:: Trigger had existing AC")
                     ac.dump()
         if ac is None:
             if DEBUG:
-                print "  _async_eval_at_trg:: Created new trigger!"
+                print("  _async_eval_at_trg:: Created new trigger!")
             ac = AccessorCache(buf.accessor, trg.pos, fetchsize=20)
 
         ctlr.start(buf, trg)
@@ -813,10 +813,10 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
         try:
             if trg.id == ("CSS", TRG_FORM_CPLN, "tag-names"):
                 if DEBUG:
-                    print "  _async_eval_at_trg:: 'tag-names'"
+                    print("  _async_eval_at_trg:: 'tag-names'")
                 cplns = self.CSS_HTML_TAG_NAMES
                 if DEBUG:
-                    print "  _async_eval_at_trg:: cplns:", cplns
+                    print("  _async_eval_at_trg:: cplns:", cplns)
                 if cplns:
                     ctlr.set_cplns([("element", v) for v in cplns])
                 ctlr.done("success")
@@ -854,13 +854,13 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                     = self._extract_css_declaration(ac, styleClassifier, trg,
                                                     is_for_calltip=True)
                 if DEBUG:
-                    print "  _async_eval_at_trg:: Property name: %r" % \
-                        (property, )
+                    print("  _async_eval_at_trg:: Property name: %r" % \
+                        (property, ))
                 try:
                     calltip = self.CSS_PROPERTY_ATTRIBUTE_CALLTIPS_DICT[
                         property]
                     if DEBUG:
-                        print "  _async_eval_at_trg:: calltip:", calltip
+                        print("  _async_eval_at_trg:: calltip:", calltip)
                     ctlr.set_calltips([calltip])
                 except KeyError:
                     # print "Unknown CSS property: '%s'" % (property)
@@ -870,10 +870,10 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                 property, current_value, values \
                     = self._extract_css_declaration(ac, styleClassifier, trg)
                 if DEBUG:
-                    print "  _async_eval_at_trg:: XXX property: %r, " \
+                    print("  _async_eval_at_trg:: XXX property: %r, " \
                           " current_value: %r, values: %r" % (property,
                                                               current_value,
-                                                              values)
+                                                              values))
                 try:
                     # print "\ndict:", self.CSS_ATTRIBUTES[property]
                     property_values = sorted(self.CSS_ATTRIBUTES[property],
@@ -894,8 +894,8 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                     ctlr.set_cplns(cplns)
                 except KeyError:
                     if DEBUG:
-                        print "  _async_eval_at_trg:: Unknown CSS property: "\
-                              "'%s'" % (property)
+                        print("  _async_eval_at_trg:: Unknown CSS property: "\
+                              "'%s'" % (property))
                     pass    # Ignore unknown CSS attributes
                 ctlr.done("success")
 
@@ -927,7 +927,7 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
         except IndexError:
             # Tried to go out of range of buffer, nothing appropriate found
             if DEBUG:
-                print "  _async_eval_at_trg:: ** Out of range error **"
+                print("  _async_eval_at_trg:: ** Out of range error **")
             ctlr.done("success")
 
     def async_eval_at_trg(self, buf, trg, ctlr):
@@ -989,9 +989,9 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
             p, ch, style = ac.getPrevPosCharStyle()
             if not styleClassifier.is_operator(style, ac):
                 if DEBUG:
-                    print "Current ch is not an operator, so getting the " \
+                    print("Current ch is not an operator, so getting the " \
                           "preceeding one, p: %d, ch: %r, style: %d" % \
-                          (p, ch, style, )
+                          (p, ch, style, ))
                 p, ch, style = ac.getPrevPosCharStyle(
                     ignore_styles=styleClassifier.ignore_styles)
         except IndexError:
@@ -1000,12 +1000,12 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
             ac.resetToPosition(trg.pos - 1)
             p, ch, style = ac.getCurrentPosCharStyle()
         if DEBUG:
-            print """------ _extract_css_declaration -----"""
-            print "  _extract_css_declaration:: Trg.pos: %d" % (trg.pos)
+            print("""------ _extract_css_declaration -----""")
+            print("  _extract_css_declaration:: Trg.pos: %d" % (trg.pos))
             # ac._debug = True
-            print "  _extract_css_declaration:: pos: %r" % (p)
-            print "  _extract_css_declaration:: ch: %r" % (ch)
-            print "  _extract_css_declaration:: style: %r" % (style)
+            print("  _extract_css_declaration:: pos: %r" % (p))
+            print("  _extract_css_declaration:: ch: %r" % (ch))
+            print("  _extract_css_declaration:: style: %r" % (style))
             ac.dump()
         # Walk back to ':' operator.
         num_close_parenthesis = 0
@@ -1018,52 +1018,52 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                 if ch == "(":
                     num_close_parenthesis -= 1
                     if DEBUG:
-                        print "Found matching open paren," \
+                        print("Found matching open paren," \
                               " num_close_parenthesis now: %d" % (
-                                  num_close_parenthesis)
+                                  num_close_parenthesis))
                 elif DEBUG:
-                    print "Ignoring everything inside the parenthesis"
+                    print("Ignoring everything inside the parenthesis")
             elif ch == "(" and (styleClassifier.is_operator(style) or
                                 styleClassifier.is_value(style)):
                 if DEBUG:
-                    print "Already inside a paren, no cpln's then."
+                    print("Already inside a paren, no cpln's then.")
                     # XXX SCSS and Less support arithmetic expressions
                 return (None, None, None)
             elif ch == ")" and (styleClassifier.is_operator(style) or
                                 styleClassifier.is_value(style)):
                 num_close_parenthesis += 1
                 if DEBUG:
-                    print "Found close paren, need to skip over contents," \
+                    print("Found close paren, need to skip over contents," \
                           " num_close_parenthesis: %d" % (
-                              num_close_parenthesis)
+                              num_close_parenthesis))
             elif styleClassifier.is_operator(style):
                 if ch not in ":,%":
                     if DEBUG:
-                        print "%s: couldn't find ':' operator, found invalid " \
-                              "operator: %d %r %d" % (trg.name, p, ch, style)
+                        print("%s: couldn't find ':' operator, found invalid " \
+                              "operator: %d %r %d" % (trg.name, p, ch, style))
                     # TODO: SCSS and Less support arithmetic expressions
                     return (None, None, None)
             elif styleClassifier.is_string(style):
                 # Used to skip over string items in property values
                 if DEBUG:
-                    print "Found string style, ignoring it"
+                    print("Found string style, ignoring it")
             elif not (styleClassifier.is_value(style) or styleClassifier.is_default(style)):
                 # old CSS lexer: everything betwee ":" and ';' used to be a
                 # value.
                 if DEBUG:
-                    print "%s: couldn't find ':' operator, found invalid " \
-                          "style: pcs: %d %r %d" % (trg.name, p, ch, style)
+                    print("%s: couldn't find ':' operator, found invalid " \
+                          "style: pcs: %d %r %d" % (trg.name, p, ch, style))
                 return (None, None, None)
             p, ch, style = ac.getPrevPosCharStyle(
                 ignore_styles=styleClassifier.ignore_styles)
         else:
             if DEBUG:
-                print "%s: couldn't find ':' operator within 200 chars, " \
-                      "giving up" % (trg.name)
+                print("%s: couldn't find ':' operator within 200 chars, " \
+                      "giving up" % (trg.name))
             return (None, None, None)
 
         if DEBUG:
-            print "  _extract_css_declaration:: Found ':' at pos: %d" % (p)
+            print("  _extract_css_declaration:: Found ':' at pos: %d" % (p))
         # Parse out the property name.
         colan_pos = p
         p, ch, style = ac.getPrecedingPosCharStyle(style,
@@ -1071,8 +1071,8 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                                                    max_look_back=150)
         if style not in styleClassifier.identifier_styles:
             if DEBUG:
-                print "  _extract_css_declaration:: No identifier style found" \
-                      " before ':', found style %d instead" % (style)
+                print("  _extract_css_declaration:: No identifier style found" \
+                      " before ':', found style %d instead" % (style))
             return (None, None, None)
         p, property = ac.getTextBackWithStyle(style)
         property = property.strip()
@@ -1080,8 +1080,8 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
         if is_for_calltip:
             # We have all the info we need
             if DEBUG:
-                print "  _extract_css_declaration:: Returning property: %r" % (
-                    property)
+                print("  _extract_css_declaration:: Returning property: %r" % (
+                    property))
             return (property, '', [])
 
         # Walk forward parsing the value information, ends when we hit a ";" or
@@ -1100,8 +1100,8 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                 if p is None or not styleClassifier.is_css_style(style):
                     # Went past max_look_ahead, just use what we've got then
                     if DEBUG:
-                        print "%s: css value reached max length or end of " \
-                              "document: trg.pos %d" % (trg.name, trg.pos)
+                        print("%s: css value reached max length or end of " \
+                              "document: trg.pos %d" % (trg.name, trg.pos))
                     value_info.append((from_pos, ac.text_range(from_pos, p)))
                     break
 
@@ -1123,17 +1123,17 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
                 elif not styleClassifier.is_value(style) and \
                         style not in styleClassifier.ignore_styles:
                     if DEBUG:
-                        print "%s: invalid style found: pos %d, style: %d" % (
-                            trg.name, trg.pos, style)
+                        print("%s: invalid style found: pos %d, style: %d" % (
+                            trg.name, trg.pos, style))
                     return (None, None, None)
                 prev_pos, prev_ch, prev_style = p, ch, style
             else:
                 if DEBUG:
-                    print "%s: css value too long: trg.pos %d" % (trg.name, trg.pos)
+                    print("%s: css value too long: trg.pos %d" % (trg.name, trg.pos))
                 return (None, None, None)
         except IndexError:
             if DEBUG:
-                print "ran out of buffer"
+                print("ran out of buffer")
 
         # Work out the values and the current value
         current_value = None
@@ -1142,16 +1142,16 @@ class CSSLangIntel(LangIntel, ParenStyleCalltipIntelMixin):
         for p, value in value_info:
             if value and _isident_first_char(value[0]):
                 if DEBUG:
-                    print "Is a valid value, p: %d, value: %r" % (p, value, )
+                    print("Is a valid value, p: %d, value: %r" % (p, value, ))
                 values.append(value)
                 if current_value is None and trg_pos >= p and \
                    trg_pos <= p + len(value):
                     current_value = value
 
         if DEBUG:
-            print "  _extract_css_declaration:: Returning property: %r, " \
+            print("  _extract_css_declaration:: Returning property: %r, " \
                   "current_value: %r, values: %r" % (property, current_value,
-                                                     values)
+                                                     values))
         return (property, current_value, values)
 
 

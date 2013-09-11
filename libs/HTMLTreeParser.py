@@ -40,7 +40,7 @@ import re
 import string
 import sys
 import mimetools
-import StringIO
+import io
 from elementtree import ElementTree
 
 
@@ -181,7 +181,7 @@ class HTMLTreeBuilder(ElementTree.TreeBuilder):
             if http_equiv == "content-type" and content:
                 # use mimetools to parse the http header
                 header = mimetools.Message(
-                    StringIO.StringIO("%s: %s\n\n" % (http_equiv, content))
+                    io.StringIO("%s: %s\n\n" % (http_equiv, content))
                 )
                 encoding = header.getparam("charset")
                 if encoding:
@@ -269,7 +269,7 @@ class HTMLTreeBuilder(ElementTree.TreeBuilder):
     def data(self, data):
         if isinstance(data, type('')) and is_not_ascii(data):
             # convert to unicode, but only if necessary
-            data = unicode(data, self.encoding, "ignore")
+            data = str(data, self.encoding, "ignore")
         ElementTree.TreeBuilder.data(self, data)
 
     def close(self):
@@ -414,11 +414,11 @@ if __name__ == "__main__":
         t1 = time.time()
         tree = HTML(data, ReParser)
         t2 = time.time()
-        print "RE parsing took %s" % (t2-t1)
+        print("RE parsing took %s" % (t2-t1))
         t1 = time.time()
         tree = HTML(data, SgmlopParser)
         t2 = time.time()
-        print "sgmlop parsing took %s" % (t2-t1)
+        print("sgmlop parsing took %s" % (t2-t1))
         sys.exit(0)
 
     data = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -433,7 +433,7 @@ if __name__ == "__main__":
 </body>
 </html>"""
     tree = HTML(data)
-    print ElementTree.tostring(tree)
+    print(ElementTree.tostring(tree))
     sys.exit(0)
 
     data = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -442,7 +442,7 @@ if __name__ == "__main__":
 <head>
 """
     tree = HTML(data)
-    print ElementTree.tostring(tree)
+    print(ElementTree.tostring(tree))
     sys.exit(0)
 
     data = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
@@ -651,7 +651,7 @@ function fadeTableRow(rowid, opts) {
 
 """
     tree = HTML(data)
-    print ElementTree.tostring(tree)
+    print(ElementTree.tostring(tree))
     p = Parser(HTMLTreeBuilder())
     p.feed(data)
     p.close()

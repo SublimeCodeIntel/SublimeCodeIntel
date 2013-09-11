@@ -55,7 +55,7 @@ import sys
 import threading
 import time
 import bisect
-import Queue
+import queue
 from hashlib import md5
 import traceback
 
@@ -76,7 +76,7 @@ log = logging.getLogger("codeintel.indexer")
 
 
 #---- internal support
-class _PriorityQueue(Queue.Queue):
+class _PriorityQueue(queue.Queue):
     """A thread-safe priority queue.
 
     In order to use this the inserted items should be tuples with the
@@ -264,7 +264,7 @@ class _StagingRequestQueue(_UniqueRequestPriorityQueue):
             currTime = time.time()
             toQueue = []
             try:
-                for id, (timeDue, priority, item) in self._onDeck.items():
+                for id, (timeDue, priority, item) in list(self._onDeck.items()):
                     if currTime >= timeDue:
                         toQueue.append(item)
                         del self._onDeck[id]
@@ -460,7 +460,7 @@ class Indexer(threading.Thread):
     - There is a potential race condition on request id generation
       if addRequest/stageRequest calls are made from multiple threads.
     """
-    MODE_DAEMON, MODE_ONE_SHOT = range(2)
+    MODE_DAEMON, MODE_ONE_SHOT = list(range(2))
     mode = MODE_DAEMON
 
     class StopIndexing(Exception):
@@ -544,7 +544,7 @@ class Indexer(threading.Thread):
             while 1:
                 try:
                     self._iteration()
-                except Queue.Empty:  # for mode=MODE_ONE_SHOT only
+                except queue.Empty:  # for mode=MODE_ONE_SHOT only
 ##                    reason = "completed"
                     break
                 except self.StopIndexing:

@@ -114,7 +114,7 @@ def rmdir(dir):
 def _rmtree_onerror(rm_func, path, exc_info):
     if exc_info[0] == OSError:
         # presuming because file is read-only
-        os.chmod(path, 0777)
+        os.chmod(path, 0o777)
         rm_func(path)
 
 
