@@ -991,7 +991,7 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
 
         fd, filepath = tempfile.mkstemp(suffix=".php")
         try:
-            os.write(fd, info_cmd)
+            os.write(fd, bytes(info_cmd, 'UTF-8'))
             os.close(fd)
             argv.append(filepath)
             p = process.ProcessOpen(argv, env=env.get_all_envvars())
@@ -1405,7 +1405,7 @@ def _sortByLineCmp(val1, val2):
 
 
 def sortByLine(seq):
-    seq.sort(_sortByLineCmp)
+    seq.sort(key=lambda x: x.linestart if hasattr(x, 'linestart') else x)
     return seq
 
 
