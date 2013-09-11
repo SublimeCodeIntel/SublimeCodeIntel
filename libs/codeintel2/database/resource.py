@@ -86,7 +86,7 @@ class AreaResource(Resource):
     _path_areas = {
         "ci-pkg-dir": dirname(dirname(abspath(__file__))),
     }
-    _ordered_area_items = [(d, a) for a, d in _path_areas.items()]
+    _ordered_area_items = [(d, a) for a, d in list(_path_areas.items())]
     _ordered_area_items.sort(key=lambda i: len(i[0]), reverse=True)
 
     @classmethod

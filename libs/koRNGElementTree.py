@@ -71,7 +71,7 @@ class rng_base_dataset:
 
     def resolveRefs(self, dataset):
         for ref in self.refs[:]:
-            if ref not in dataset.defs.keys():
+            if ref not in list(dataset.defs.keys()):
                 if ref not in dataset.ref_unresolved:
                     dataset.ref_unresolved[ref] = []
                 dataset.ref_unresolved[ref].append(self)
@@ -106,10 +106,10 @@ class rng_dataset(rng_base_dataset):
             dataset = self
         rng_base_dataset.resolveRefs(self, dataset)
 
-        for d in self.defs.values():
+        for d in list(self.defs.values()):
             d.resolveRefs(dataset)
 
-        for e in self.all_elements.values():
+        for e in list(self.all_elements.values()):
             e.resolveRefs(dataset)
 
         for a in self.attributes[:]:
@@ -118,7 +118,7 @@ class rng_dataset(rng_base_dataset):
         self.resolveUnresolvedRefs()
 
     def resolveCircularRefs(self):
-        for ref in self.ref_circular.keys()[:]:
+        for ref in list(self.ref_circular.keys())[:]:
             # print "resolving earlier circular reference %s"%ref
             el = self.ref_circular[ref]
             del self.ref_circular[ref]
@@ -126,8 +126,8 @@ class rng_dataset(rng_base_dataset):
                 e.resolveRefs(self)
 
     def resolveUnresolvedRefs(self):
-        for ref in self.ref_unresolved.keys()[:]:
-            print "resolving earlier unresolved reference %s" % ref
+        for ref in list(self.ref_unresolved.keys())[:]:
+            print("resolving earlier unresolved reference %s" % ref)
             el = self.ref_unresolved[ref]
             del self.ref_unresolved[ref]
             for e in el:
@@ -163,19 +163,19 @@ class rng_dataset(rng_base_dataset):
         return []
 
     def all_element_types(self):
-        return self.all_elements.keys()
+        return list(self.all_elements.keys())
 
     def dump(self, stream):
-        print "RNG NS: %s" % self.xmlns
-        print "Namespace: %s" % self.namespace
-        print "datatypeLibrary: %s" % self.datatypeLibrary
-        print "-"*60
+        print("RNG NS: %s" % self.xmlns)
+        print("Namespace: %s" % self.namespace)
+        print("datatypeLibrary: %s" % self.datatypeLibrary)
+        print("-"*60)
         for e in self.elements:
             e.dump(stream)
-        print "-"*60
-        for e in self.all_elements.values():
+        print("-"*60)
+        for e in list(self.all_elements.values()):
             e.dump(stream)
-        print "-"*60
+        print("-"*60)
 
 
 class rng_node_info(rng_base_dataset):
@@ -188,7 +188,7 @@ class rng_node_info(rng_base_dataset):
 class element_info(rng_node_info):
     def dump(self, stream):
         attrs = []
-        for n, v in self._node.attrib.items():
+        for n, v in list(self._node.attrib.items()):
             attrs.append('%s="%s"' % (n, v))
         stream.write("<element %s>\n" % ' '.join(attrs))
         names = [el.name for el in self.elements]

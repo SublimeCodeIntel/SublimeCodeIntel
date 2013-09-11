@@ -48,7 +48,7 @@ import time
 from glob import glob
 from pprint import pprint, pformat
 import logging
-from cStringIO import StringIO
+from io import BytesIO
 import codecs
 import copy
 
@@ -160,7 +160,7 @@ class LangDirsLib(LangDirsLibBase):
                             imports = set(
                                 (name, is_dir_import)
                                 for name, (_, _, is_dir_import)
-                                in sub_importables.items()
+                                in list(sub_importables.items())
                             )
                             break
                     else:
@@ -172,7 +172,7 @@ class LangDirsLib(LangDirsLibBase):
                         imports.update(
                             (name, is_dir_import)
                             for name, (_, _, is_dir_import)
-                            in importables.items()
+                            in list(importables.items())
                         )
                 self._blob_imports_from_prefix_cache[prefix] = imports
             return self._blob_imports_from_prefix_cache[prefix]
@@ -426,7 +426,7 @@ class LangDirsLib(LangDirsLibBase):
                     try:
                         buf = self.mgr.buf_from_path(
                             join(blobdir, blobfile), self.lang)
-                    except (EnvironmentError, CodeIntelError), ex:
+                    except (EnvironmentError, CodeIntelError) as ex:
                         # This can occur if the path does not exist, such as a
                         # broken symlink, or we don't have permission to read
                         # the file, or the file does not contain text.
@@ -517,7 +517,7 @@ class LangTopLevelNameIndex(object):
         }
 
     def __repr__(self):
-        num_toplevelnames = sum(len(v) for v in self._data.itervalues())
+        num_toplevelnames = sum(len(v) for v in self._data.values())
         return ("<LangTopLevelNameIndex: %d top-level name(s), "
                 "%d update(s) on-deck>"
                 % (num_toplevelnames, len(self._on_deck)))
@@ -525,14 +525,14 @@ class LangTopLevelNameIndex(object):
     def merge(self):
         """Merge all on-deck changes with `self.data'."""
         for base, (timestamp, res_data,
-                   res_data_pivot) in self._on_deck.items():
+                   res_data_pivot) in list(self._on_deck.items()):
             if res_data_pivot is None:
                 res_data_pivot = self._pivot_res_data(res_data)
             # res_data_pivot: {ilk -> toplevelname -> blobnames}
             # "bft" means blobnames_from_toplevelname
-            for ilk, bft in res_data_pivot.iteritems():
+            for ilk, bft in res_data_pivot.items():
                 data_bft = self._data.setdefault(ilk, {})
-                for toplevelname, blobnames in bft.iteritems():
+                for toplevelname, blobnames in bft.items():
                     if toplevelname not in data_bft:
                         data_bft[toplevelname] = blobnames
                     else:
@@ -542,7 +542,7 @@ class LangTopLevelNameIndex(object):
     def merge_expired(self, now):
         """Merge expired on-deck changes with `self.data'."""
         for base, (timestamp, res_data,
-                   res_data_pivot) in self._on_deck.items():
+                   res_data_pivot) in list(self._on_deck.items()):
             if now - timestamp < self.timeout:
                 continue
 
@@ -550,9 +550,9 @@ class LangTopLevelNameIndex(object):
                 res_data_pivot = self._pivot_res_data(res_data)
             # res_data_pivot: {ilk -> toplevelname -> blobnames}
             # "bft" means blobnames_from_toplevelname
-            for ilk, bft in res_data_pivot.iteritems():
+            for ilk, bft in res_data_pivot.items():
                 data_bft = self._data.setdefault(ilk, {})
-                for toplevelname, blobnames in bft.iteritems():
+                for toplevelname, blobnames in bft.items():
                     if toplevelname not in data_bft:
                         data_bft[toplevelname] = blobnames
                     else:
@@ -577,8 +577,8 @@ class LangTopLevelNameIndex(object):
             # Remove old refs from current data.
             # old_res_data:   {blobname -> ilk -> toplevelnames}
             # self._data: {ilk -> toplevelname -> blobnames}
-            for blobname, toplevelnames_from_ilk in old_res_data.iteritems():
-                for ilk, toplevelnames in toplevelnames_from_ilk.iteritems():
+            for blobname, toplevelnames_from_ilk in old_res_data.items():
+                for ilk, toplevelnames in toplevelnames_from_ilk.items():
                     for toplevelname in toplevelnames:
                         try:
                             self._data[ilk][toplevelname].remove(blobname)
@@ -594,8 +594,8 @@ class LangTopLevelNameIndex(object):
         # res_data:       {blobname -> ilk -> toplevelnames}
         # res_data_pivot: {ilk -> toplevelname -> blobnames}
         res_data_pivot = {}
-        for blobname, toplevelnames_from_ilk in res_data.iteritems():
-            for ilk, toplevelnames in toplevelnames_from_ilk.iteritems():
+        for blobname, toplevelnames_from_ilk in res_data.items():
+            for ilk, toplevelnames in toplevelnames_from_ilk.items():
                 pivot_bft = res_data_pivot.setdefault(ilk, {})
                 for toplevelname in toplevelnames:
                     if toplevelname not in pivot_bft:
@@ -624,13 +624,13 @@ class LangTopLevelNameIndex(object):
 
         # ...on-deck items
         for base, (timestamp, res_data,
-                   res_data_pivot) in self._on_deck.items():
+                   res_data_pivot) in list(self._on_deck.items()):
             if res_data_pivot is None:
                 res_data_pivot = self._on_deck[base][2] \
                     = self._pivot_res_data(res_data)
             # res_data_pivot: {ilk -> toplevelname -> blobnames}
             if ilk is None:
-                for i, bft in res_data_pivot.iteritems():
+                for i, bft in res_data_pivot.items():
                     cplns += [(i, toplevelname) for toplevelname in bft]
             elif ilk in res_data_pivot:
                 cplns += [(ilk, toplevelname)
@@ -639,7 +639,7 @@ class LangTopLevelNameIndex(object):
         # ...merged data
         # self._data: {ilk -> toplevelname -> blobnames}
         if ilk is None:
-            for i, bft in self._data.iteritems():
+            for i, bft in self._data.items():
                 cplns += [(i, toplevelname) for toplevelname in bft]
         elif ilk in self._data:
             cplns += [(ilk, toplevelname)
@@ -667,13 +667,13 @@ class LangTopLevelNameIndex(object):
         blobnames = set()
         # First check on-deck items.
         for base, (timestamp, res_data,
-                   res_data_pivot) in self._on_deck.items():
+                   res_data_pivot) in list(self._on_deck.items()):
             if res_data_pivot is None:
                 res_data_pivot = self._on_deck[base][2] \
                     = self._pivot_res_data(res_data)
             # res_data_pivot: {ilk -> toplevelname -> blobnames}
             if ilk is None:
-                for bft in res_data_pivot.itervalues():
+                for bft in res_data_pivot.values():
                     if toplevelname in bft:
                         blobnames.update(bft[toplevelname])
             elif ilk in res_data_pivot:
@@ -685,7 +685,7 @@ class LangTopLevelNameIndex(object):
         # Then, fallback to already merged data.
         # self._data: {ilk -> toplevelname -> blobnames}
         if ilk is None:
-            for bft in self._data.itervalues():
+            for bft in self._data.values():
                 if toplevelname in bft:
                     blobnames.update(bft[toplevelname])
         elif ilk in self._data:
@@ -775,7 +775,7 @@ class LangZone(object):
             lang_path = join(self.base_dir, "lang")
             try:
                 fin = open(lang_path, 'r')
-            except EnvironmentError, ex:
+            except EnvironmentError as ex:
                 self.db.corruption("LangZone._check_lang",
                                    "could not open `%s': %s" % (lang_path, ex),
                                    "recover")
@@ -835,7 +835,7 @@ class LangZone(object):
             if res_data:
                 try:
                     dbfile_from_blobname = self.dfb_from_dir(dir)
-                except EnvironmentError, ex:
+                except EnvironmentError as ex:
                     # DB corruption will be noted in remove_buf_data()
                     self.remove_buf_data(buf)
                     raise NotFoundInDatabase("%s buffer '%s' not found in database"
@@ -845,7 +845,7 @@ class LangZone(object):
                     dbsubpath = join(dhash, dbfile_from_blobname[blobname])
                     try:
                         blob = self.load_blob(dbsubpath)
-                    except ET.XMLParserError, ex:
+                    except ET.XMLParserError as ex:
                         self.db.corruption("LangZone.get_buf_data",
                                            "could not parse dbfile for '%s' blob: %s"
                                            % (blobname, ex),
@@ -854,7 +854,7 @@ class LangZone(object):
                         raise NotFoundInDatabase(
                             "`%s' buffer `%s' blob was corrupted in database"
                             % (buf.path, blobname))
-                    except EnvironmentError, ex:
+                    except EnvironmentError as ex:
                         self.db.corruption("LangZone.get_buf_data",
                                            "could not read dbfile for '%s' blob: %s"
                                            % (blobname, ex),
@@ -889,7 +889,7 @@ class LangZone(object):
 
             try:
                 blob_index = self.load_index(dir, "blob_index")
-            except EnvironmentError, ex:
+            except EnvironmentError as ex:
                 self.db.corruption("LangZone.remove_path",
                                    "could not read blob_index for '%s' dir: %s" % (
                                        dir, ex),
@@ -901,7 +901,7 @@ class LangZone(object):
                 try:
                     toplevelname_index = self.load_index(
                         dir, "toplevelname_index")
-                except EnvironmentError, ex:
+                except EnvironmentError as ex:
                     self.db.corruption("LangZone.remove_path",
                                        "could not read toplevelname_index for '%s' dir: %s"
                                        % (dir, ex),
@@ -999,7 +999,7 @@ class LangZone(object):
                     blobname = blob.get("name")
                     toplevelnames_from_ilk = new_res_data.setdefault(
                         blobname, {})
-                    for toplevelname, elem in blob.names.iteritems():
+                    for toplevelname, elem in blob.names.items():
                         if "__file_local__" in elem.get("attributes", "").split():
                             # don't put file local things in toplevel names
                             continue
@@ -1075,7 +1075,7 @@ class LangZone(object):
                     elif action == "update":
                         # Try to only change the dbfile on disk if it is
                         # different.
-                        s = StringIO()
+                        s = BytesIO()
                         if blob.get("src") is None:
                             blob.set(
                                 "src", buf.path)   # for defns_from_pos() support
@@ -1088,8 +1088,8 @@ class LangZone(object):
                         #       updated. For files under edit this will be
                         #       common. I.e. just for the "editset".
                         try:
-                            fin = open(dbpath, 'r')
-                        except (OSError, IOError), ex:
+                            fin = open(dbpath, 'rb')
+                        except (OSError, IOError) as ex:
                             # Technically if the dbfile doesn't exist, this
                             # is a sign of database corruption. No matter
                             # though (for this blob anyway), we are about to
@@ -1106,7 +1106,7 @@ class LangZone(object):
                             # XXX What to do if fail to write out file?
                             log.debug("fs-write: %s blob '%s/%s'",
                                       self.lang, dhash, dbfile)
-                            fout = open(dbpath, 'w')
+                            fout = open(dbpath, 'wb')
                             try:
                                 fout.write(new_dbfile_content)
                             finally:
@@ -1246,7 +1246,7 @@ class LangZone(object):
 
             now = time.time()
             for dbsubpath, (index, atime) \
-                    in self._index_and_atime_from_dbsubpath.items():
+                    in list(self._index_and_atime_from_dbsubpath.items()):
                 if now - atime > TIME_SINCE_ACCESS:
                     if dbsubpath in self._is_index_dirty_from_dbsubpath:
                         self.save_index(dbsubpath, index)

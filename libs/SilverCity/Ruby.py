@@ -1,11 +1,11 @@
-import HTMLGenerator
-import Lexer
-import Keywords
+from . import HTMLGenerator
+from . import Lexer
+from . import Keywords
 from _SilverCity import find_lexer_module_by_id, PropertySet, WordList
-from DispatchHandler import DispatchHandler
-from ScintillaConstants import SCLEX_RUBY
-import LanguageInfo
-import Python
+from .DispatchHandler import DispatchHandler
+from .ScintillaConstants import SCLEX_RUBY
+from . import LanguageInfo
+from . import Python
 
 
 class RubyLexer(Lexer.Lexer):

@@ -44,7 +44,7 @@ import sys
 import os
 from os.path import (join, dirname, exists, expanduser, splitext, basename,
                      split, abspath, isabs, isdir, isfile)
-import cPickle as pickle
+import pickle as pickle
 import threading
 import time
 import bisect
@@ -52,11 +52,11 @@ import fnmatch
 from glob import glob
 from pprint import pprint, pformat
 import logging
-from cStringIO import StringIO
+from io import StringIO
 import codecs
 import copy
 import weakref
-import Queue
+import queue
 
 import ciElementTree as ET
 from codeintel2.common import *
@@ -183,7 +183,7 @@ class StdLib(object):
         assert isinstance(lpath, tuple)  # common mistake to pass in a string
         hits = []
         # toplevelname_index: {ilk -> toplevelname -> blobnames}
-        for blobnames_from_toplevelname in self.toplevelname_index.itervalues():
+        for blobnames_from_toplevelname in self.toplevelname_index.values():
             for blobname in blobnames_from_toplevelname.get(lpath[0], ()):
                 blob = self.get_blob(blobname)
                 try:
@@ -221,7 +221,7 @@ class StdLib(object):
         cplns = []
         if prefix is None:
             # Use 'toplevelname_index': {ilk -> toplevelname -> blobnames}
-            for i, bft in self.toplevelname_index.iteritems():
+            for i, bft in self.toplevelname_index.items():
                 if ilk is not None and i != ilk:
                     continue
                 cplns += [(i, toplevelname) for toplevelname in bft]
@@ -236,7 +236,7 @@ class StdLib(object):
                 else:
                     cplns += [(ilk, t) for t in toplevelnames]
             else:
-                for i, tfp in self.toplevelprefix_index.iteritems():
+                for i, tfp in self.toplevelprefix_index.items():
                     if prefix not in tfp:
                         continue
                     cplns += [(i, t) for t in tfp[prefix]]
@@ -351,7 +351,7 @@ class StdLibsZone(object):
         """
         log.debug("StdLibZone: reporting memory")
         result = {}
-        for stdlib in self._stdlib_from_stdlib_ver_and_name.values():
+        for stdlib in list(self._stdlib_from_stdlib_ver_and_name.values()):
             result.update(stdlib.reportMemory())
         return result
 
@@ -426,12 +426,12 @@ class StdLibsZone(object):
         try:
             import process
             import which
-        except ImportError, ex:
+        except ImportError as ex:
             log.info("can't preload stdlibs: %s", ex)
             return False
         try:
             which.which("unzip")
-        except which.WhichError, ex:
+        except which.WhichError as ex:
             log.info("can't preload stdlibs: %s", ex)
             return False
         preload_zip = self._get_preload_zip()
@@ -594,10 +594,10 @@ class StdLibsZone(object):
         dbdir = join(self.base_dir, name)
         try:
             rmdir(dbdir)
-        except OSError, ex:
+        except OSError as ex:
             try:
                 os.rename(dbdir, dbdir+".zombie")
-            except OSError, ex2:
+            except OSError as ex2:
                 log.error("could not remove %s stdlib database dir `%s' (%s): "
                           "couldn't even rename it to `%s.zombie' (%s): "
                           "giving up", name, dbdir, ex, name, ex2)
@@ -610,7 +610,7 @@ class StdLibsZone(object):
         cix_path = res.path
         try:
             tree = tree_from_cix_path(cix_path)
-        except ET.XMLParserError, ex:
+        except ET.XMLParserError as ex:
             log.warn("could not load %s stdlib from `%s' (%s): skipping",
                      name, cix_path, ex)
             return
@@ -621,7 +621,7 @@ class StdLibsZone(object):
                      "removing it", name)
             try:
                 rmdir(dbdir)
-            except OSError, ex:
+            except OSError as ex:
                 log.error("could not remove `%s' to create %s stdlib in "
                           "database (%s): skipping", dbdir, name)
         if not exists(dbdir):
@@ -642,7 +642,7 @@ class StdLibsZone(object):
             dbfile = self.db.bhash_from_blob_info(cix_path, lang, blobname)
             blob_index[blobname] = dbfile
             ET.ElementTree(blob).write(join(dbdir, dbfile+".blob"))
-            for toplevelname, elem in blob.names.iteritems():
+            for toplevelname, elem in blob.names.items():
                 if "__local__" in elem.get("attributes", "").split():
                     # this is internal to the stdlib
                     continue
