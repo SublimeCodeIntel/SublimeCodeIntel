@@ -122,8 +122,8 @@ log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [codeintel_hdlr]
 log.handlers = [stderr_hdlr]
 codeintel_log.setLevel(logging.INFO)  # INFO
-logging.getLogger("codeintel.db").setLevel(logging.WARNING)  # WARNING
-
+for logger in ('codeintel.db', 'codeintel.pythoncile'):
+    logging.getLogger(logger).setLevel(logging.WARNING)  # WARNING
 for logger in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
              'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
              'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
