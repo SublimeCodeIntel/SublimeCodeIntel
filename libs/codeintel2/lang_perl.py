@@ -433,20 +433,20 @@ class PerlLangIntel(CitadelLangIntel,
         """
         DEBUG = False  # not using 'logging' system, because want to be fast
         if DEBUG:
-            print banner("trg_from_pos(pos=%r, implicit=%r)"
-                         % (pos, implicit))
+            print(banner("trg_from_pos(pos=%r, implicit=%r)"
+                         % (pos, implicit)))
 
         accessor = buf.accessor
         last_pos = pos - 1
         last_ch = accessor.char_at_pos(last_pos)
         if DEBUG:
-            print "  last_pos: %s" % last_pos
-            print "  last_ch: %r" % last_ch
+            print("  last_pos: %s" % last_pos)
+            print("  last_ch: %r" % last_ch)
 
         # All Perl trigger points occur at one of the trg_chars.
         if last_ch not in self.trg_chars:
             if DEBUG:
-                print "no: %r is not in %r" % (last_ch, self.trg_chars)
+                print("no: %r is not in %r" % (last_ch, self.trg_chars))
             return None
         elif last_ch == ':' \
             and not (last_pos > 0
@@ -454,27 +454,27 @@ class PerlLangIntel(CitadelLangIntel,
             if DEBUG:
                 penultimate_ch = (last_pos > 0
                                   and accessor.char_at_pos(last_pos-1) or '')
-                print "no: %r is not '::'" % (penultimate_ch+last_ch)
+                print("no: %r is not '::'" % (penultimate_ch+last_ch))
             return None
         elif last_ch == '>' \
                 and not (last_pos > 0 and accessor.char_at_pos(last_pos-1) == '-'):
             if DEBUG:
                 penultimate_ch = (last_pos > 0
                                   and accessor.char_at_pos(last_pos-1) or '')
-                print "no: %r is not '->'" % (penultimate_ch+last_ch)
+                print("no: %r is not '->'" % (penultimate_ch+last_ch))
             return None
 
         # We should never trigger in some styles (strings, comments, etc.).
         last_style = accessor.style_at_pos(last_pos)
         if DEBUG:
             last_style_names = buf.style_names_from_style_num(last_style)
-            print "  style: %s %s" % (last_style, last_style_names)
+            print("  style: %s %s" % (last_style, last_style_names))
         if (implicit and last_style in buf.implicit_completion_skip_styles
                 or last_style in buf.completion_skip_styles):
             if DEBUG:
-                print "no: completion is suppressed "\
+                print("no: completion is suppressed "\
                       "in style at %s: %s %s"\
-                      % (last_pos, last_style, last_style_names)
+                      % (last_pos, last_style, last_style_names))
             return None
 
         WHITESPACE = tuple(' \t\n\r')
@@ -500,12 +500,12 @@ class PerlLangIntel(CitadelLangIntel,
             text = accessor.text_range(max(
                 0, last_pos-LIMIT), last_pos)  # working text
             if DEBUG:
-                print "  working text: %r" % text
+                print("  working text: %r" % text)
             i = len(text)-1
             if i >= 0 and not (isident(text[i]) or isdigit(text[i])):
                 if DEBUG:
-                    print "no: two before trigger point is not "\
-                          "an ident char: '%s'" % text[i]
+                    print("no: two before trigger point is not "\
+                          "an ident char: '%s'" % text[i])
                 return None
             while i >= 0:  # parse out the preceding identifier
                 if not isident(text[i]):
@@ -525,20 +525,20 @@ class PerlLangIntel(CitadelLangIntel,
                 preceding_ch = None
                 identifier = text
             if DEBUG:
-                print "  identifier: %r" % identifier
+                print("  identifier: %r" % identifier)
             if not identifier:
                 if DEBUG:
-                    print "no: no identifier preceding trigger point"
+                    print("no: no identifier preceding trigger point")
                 return None
             if DEBUG:
-                print "  preceding char: %r" % preceding_ch
+                print("  preceding char: %r" % preceding_ch)
             if identifier in ("use", "require", "no"):
                 return Trigger("Perl", TRG_FORM_CPLN,
                                "available-imports", pos, implicit, prefix="")
             if preceding_ch and preceding_ch in "$@&%\\*":  # indicating a Perl variable
                 if DEBUG:
-                    print "no: triggering on space after Perl "\
-                          "variables not supported"
+                    print("no: triggering on space after Perl "\
+                          "variables not supported")
                 return None
             if identifier not in self._allow_trg_on_space_from_identifier:
                 if DEBUG:
@@ -552,10 +552,10 @@ class PerlLangIntel(CitadelLangIntel,
             # name. Almost all examples in the Perl lib seem to follow this.
             if i >= 3 and text[i-3:i+1] == "sub ":
                 if DEBUG:
-                    print "no: do not trigger in sub definition"
+                    print("no: do not trigger in sub definition")
                 return None
             if DEBUG:
-                print "calltip-space-call-signature"
+                print("calltip-space-call-signature")
             return Trigger("Perl", TRG_FORM_CALLTIP,
                            "space-call-signature", pos, implicit)
 
@@ -566,14 +566,14 @@ class PerlLangIntel(CitadelLangIntel,
             text = accessor.text_range(max(
                 0, last_pos-LIMIT), last_pos)  # working text
             if DEBUG:
-                print "  working text: %r" % text
+                print("  working text: %r" % text)
             i = len(text)-1
             while i >= 0 and text[i] in WHITESPACE:  # parse off whitespace
                 i -= 1
             if i >= 0 and not (isident(text[i]) or isdigit(text[i])):
                 if DEBUG:
-                    print "no: first non-ws char before "\
-                          "trigger point is not an ident char: '%s'" % text[i]
+                    print("no: first non-ws char before "\
+                          "trigger point is not an ident char: '%s'" % text[i])
                 return None
             end = i+1
             while i >= 0:  # parse out the preceding identifier
@@ -594,27 +594,27 @@ class PerlLangIntel(CitadelLangIntel,
                 preceding_ch = None
                 identifier = text[:end]
             if DEBUG:
-                print "  identifier: %r" % identifier
+                print("  identifier: %r" % identifier)
             if DEBUG:
                 assert ' ' not in identifier, "parse error: space in identifier: %r" % identifier
             if not identifier:
                 if DEBUG:
-                    print "no: no identifier preceding trigger point"
+                    print("no: no identifier preceding trigger point")
                 return None
             if DEBUG:
-                print "  preceding char: %r" % preceding_ch
+                print("  preceding char: %r" % preceding_ch)
             if preceding_ch and preceding_ch in "$@%\\*":
                 # '&foo(' *is* a trigger point, but the others -- '$foo(',
                 # '&$foo(', etc. -- are not because current CodeIntel wouldn't
                 # practically be able to determine the method to which $foo
                 # refers.
                 if DEBUG:
-                    print "no: calltip trigger on Perl var not supported"
+                    print("no: calltip trigger on Perl var not supported")
                 return None
             if identifier in ("if", "else", "elsif", "while", "for",
                               "sub", "unless", "my", "our"):
                 if DEBUG:
-                    print "no: no trigger on anonymous sub or control structure"
+                    print("no: no trigger on anonymous sub or control structure")
                 return None
             # Now we want to rule out the subroutine definition lines, e.g.:
             #    sub FOO(<|>
@@ -624,16 +624,16 @@ class PerlLangIntel(CitadelLangIntel,
             # Note: Frankly 80/20 rules out the last three.
             line = text[:end].splitlines(0)[-1]
             if DEBUG:
-                print "  trigger line: %r" % line
+                print("  trigger line: %r" % line)
             if "sub " in line:  # only use regex if "sub " on that line
                 if DEBUG:
-                    print "  *could* be a subroutine definition"
+                    print("  *could* be a subroutine definition")
                 if self._sub_pat.search(line):
                     if DEBUG:
-                        print "no: no trigger on Perl sub definition"
+                        print("no: no trigger on Perl sub definition")
                     return None
             if DEBUG:
-                print "calltip-call-signature"
+                print("calltip-call-signature")
             return Trigger("Perl", TRG_FORM_CALLTIP, "call-signature",
                            pos, implicit)
 
@@ -647,25 +647,25 @@ class PerlLangIntel(CitadelLangIntel,
             text = accessor.text_range(max(
                 0, last_pos-1-LIMIT), last_pos-1)  # working text
             if DEBUG:
-                print "  working text: %r" % text
+                print("  working text: %r" % text)
             i = len(text)-1
             while i >= 0 and text[i] in WHITESPACE:  # parse off whitespace
                 i -= 1
             if i < 0:
                 if DEBUG:
-                    print "no: no non-whitespace text preceding '->'"
+                    print("no: no non-whitespace text preceding '->'")
                 return None
             elif not (isident(text[i]) or text[i].isdigit()):
                 if DEBUG:
-                    print "no: first non-ws char before "\
-                          "trigger point is not an ident char: '%s'" % text[i]
+                    print("no: first non-ws char before "\
+                          "trigger point is not an ident char: '%s'" % text[i])
                 return None
             # At this point we know it is either "complete-package-subs"
             # or "complete-object-subs". We don't really care to take
             # the time to distinguish now -- trg_from_pos is supposed to be
             # quick -- and we don't have to.
             if DEBUG:
-                print "complete-*-subs"
+                print("complete-*-subs")
             return Trigger("Perl", TRG_FORM_CPLN, "*-subs", pos, implicit,
                            length=2)
 
@@ -680,11 +680,11 @@ class PerlLangIntel(CitadelLangIntel,
             text = accessor.text_range(max(
                 0, last_pos-1-LIMIT), last_pos-1)  # working text
             if DEBUG:
-                print "  working text: %r" % text
+                print("  working text: %r" % text)
             i = len(text)-1
             if i < 0:
                 if DEBUG:
-                    print "no: no text preceding '::'"
+                    print("no: no text preceding '::'")
                 return None
             ch = text[i]
             if not (isident(ch) or isdigit(ch) or ch == '$'):
@@ -692,8 +692,8 @@ class PerlLangIntel(CitadelLangIntel,
                 # there a total of 5 of all of this in the Perl std lib.
                 # 80/20 rule.
                 if DEBUG:
-                    print "no: first char before trigger "\
-                          "point is not an ident char or '$': '%s'" % ch
+                    print("no: first char before trigger "\
+                          "point is not an ident char or '$': '%s'" % ch)
                 return None
             # Check if this is in a 'use' or 'require' statement.
             while i > 0 and text[i-1] not in WHITESPACE:  # skip to whitespace
@@ -708,11 +708,11 @@ class PerlLangIntel(CitadelLangIntel,
             ident = text[start_idx:end_idx]
             if ident in ("use", "require", "no"):
                 if DEBUG:
-                    print "complete-available-imports (prefix=%r)" % prefix
+                    print("complete-available-imports (prefix=%r)" % prefix)
                 return Trigger("Perl", TRG_FORM_CPLN, "available-imports",
                                pos, implicit, length=2, prefix=prefix)
             if DEBUG:
-                print "complete-package-members (prefix=%r)" % prefix
+                print("complete-package-members (prefix=%r)" % prefix)
             return Trigger("Perl", TRG_FORM_CPLN, "package-members", pos,
                            implicit, length=2, prefix=prefix)
 
@@ -794,11 +794,11 @@ class PerlLangIntel(CitadelLangIntel,
         """
         DEBUG = False
         if DEBUG:
-            print
-            print banner("citdl_expr_and_prefix_filter_from_trg @ %d"
-                         % trg.pos)
-            print markup_text(buf.accessor.text, trg_pos=trg.pos)
-            print banner(None, '-')
+            print()
+            print(banner("citdl_expr_and_prefix_filter_from_trg @ %d"
+                         % trg.pos))
+            print(markup_text(buf.accessor.text, trg_pos=trg.pos))
+            print(banner(None, '-'))
 
         if trg.implicit:
             skip_styles = buf.implicit_completion_skip_styles
@@ -836,7 +836,7 @@ class PerlLangIntel(CitadelLangIntel,
                 p = p - 2
 
             if DEBUG:
-                print "'defn'-trigger: adjust position %d" % (p-trg.pos)
+                print("'defn'-trigger: adjust position %d" % (p-trg.pos))
         else:
             p = trg.pos - trg.length
 
@@ -844,8 +844,8 @@ class PerlLangIntel(CitadelLangIntel,
         while p >= LIMIT:
             # Parse off a perl variable/identifier.
             if DEBUG:
-                print "look for Perl var at end of %r"\
-                      % accessor.text_range(LIMIT, p+1)
+                print("look for Perl var at end of %r"\
+                      % accessor.text_range(LIMIT, p+1))
             match = self._perl_var_pat.search(
                 accessor.text_range(LIMIT, p+1))
             if not match:
@@ -854,7 +854,7 @@ class PerlLangIntel(CitadelLangIntel,
                         segment = '...'+accessor.text_range(p-20, p+1)
                     else:
                         segment = accessor.text_range(LIMIT, p+1)
-                    print "could not match a Perl var off %r" % segment
+                    print("could not match a Perl var off %r" % segment)
                 citdl = None
                 break
             prefix = match.group("prefix") or ""
@@ -867,7 +867,7 @@ class PerlLangIntel(CitadelLangIntel,
             try:
                 # TODO:PERF: Use the available faster accessor methods here.
                 trg_ch = accessor.char_at_pos(p+1)
-            except IndexError, ex:
+            except IndexError as ex:
                 if trg.form != TRG_FORM_DEFN:
                     log.warn("text does not include trailing trigger "
                              "char to resolve possible ambiguities in '%s'",
@@ -899,9 +899,9 @@ class PerlLangIntel(CitadelLangIntel,
                         citdl.insert(0, scope)
             p -= len(match.group(0))
             if DEBUG:
-                print "parse out Perl var: %r (prefix=%r, scope=%r, "\
+                print("parse out Perl var: %r (prefix=%r, scope=%r, "\
                       "name=%r): %r" % (match.group(0), prefix, scope,
-                                        name, citdl)
+                                        name, citdl))
 
             # Preceding characters will determine if we stop or continue.
             WHITESPACE = tuple(" \t\n\r\v\f")
@@ -912,12 +912,12 @@ class PerlLangIntel(CitadelLangIntel,
                 if DEBUG:
                     style = accessor.style_at_pos(p)
                     style_names = buf.style_names_from_style_num(style)
-                    print "stop at style to ignore: %r (%s %s)"\
-                          % (accessor.char_at_pos(p), style, style_names)
+                    print("stop at style to ignore: %r (%s %s)"\
+                          % (accessor.char_at_pos(p), style, style_names))
                 break
             elif p >= LIMIT+1 and accessor.text_range(p-1, p+1) == '->':
                 if DEBUG:
-                    print "parse out '->'"
+                    print("parse out '->'")
                 p -= 2
                 while p >= LIMIT and accessor.char_at_pos(p) in WHITESPACE:
                     # if DEBUG: print "drop whitespace: %r" % text[p]
@@ -931,7 +931,7 @@ class PerlLangIntel(CitadelLangIntel,
         else:
             retval = (None, filter)
         if DEBUG:
-            print "returning: %r" % (retval,)
+            print("returning: %r" % (retval,))
             banner("done")
         return retval
 
@@ -953,7 +953,7 @@ class PerlLangIntel(CitadelLangIntel,
         try:
             citdl_expr, filter \
                 = self.citdl_expr_and_prefix_filter_from_trg(buf, trg)
-        except CodeIntelError, ex:
+        except CodeIntelError as ex:
             ctlr.error(str(ex))
             ctlr.done("error")
             return
@@ -1312,10 +1312,10 @@ class PerlImportHandler(ImportHandler):
             compiler = which.which("perl")
         self.corePath = self._shellOutForPath(compiler)
 
-    def _findScannableFiles(self,
-                            (files, searchedDirs,
-                             skipTheseDirs, skipRareImports),
+    def _findScannableFiles(self, xxx_todo_changeme,
                             dirname, names):
+        (files, searchedDirs,
+                             skipTheseDirs, skipRareImports) = xxx_todo_changeme
         if sys.platform.startswith("win"):
             cpath = dirname.lower()
         else:
@@ -1373,7 +1373,7 @@ class PerlImportHandler(ImportHandler):
         # TODO: log the fs-stat'ing a la codeintel.db logging.
         try:
             names = os.listdir(dir)
-        except OSError, ex:
+        except OSError as ex:
             return {}
         dirs, nondirs = set(), set()
         for name in names:

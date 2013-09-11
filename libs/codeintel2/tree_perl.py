@@ -338,7 +338,7 @@ class PerlTreeEvaluatorBase(CandidatesForTreeEvaluator):
         _handled_pkg_names.add(pkg_name)
 
         # Get the locally defined subs.
-        members = [("function", n) for n, el in pkg.names.items()
+        members = [("function", n) for n, el in list(pkg.names.items())
                    if el.get("ilk") == "function"]
 
         # Get inherited subs.
@@ -365,7 +365,7 @@ class PerlTreeEvaluatorBase(CandidatesForTreeEvaluator):
     def post_process_cplns(self, cplns):
         DEBUG = False
         if DEBUG:
-            print banner("Perl post_process_cplns (before)")
+            print(banner("Perl post_process_cplns (before)"))
             pprint(cplns)
 
         trg_type = self.trg.type
@@ -408,8 +408,8 @@ class PerlTreeEvaluatorBase(CandidatesForTreeEvaluator):
                         continue
                     prefix, name = match.groups()
                     if DEBUG:
-                        print "tokenize perl var: %r -> %r %r"\
-                              % (value, prefix, name)
+                        print("tokenize perl var: %r -> %r %r"\
+                              % (value, prefix, name))
                     if prefix:
                         prefix = prefix[-1]  # only last char is relevant
 
@@ -433,9 +433,9 @@ class PerlTreeEvaluatorBase(CandidatesForTreeEvaluator):
 
         cplns = CandidatesForTreeEvaluator.post_process_cplns(self, cplns)
         if DEBUG:
-            print banner("(after)", '-')
+            print(banner("(after)", '-'))
             pprint(cplns)
-            print banner(None, '-')
+            print(banner(None, '-'))
         return cplns
 
 
@@ -497,7 +497,7 @@ class PerlPackageMembersTreeEvaluator(PerlTreeEvaluatorBase):
 
         # Get the locally defined members.
         members = []
-        for name, elem in pkg.names.items():
+        for name, elem in list(pkg.names.items()):
             # self.debug("%r: %r", name, elem)
             if elem.tag == "variable":
                 if "__local__" not in elem.get("attributes", ""):
@@ -542,7 +542,7 @@ class PerlPackageSubsTreeEvaluator(PerlTreeEvaluatorBase):
         _handled_pkg_names.add(pkg_name)
 
         # Get the locally defined subs.
-        members = [("function", n) for n, el in pkg.names.items()
+        members = [("function", n) for n, el in list(pkg.names.items())
                    if el.get("ilk") == "function"]
 
         # Get inherited subs.

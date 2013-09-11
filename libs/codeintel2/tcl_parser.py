@@ -472,5 +472,5 @@ if __name__ == "__main__":
     tokenizer = tcl_lexer.TclLexer(sample_code)
     parser = Parser(tokenizer, "Tcl")
     tree = parser.parse()
-    print "Analyze the parse tree"
+    print("Analyze the parse tree")
     tree.dump()

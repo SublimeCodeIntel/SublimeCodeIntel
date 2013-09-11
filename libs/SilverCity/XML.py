@@ -1,10 +1,10 @@
-import HTMLGenerator
-import Lexer
-from DispatchHandler import DispatchHandler
-import Keywords
+from . import HTMLGenerator
+from . import Lexer
+from .DispatchHandler import DispatchHandler
+from . import Keywords
 from _SilverCity import find_lexer_module_by_id, PropertySet, WordList
-from ScintillaConstants import SCLEX_XML
-import LanguageInfo
+from .ScintillaConstants import SCLEX_XML
+from . import LanguageInfo
 
 
 class XMLLexer(Lexer.Lexer):

@@ -212,8 +212,8 @@ class DjangoLangIntel(LangIntel):
         """
         # DEBUG = True # not using 'logging' system, because want to be fast
         if DEBUG:
-            print "\n----- Django trg_from_pos(pos=%r, implicit=%r) -----"\
-                  % (pos, implicit)
+            print("\n----- Django trg_from_pos(pos=%r, implicit=%r) -----"\
+                  % (pos, implicit))
 
         if pos < 2:
             return None
@@ -221,20 +221,20 @@ class DjangoLangIntel(LangIntel):
         last_pos = pos - 1
         last_char = accessor.char_at_pos(last_pos)
         if DEBUG:
-            print "  last_pos: %s" % last_pos
-            print "  last_char: %r" % last_char
-            print 'accessor.text_range(last_pos-2, last_pos): %r' % (accessor.text_range(last_pos-2, last_pos), )
+            print("  last_pos: %s" % last_pos)
+            print("  last_char: %r" % last_char)
+            print('accessor.text_range(last_pos-2, last_pos): %r' % (accessor.text_range(last_pos-2, last_pos), ))
 
         if last_char == " " and \
            accessor.text_range(last_pos-2, last_pos) == "{%":
             if DEBUG:
-                print "  triggered: 'complete-tags'"
+                print("  triggered: 'complete-tags'")
             return Trigger(lang, TRG_FORM_CPLN,
                            "complete-tags", pos, implicit)
 
         if last_char == "|":
             if DEBUG:
-                print "  triggered: 'complete-filters'"
+                print("  triggered: 'complete-filters'")
             return Trigger(lang, TRG_FORM_CPLN,
                            "complete-filters", pos, implicit)
 

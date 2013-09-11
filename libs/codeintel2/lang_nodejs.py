@@ -145,7 +145,7 @@ class NodeJSTreeEvaluator(JavaScriptTreeEvaluator):
                     self.log("skipping lib %r, don't know how to deal", lib)
                     continue
 
-                if dirname in map(os.path.normpath, lib.dirs):
+                if dirname in list(map(os.path.normpath, lib.dirs)):
                     # Found a lib with the directory we want. Whether we found
                     # a hit or not, we don't need to look in any other libs
                     # (since they will just give the same results)
@@ -179,7 +179,7 @@ class NodeJSTreeEvaluator(JavaScriptTreeEvaluator):
                         self.log("found module via %r, trying %r",
                                  manifest_path, main_path)
                         hits = load_as_file(main_path)
-                except ValueError, e:
+                except ValueError as e:
                     self.log("Error loading %r: %r", manifest_path, e)
                 finally:
                     manifest_file.close()

@@ -6,7 +6,7 @@
 # (BSD-style).
 
 import re
-from Base import Base
+from .Base import Base
 
 
 class English (Base):
@@ -57,7 +57,7 @@ class English (Base):
             if lower_cased_word[-1*len(uncountable_word):] == uncountable_word:
                 return word
 
-        for irregular in irregular_words.keys():
+        for irregular in list(irregular_words.keys()):
             match = re.search('('+irregular+')$', word, re.IGNORECASE)
             if match:
                 return re.sub('(?i)'+irregular+'$', match.expand('\\1')[0]+irregular_words[irregular][1:], word)
@@ -123,7 +123,7 @@ class English (Base):
             if lower_cased_word[-1*len(uncountable_word):] == uncountable_word:
                 return word
 
-        for irregular in irregular_words.keys():
+        for irregular in list(irregular_words.keys()):
             match = re.search('('+irregular+')$', word, re.IGNORECASE)
             if match:
                 return re.sub('(?i)'+irregular+'$', match.expand('\\1')[0]+irregular_words[irregular][1:], word)

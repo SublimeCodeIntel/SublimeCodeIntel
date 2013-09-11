@@ -40,7 +40,7 @@
 import os
 from os.path import isfile, isdir, exists, dirname, abspath, splitext, join
 import sys
-from cStringIO import StringIO
+from io import StringIO
 import logging
 import re
 import traceback
@@ -174,8 +174,8 @@ class XMLLangIntel(LangIntel):
             styles = pure_styles
 
         if DEBUG:
-            print "\n----- UDL %s trg_from_pos(pos=%r, implicit=%r) -----"\
-                  % (self.lang, pos, implicit)
+            print("\n----- UDL %s trg_from_pos(pos=%r, implicit=%r) -----"\
+                  % (self.lang, pos, implicit))
 
         if pos == 0:
             return None
@@ -185,10 +185,10 @@ class XMLLangIntel(LangIntel):
         last_char = accessor.char_at_pos(last_pos)
         last_style = accessor.style_at_pos(last_pos)
         if DEBUG:
-            print "  last_pos: %s" % last_pos
-            print "  last_char: %r" % last_char
-            print "  last_style: %r %s" \
-                  % (last_style, buf.style_names_from_style_num(last_style))
+            print("  last_pos: %s" % last_pos)
+            print("  last_char: %r" % last_char)
+            print("  last_style: %r %s" \
+                  % (last_style, buf.style_names_from_style_num(last_style)))
             # for i in xrange(pos):
                 # print "style at pos %d (%c) : %d" % (i,
                 #   accessor.char_at_pos(i), accessor.style_at_pos(i))
@@ -371,7 +371,7 @@ class XMLLangIntel(LangIntel):
             return None
         # print "get_valid_attributes NODE %s:%s xmlns[%s]
         # %r"%(tree.prefix(node),node.localName,node.ns,node.tag)
-        already_supplied = node.attrib.keys()
+        already_supplied = list(node.attrib.keys())
         handlerclass = buf.xml_tree_handler(node)
         attrs = handlerclass.attrs(buf.xml_tree, node)
         if not attrs:
