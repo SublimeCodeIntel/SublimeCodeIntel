@@ -198,7 +198,7 @@ def calltip(view, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel', logge
                     (logger or log.info)(msg)
                     if ltype != 'debug':
                         view.set_status(lid, "%s: %s" % (ltype.capitalize(), msg))
-                        status_msg[lid][0] = [ltype, msg, order]
+                        status_msg[lid] = [ltype, msg, order]
                     if 'warning' not in lid:
                         status_lineno[lid] = lineno
                 else:
