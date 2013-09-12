@@ -334,37 +334,36 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                 if view_settings.get('codeintel_snippets', True):
                     # Insert parameters as snippet:
                     if content[sel.begin() - 1] == '(' and content[sel.begin()] == ')':
-                        m = re.search(r'([^\s]+)\(([^\[\(\)]*)', tip_info[0])
-                        if m:
-                            params = [p.strip() for p in m.group(2).split(',')]
-                            if params:
-                                snippet = []
-                                for i, p in enumerate(params):
-                                    if p:
-                                        var, _, _ = p.partition('=')
-                                        if ' ' in var:
-                                            var = var.split(' ')[1]
-                                        if var[0] == '$':
-                                            var = var[1:]
-                                        snippet.append('${%s:%s}' % (i + 1, var))
-                                contents = ', '.join(snippet)
-                                # func = m.group(1)
-                                # scope = view.scope_name(pos)
-                                # view.run_command('new_snippet', {'contents': contents, 'tab_trigger': func, 'scope': scope})  # FIXME: Doesn't add the new snippet... is it possible to do so?
-                                def _insert_snippet():
-                                    # Check to see we are still at a position where the snippet is wanted:
-                                    view_sel = view.sel()
-                                    if not view_sel:
-                                        return
-                                    sel = view_sel[0]
-                                    pos = sel.end()
-                                    if not pos or pos != original_pos:
-                                        return
-                                    view.run_command('insert_snippet', {'contents': contents})
-                                sublime.set_timeout(_insert_snippet, 500)  # Delay snippet insertion a bit... it's annoying some times
-                            tooltip += ' - ' + tip_info[0]  # Add function to the end
-                        else:
-                            tooltip = tip_info[0] + ' ' + tooltip  # No function match, just add the first line
+                        m = re.search(r'\((.*?)\)', calltips[0])
+                        params = [p.strip() for p in m.group(1).split(',')] if m else None
+                        if params:
+                            snippet = []
+                            for i, p in enumerate(params):
+                                if p:
+                                    var, _, _ = p.partition('=')
+                                    if ' ' in var:
+                                        var = var.split(' ')[1]
+                                    if var[0] == '$':
+                                        var = var[1:]
+                                    snippet.append('${%s:%s}' % (i + 1, var))
+                            contents = ', '.join(snippet)
+                            # func = m.group(1)
+                            # scope = view.scope_name(pos)
+                            # view.run_command('new_snippet', {'contents': contents, 'tab_trigger': func, 'scope': scope})  # FIXME: Doesn't add the new snippet... is it possible to do so?
+                            def _insert_snippet():
+                                # Check to see we are still at a position where the snippet is wanted:
+                                view_sel = view.sel()
+                                if not view_sel:
+                                    return
+                                sel = view_sel[0]
+                                pos = sel.end()
+                                if not pos or pos != original_pos:
+                                    return
+                                view.run_command('insert_snippet', {'contents': contents})
+                            sublime.set_timeout(_insert_snippet, 500)  # Delay snippet insertion a bit... it's annoying some times
+                        tooltip += ' - ' + tip_info[0]  # Add function to the end
+                    else:
+                        tooltip = tip_info[0] + ' ' + tooltip  # No function match, just add the first line
                 # Trigger a tooltip
                 calltip(view, 'tip', tooltip)
             codeintel(view, path, content, lang, pos, forms, _trigger)
