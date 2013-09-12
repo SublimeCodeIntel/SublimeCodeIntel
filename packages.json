@@ -10,8 +10,8 @@
             "platforms": {
                 "*": [
                     {
-                        "version": "2.0.1",
-                        "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.0.1.zip"
+                        "version": "2.0.2",
+                        "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.0.2.zip"
                     }
                 ]
             }

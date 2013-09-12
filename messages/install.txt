@@ -1,8 +1,8 @@
 SublimeCodeIntel
 ================
-[Please restart Sublime Text 2 after reading this. In case of trouble, please read the Troubleshooting section in the README]
+[Please restart Sublime Text after reading this. In case of trouble, please read the Troubleshooting section in the README]
 
-Code intelligence plugin ported from Open Komodo Editor to Sublime Text 2.
+Code intelligence plugin ported from Open Komodo Editor to Sublime Text.
 
 Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2):
 
