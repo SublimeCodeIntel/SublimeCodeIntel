@@ -233,7 +233,7 @@ def logger(view, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel'):
 
 
 def guess_lang(view=None, path=None):
-    if not view or not view.settings().get('codeintel', True):
+    if not view or not codeintel_enabled(view):
         return None
 
     syntax = None
@@ -969,16 +969,13 @@ def reload_settings(view):
     return view_settings
 
 
+def codeintel_enabled(view, default=None):
+    if view.settings().get('codeintel') is None:
+        reload_settings(view)
+    return view.settings().get('codeintel', default)
+
+
 class PythonCodeIntel(sublime_plugin.EventListener):
-    def on_load(self, view):
-        reload_settings(view)
-
-    def on_new(self, view):
-        reload_settings(view)
-
-    def on_clone(self, view):
-        reload_settings(view)
-
     def on_close(self, view):
         vid = view.id()
         if vid in completions:
@@ -1201,7 +1198,7 @@ class SublimecodeintelCommand(SublimecodeintelWindowCommand):
 
         if active is not None:
             view = self.window.active_view()
-            enabled = enabled and view.settings().get('codeintel', True) == active
+            enabled = enabled and codeintel_enabled(view, True) == active
 
         return bool(enabled)
 
