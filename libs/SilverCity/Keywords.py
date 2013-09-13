@@ -47,7 +47,7 @@ perl_keywords = \
     "system syswrite tell telldir tie tied time times tr truncate "\
     "uc ucfirst umask undef unless unlink unpack unshift untie until "\
     "use utime values vec wait waitpid wantarray warn when while write "\
-    "x xor y"
+    "x xor y method func"
 
 # False None True are not strictly keywords in python2... but treat them as so.
 python_keywords = \

@@ -54,7 +54,7 @@
 12:and stat study sub substr symlink syscall sysopen sysread sysseek system sy
 12:swrite tell telldir tie tied time times tr truncate uc ucfirst umask undef 
 12:unless unlink unpack unshift untie until use utime values vec wait waitpid 
-12:wantarray warn while write xor y
+12:wantarray warn while write xor y method func
 21
 22:45:44
 23

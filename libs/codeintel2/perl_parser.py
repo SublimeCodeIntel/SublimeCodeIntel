@@ -1531,7 +1531,7 @@ class Parser:
                         self.moduleInfo.doStartNS( ns )
                         popNS = 1
                 elif tval == 'sub':
-                    self.start_process_sub_definition(False)
+                    self.start_process_sub_definition(tval, False)
                     # Is outer sub
                 elif tval in ['BEGIN', 'END', 'AUTOLOAD']:
                     self.skip_anon_sub_contents()
