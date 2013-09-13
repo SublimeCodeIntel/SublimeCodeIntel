@@ -323,7 +323,7 @@ class PerlTreeEvaluatorBase(CandidatesForTreeEvaluator):
         self.prefix_filter = prefix_filter
 
     def pre_eval(self):
-        curr_blob = self.buf.blob_from_lang[self.trg.lang]
+        curr_blob = self.buf.blob_from_lang.get(self.lang, None)
         self.pkg_tbl = _PerlPkgTable(curr_blob, self.buf.libs)
 
     def _func_members_from_pkg(self, pkg_name, pkg, _handled_pkg_names=None):
