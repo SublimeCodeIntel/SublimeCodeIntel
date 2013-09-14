@@ -148,6 +148,12 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 
 What's New
 ----------
+
+v2.0.3 (14-09-2013):
+
+* Libraries built for compatibility with more systems.
+
+
 v2.0.2 (12-09-2013):
 
 * Initial Sublime Text 3 support!
