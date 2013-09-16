@@ -148,6 +148,10 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 
 What's New
 ----------
+v2.0.4 (16-09-2013):
+
+* First non-pre-release for ST3
+
 
 v2.0.3 (14-09-2013):
 

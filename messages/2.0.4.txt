@@ -1,0 +1,8 @@
+SublimeCodeIntel v2.0.4 Release Notes
+=====================================
+[Please restart Sublime Text after reading this. In case of trouble, please read the Troubleshooting section in the README]
+
+
+CHANGES/FIXES
+
+* First non-pre-release for ST3
