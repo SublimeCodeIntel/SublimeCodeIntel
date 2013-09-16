@@ -139,7 +139,7 @@ def uncommentDocString(doc):
 
     # guess the indent size
     spaces = re.findall(_indent, d)
-    indent = spaces[0]
+    indent = len(spaces[0])
     for s in spaces:
         if len(s) and len(s) < indent:
             indent = len(s)
