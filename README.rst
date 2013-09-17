@@ -15,9 +15,9 @@ Provides the following features:
 
 Plugin should work in all three platforms (MacOS X, Windows and Linux).
 
-.. image:: http://pledgie.com/campaigns/16511.png?skin_name=chrome
-   :alt: Click here to lend your support to SublimeCodeIntel and make a donation at pledgie.com!
-   :target: http://pledgie.com/campaigns/16511
+.. image:: https://www.paypalobjects.com/en_GB/i/btn/btn_donate_LG.gif
+   :alt: Click here to lend your support to SublimeCodeIntel and make a donation!
+   :target: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=VVX4Q9H3924LE
 
 
 Installing
