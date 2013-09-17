@@ -17,14 +17,14 @@
                     "sublime_text": "<3000",
                     "version": "2.0.4",
                     "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.0.4.zip",
-                    "date": "2013-09-16 0:00:00"
+                    "date": "2013-09-16 00:00:00"
                 },
                 {
                     "platforms": "*",
                     "sublime_text": ">=3000",
                     "version": "2.0.4+st3",
                     "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.0.4+st3.zip",
-                    "date": "2013-09-16 0:00:00"
+                    "date": "2013-09-16 00:00:00"
                 }
             ]
         }
