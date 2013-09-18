@@ -243,6 +243,7 @@ class ProcessOpen(Popen):
             output is redirected to Komodo's log files.
         "universal_newlines": On by default (the opposite of subprocess).
         """
+        self._child_created = False
         self.__use_killpg = False
         auto_piped_stdin = False
         preexec_fn = None
