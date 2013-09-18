@@ -37,7 +37,6 @@
 
 # import htmlentitydefs
 import re
-import string
 import sys
 import email
 import io
@@ -175,7 +174,7 @@ class HTMLTreeBuilder(ElementTree.TreeBuilder):
             http_equiv = content = None
             for k, v in attrs:
                 if k == "http-equiv":
-                    http_equiv = string.lower(v)
+                    http_equiv = v.lower()
                 elif k == "content":
                     content = v
             if http_equiv == "content-type" and content:
