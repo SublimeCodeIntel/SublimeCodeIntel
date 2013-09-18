@@ -277,7 +277,7 @@ class ProcessOpen(Popen):
                 for key, value in env.items():
                     try:
                         _enc_env[key.encode(encoding)] = value.encode(encoding)
-                    except UnicodeEncodeError:
+                    except (UnicodeEncodeError, UnicodeDecodeError):
                         # Could not encode it, warn we are dropping it.
                         log.warn("Could not encode environment variable %r "
                                  "so removing it", key)
