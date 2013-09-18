@@ -98,7 +98,6 @@ if arch_path not in sys.path:
 
 from codeintel2.common import CodeIntelError, EvalTimeout, LogEvalController, TRG_FORM_CPLN, TRG_FORM_CALLTIP, TRG_FORM_DEFN
 from codeintel2.manager import Manager
-from codeintel2.citadel import CitadelBuffer
 from codeintel2.environment import SimplePrefsEnvironment
 from codeintel2.util import guess_lang_from_path
 
@@ -730,10 +729,10 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
 
             buf = mgr.buf_from_content(content, lang, env, path or "<Unsaved>", 'utf-8')
 
-            now = datetime.datetime.now()
-            if not _ci_next_scan_.get(vid) or now > _ci_next_scan_[vid]:
-                _ci_next_scan_[vid] = now + datetime.timedelta(seconds=10)
-                if isinstance(buf, CitadelBuffer):
+            if mgr.is_citadel_lang(lang):
+                now = datetime.datetime.now()
+                if not _ci_next_scan_.get(vid) or now > _ci_next_scan_[vid]:
+                    _ci_next_scan_[vid] = now + datetime.timedelta(seconds=10)
                     despair = 0
                     despaired = False
                     msg = "Updating indexes for '%s'... The first time this can take a while." % lang
