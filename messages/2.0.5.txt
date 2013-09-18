@@ -1,0 +1,23 @@
+SublimeCodeIntel v2.0.5 Release Notes
+=====================================
+[Restart Sublime Text after reading this. In case of trouble, please read the Troubleshooting section in the README]
+
+A full-featured code intelligence and smart autocomplete engine for Sublime Text.
+(Code intelligence plugin ported from Open Komodo Editor to Sublime Text)
+
+If you like SublimeCodeIntel, please make a donation: http://sublimecodeintel.github.io/SublimeCodeIntel/donate.html
+
+
+For more information:
+---------------------
+Please take the time to read the documentation:
+
+* Online - http://sublimecodeintel.github.io/SublimeCodeIntel/
+
+
+CHANGES/FIXES
+-------------
+
+- Resolved issues with ST2 in Mac OS X and Windows
+
+- Fixed a few problems with Ruby and HTML parsers in ST3

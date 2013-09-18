@@ -148,6 +148,13 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 
 What's New
 ----------
+v2.0.5 (18-09-2013):
+
+- Resolved issues with ST2 in Mac OS X and Windows
+
+- Fixed a few problems with Ruby and HTML parsers in ST3
+
+
 v2.0.4 (16-09-2013):
 
 * First non-pre-release for ST3

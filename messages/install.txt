@@ -1,19 +1,27 @@
 SublimeCodeIntel
 ================
-[Please restart Sublime Text after reading this. In case of trouble, please read the Troubleshooting section in the README]
+[Restart Sublime Text after reading this. In case of trouble, please read the Troubleshooting section in the README]
 
-Code intelligence plugin ported from Open Komodo Editor to Sublime Text.
+A full-featured code intelligence and smart autocomplete engine for Sublime Text.
+(Code intelligence plugin ported from Open Komodo Editor to Sublime Text)
+
+If you like SublimeCodeIntel, please make a donation: http://sublimecodeintel.github.io/SublimeCodeIntel/donate.html
+
+
+Features:
+---------
 
 Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2):
 
 JavaScript, Mason, XBL, XUL, RHTML, SCSS, Python, HTML, Ruby, Python3, XML, Sass, XSLT, Django, HTML5, Perl, CSS, Twig, Less, Smarty, Node.js, Tcl, TemplateToolkit, PHP.
 
+
 Provides the following features:
 
-Jump to Symbol Definition - Jump to the file and line of the definition of a symbol.
-Imports autocomplete - Shows autocomplete with the available modules/symbols in real time.
-Function Call tooltips - Displays information in the status bar about the working function.
-Plugin should work in all three platforms (MacOS X, Windows and Linux).
+* Jump to Symbol Definition - Jump to the file and line of the definition of a symbol.
+* Imports autocomplete - Shows autocomplete with the available modules/symbols in real time.
+* Function Call tooltips - Displays information in the status bar about the working function.
+
 
 + Shortcuts for jump to definition have changed:
 
@@ -40,7 +48,7 @@ For more information:
 ---------------------
 Please take the time to read the documentation:
 
-* Online - https://github.com/SublimeCodeIntel/SublimeCodeIntel
+* Online - http://sublimecodeintel.github.io/SublimeCodeIntel/
 
 
 IMPORTANT
