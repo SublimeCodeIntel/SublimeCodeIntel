@@ -9,7 +9,7 @@
             "homepage": "http://sublimecodeintel.github.io/SublimeCodeIntel/",
             "readme": "https://raw.github.com/SublimeCodeIntel/SublimeCodeIntel/master/README.rst",
             "issues": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/issues",
-            "donate": "https://www.gittip.com/Kronuz/",
+            "donate": "http://sublimecodeintel.github.io/SublimeCodeIntel/donate.html",
             "labels": ["auto-complete", "code navigation", "snippets"],
             "releases": [
                 {
