@@ -150,6 +150,8 @@ What's New
 ----------
 v2.0.6 (?):
 
++ Tooltips can use Popups, Output Panel or Status Bar ("popup", "panel", "status" respectively, in the settings)
+
 - Resolved issues with XML and other languages.
 
 - Improved speed by using cache for some things (added zope.cachedescriptors)

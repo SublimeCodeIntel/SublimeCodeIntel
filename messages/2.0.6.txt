@@ -1,0 +1,25 @@
+SublimeCodeIntel v2.0.6 Release Notes
+=====================================
+[Restart Sublime Text after reading this. In case of trouble, please read the Troubleshooting section in the README]
+
+A full-featured code intelligence and smart autocomplete engine for Sublime Text.
+(Code intelligence plugin ported from Open Komodo Editor to Sublime Text)
+
+If you like SublimeCodeIntel, please make a donation: http://sublimecodeintel.github.io/SublimeCodeIntel/donate.html
+
+
+For more information:
+---------------------
+Please take the time to read the documentation:
+
+* Online - http://sublimecodeintel.github.io/SublimeCodeIntel/
+
+
+CHANGES/FIXES
+-------------
+
++ Tooltips can use Popups, Output Panel or Status Bar ("popup", "panel", "status" respectively, in the settings)
+
+- Resolved issues with XML and other languages.
+
+- Improved speed by using cache for some things (added zope.cachedescriptors)
