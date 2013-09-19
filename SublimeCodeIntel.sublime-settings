@@ -14,6 +14,15 @@
     "sublime_auto_complete": true,
 
     /*
+        Tooltips method:
+
+        "popup" - Uses Autocomplete popup for tooltips.
+        "panel" - Uses the output panel for tooltips.
+        "status" - Uses the status bar for tooltips (was the default).
+    */
+    "codeintel_tooltips": "popup",
+
+    /*
         Insert functions snippets.
     */
     "codeintel_snippets": true,
