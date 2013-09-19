@@ -204,6 +204,7 @@ def tooltip(view, calltips, original_pos):
                 for i, p in enumerate(params):
                     if p:
                         var, _, _ = p.partition('=')
+                        var = var.strip()
                         if ' ' in var:
                             var = var.split(' ')[1]
                         if var[0] == '$':
