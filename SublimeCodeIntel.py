@@ -69,7 +69,7 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
 """
 from __future__ import print_function
 
-VERSION = "2.0.5"
+VERSION = "2.0.6"
 
 import os
 import re

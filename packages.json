@@ -15,16 +15,16 @@
                 {
                     "platforms": "*",
                     "sublime_text": "<3000",
-                    "version": "2.0.5",
-                    "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.0.5.zip",
-                    "date": "2013-09-18 00:00:00"
+                    "version": "2.0.6",
+                    "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.0.6.zip",
+                    "date": "2013-09-21 00:00:00"
                 },
                 {
                     "platforms": "*",
                     "sublime_text": ">=3000",
-                    "version": "2.0.5+st3",
-                    "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.0.5+st3.zip",
-                    "date": "2013-09-18 00:00:00"
+                    "version": "2.0.6+st3",
+                    "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.0.6+st3.zip",
+                    "date": "2013-09-21 00:00:00"
                 }
             ]
         }
