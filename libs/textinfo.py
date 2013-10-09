@@ -559,8 +559,8 @@ class TextInfo(object):
             m = self.langinfo.conformant_attr("encoding_decl_pattern") \
                     .search(head_bytes)
             if m:
-                lang_encoding = m.group("encoding").decode('ascii')
-                norm_lang_encoding = _norm_encoding(lang_encoding)
+                lang_encoding = m.group("encoding")
+                norm_lang_encoding = _norm_encoding(lang_encoding.decode('ascii'))
                 if self._accessor.decode(norm_lang_encoding):
                     log.debug("encoding: encoding from lang-spec: %r",
                               norm_lang_encoding)
@@ -568,17 +568,17 @@ class TextInfo(object):
                     return
                 else:
                     log.debug("encoding: lang-spec encoding (%r) was *wrong*",
-                              lang_encoding)
+                              norm_lang_encoding)
                     self._encoding_bozo(
                         "lang-spec encoding (%s) could not decode %s"
-                        % (lang_encoding, self._accessor))
+                        % (norm_lang_encoding, self._accessor))
 
         # 5. XML prolog
         if self.langinfo and self.langinfo.conforms_to("XML"):
             has_xml_prolog, xml_version, xml_encoding \
                 = self._get_xml_prolog_info_b(head_bytes)
             if xml_encoding is not None:
-                norm_xml_encoding = _norm_encoding(xml_encoding)
+                norm_xml_encoding = _norm_encoding(xml_encoding.decode('ascii'))
                 if self._accessor.decode(norm_xml_encoding):
                     log.debug("encoding: encoding from XML prolog: %r",
                               norm_xml_encoding)
@@ -596,7 +596,7 @@ class TextInfo(object):
             has_http_content_type_info, http_content_type, http_encoding \
                 = self._get_http_content_type_info_b(head_bytes)
             if has_http_content_type_info and http_encoding:
-                norm_http_encoding = _norm_encoding(http_encoding)
+                norm_http_encoding = _norm_encoding(http_encoding.decode('ascii'))
                 if self._accessor.decode(norm_http_encoding):
                     log.debug("encoding: encoding from HTTP content-type: %r",
                               norm_http_encoding)
@@ -618,7 +618,7 @@ class TextInfo(object):
             emacs_tail_vars = self._get_emacs_tail_vars_b(tail_bytes)
             emacs_encoding = emacs_tail_vars.get(b"coding")
         if emacs_encoding:
-            norm_emacs_encoding = _norm_encoding(emacs_encoding)
+            norm_emacs_encoding = _norm_encoding(emacs_encoding.decode('ascii'))
             if self._accessor.decode(norm_emacs_encoding):
                 log.debug("encoding: encoding from Emacs coding var: %r",
                           norm_emacs_encoding)
@@ -638,7 +638,7 @@ class TextInfo(object):
             vi_vars = self._get_vi_vars_b(self._accessor.tail_bytes)
             vi_encoding = vi_vars.get(b"fileencoding") or vi_vars.get(b"fenc")
         if vi_encoding:
-            norm_vi_encoding = _norm_encoding(vi_encoding)
+            norm_vi_encoding = _norm_encoding(vi_encoding.decode('ascii'))
             if self._accessor.decode(norm_vi_encoding):
                 log.debug("encoding: encoding from Vi[m] coding var: %r",
                           norm_vi_encoding)
