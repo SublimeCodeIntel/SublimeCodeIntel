@@ -179,7 +179,7 @@ class HTMLTreeBuilder(ElementTree.TreeBuilder):
                     content = v
             if http_equiv == "content-type" and content:
                 # use email to parse the http header
-                header = email.Message(
+                header = email.message.Message(
                     io.StringIO("%s: %s\n\n" % (http_equiv, content))
                 )
                 encoding = header.getparam("charset")
