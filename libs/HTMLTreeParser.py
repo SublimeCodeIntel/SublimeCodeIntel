@@ -182,7 +182,7 @@ class HTMLTreeBuilder(ElementTree.TreeBuilder):
                 header = email.message.Message(
                     io.StringIO("%s: %s\n\n" % (http_equiv, content))
                 )
-                encoding = header.getparam("charset")
+                encoding = header.get_charset()
                 if encoding:
                     self.encoding = encoding
         l_tag = tag.lower()
