@@ -1516,7 +1516,9 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
         # print('on_modified', view.command_history(1), view.command_history(0), view.command_history(-1))
         if (not hasattr(view, 'command_history') or view.command_history(1)[1] is None and (
-                view.command_history(0)[0] == 'insert' or
+                view.command_history(0)[0] == 'insert' and (
+                    view.command_history(0)[1]['characters'][-1] != '\n'
+                ) or
                 view.command_history(-1)[0] in ('insert', 'paste') and (
                     view.command_history(0)[0] == 'commit_completion' or
                     view.command_history(0)[0] == 'insert_snippet' and view.command_history(
