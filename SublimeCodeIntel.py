@@ -82,7 +82,10 @@ import sublime
 import sublime_plugin
 import threading
 import logging
-from cStringIO import StringIO
+try: 
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 CODEINTEL_HOME_DIR = os.path.expanduser(os.path.join('~', '.codeintel'))
 __file__ = os.path.normpath(os.path.abspath(__file__))
