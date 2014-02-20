@@ -53,13 +53,13 @@ Using
 
 * Start typing code as usual, autocomplete will pop up whenever it's available. SublimeCodeIntel will also allow you to jump around symbol definitions even across files with just a click ..and back.
 
-  For Mac OS X:
+  For Linux:
     * Jump to definition = ``Control+Click``
     * Jump to definition = ``Control+Command+Alt+Up``
     * Go back = ``Control+Command+Alt+Left``
     * Manual Code Intelligence = ``Control+Shift+space``
 
-  For Linux:
+  For Mac OS X:
     * Jump to definition = ``Super+Click``
     * Jump to definition = ``Control+Super+Alt+Up``
     * Go back = ``Control+Super+Alt+Left``
