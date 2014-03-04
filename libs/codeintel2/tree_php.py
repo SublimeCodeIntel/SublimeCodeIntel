@@ -144,7 +144,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                                        "for", "foreach",
                                        "while",
                                        "switch",
-                                       )
+                                       "array")
 
     php_magic_global_method_cplns = [("function", name) for name in
                                      sorted(php_magic_global_method_data.keys())]
