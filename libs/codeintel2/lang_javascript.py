@@ -727,7 +727,7 @@ class JavaScriptLangIntel(CitadelLangIntel,
 
             # TODO Why doesn't it pick-up the value in the setting file???
 
-            exclude_patterns = env.get_pref("codeintel_scan_exclude_dir", {"JavaScript": ["/build/"]}).get(self.lang)
+            exclude_patterns = env.get_pref("codeintel_scan_exclude_dir", ["/build/"])
             if not exclude_patterns is None:
                 for p in exclude_patterns:
                     extra_dirs = [d for d in extra_dirs if not re.search(p, d)]

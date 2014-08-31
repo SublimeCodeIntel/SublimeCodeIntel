@@ -67,13 +67,12 @@
     },
 
     /*
-        Define filters per language to exclude paths from scanning.
-        ex: "JavaScript":["/build/", "/min/"]
+        Define global filters to exclude paths from scanning. Use the codeintel_config setting for language specific settings.
+        ex: ["/pathToExclude/"]
+        (Currently only working for JavaScript and PHP)
     */
-    "codeintel_scan_exclude_dir":
-    {
-        "JavaScript":["/build/", "/min/"]
-    },
+    "codeintel_scan_exclude_dir": [""],
+
 
     /* Code Scanning: Controls how the Code Intelligence system scans your source code files. */
 
@@ -121,7 +120,8 @@
         "JavaScript": {
             "javascriptExtraPaths": [],
             "codeintel_scan_files_in_project": false,
-            "codeintel_max_recursive_dir_depth": 2
+            "codeintel_max_recursive_dir_depth": 2,
+            "codeintel_scan_exclude_dir": ["/build/", "/min/"]
         },
         "PHP": {
             "phpExtraPaths": [],

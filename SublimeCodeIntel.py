@@ -620,6 +620,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     codeintel_config = view_settings.get('codeintel_config', {})
     _codeintel_max_recursive_dir_depth = view_settings.get('codeintel_max_recursive_dir_depth', 10)
     _codeintel_scan_files_in_project = view_settings.get('codeintel_scan_files_in_project', True)
+    _codeintel_scan_exclude_dir = view_settings.get('codeintel_scan_exclude_dir', [])
     _codeintel_selected_catalogs = view_settings.get('codeintel_selected_catalogs', [])
 
     def _codeintel_scan():
@@ -685,6 +686,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             codeintel_config_lang = codeintel_config.get(lang, {})
             codeintel_max_recursive_dir_depth = codeintel_config_lang.get('codeintel_max_recursive_dir_depth', _codeintel_max_recursive_dir_depth)
             codeintel_scan_files_in_project = codeintel_config_lang.get('codeintel_scan_files_in_project', _codeintel_scan_files_in_project)
+            codeintel_scan_exclude_dir = codeintel_config_lang.get('codeintel_scan_exclude_dir', _codeintel_scan_exclude_dir)
             codeintel_selected_catalogs = codeintel_config_lang.get('codeintel_selected_catalogs', _codeintel_selected_catalogs)
 
             avail_catalogs = mgr.db.get_catalogs_zone().avail_catalogs()
@@ -703,6 +705,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             config = {
                 'codeintel_max_recursive_dir_depth': codeintel_max_recursive_dir_depth,
                 'codeintel_scan_files_in_project': codeintel_scan_files_in_project,
+                'codeintel_scan_exclude_dir': codeintel_scan_exclude_dir,
                 'codeintel_selected_catalogs': catalogs,
             }
             config.update(codeintel_config_lang)

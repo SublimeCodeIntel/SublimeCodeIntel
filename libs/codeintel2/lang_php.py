@@ -1039,6 +1039,10 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                                          max_depth=max_depth,
                                          interesting_file_patterns=php_assocs)
             )
+            exclude_patterns = env.get_pref("codeintel_scan_exclude_dir", ["/pathToExclude/"])
+            if not exclude_patterns is None:
+                for p in exclude_patterns:
+                    extra_dirs = [d for d in extra_dirs if not re.search(p, d)]
         else:
             extra_dirs = ()  # ensure retval is a tuple
         return extra_dirs
