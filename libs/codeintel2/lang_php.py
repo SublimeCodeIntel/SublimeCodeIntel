@@ -324,10 +324,35 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                             lang, TRG_FORM_CPLN, "namespace-members",
                             pos, implicit)
 
-            elif last_style == self.variable_style or \
-                    (not implicit and last_char == "$"):
+            elif last_style == self.variable_style or (not implicit and last_char == "$"):
                 if DEBUG:
                     print("Variable style")
+
+                if prev_char == ":":
+                    if not prev_char == ":":
+                        return None
+                    ac.setCacheFetchSize(10)
+                    p, c, style = ac.getPrecedingPosCharStyle(
+                        prev_style, self.comment_styles)
+                    if DEBUG:
+                        print("Preceding: %d, %r, %d" % (p, c, style))
+                    if style is None:
+                        return None
+                    elif style == self.keyword_style:
+                        # Check if it's a "self::" or "parent::" expression
+                        p, text = ac.getTextBackWithStyle(self.keyword_style,
+                                                          # Ensure we don't go
+                                                          # too far
+                                                          max_text_len=6)
+                        if DEBUG:
+                            print("Keyword text: %d, %r" % (p, text))
+                            ac.dump()
+                        print(text)
+                        #if text not in ("parent", "self", "static"):
+                        #    return None
+                    return Trigger(lang, TRG_FORM_CPLN, "static-members",
+                                   pos, implicit)
+
                 # Completion for variables (builtins and user defined variables),
                 # must occur after a "$" character.
                 if not implicit and last_char == '$':
@@ -601,6 +626,7 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
 
     #@util.hotshotit
     def async_eval_at_trg(self, buf, trg, ctlr):
+        buf.last_citdl_expr = None
         if _xpcom_:
             trg = UnwrapObject(trg)
             ctlr = UnwrapObject(ctlr)
@@ -634,12 +660,18 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
             buf.mgr.request_eval(evalr)
 
         else:
+            if trg.type == "static-members":
+                if buf.accessor.char_at_pos(trg.pos-1) == "$":
+                    #adjust trigger position so that static properties
+                    #with leading "$" will scatter the citdl_expr
+                    trg.pos -= 1
             try:
                 citdl_expr = self.citdl_expr_from_trg(buf, trg)
             except CodeIntelError as ex:
                 ctlr.error(str(ex))
                 ctlr.done("error")
                 return
+            buf.last_citdl_expr = citdl_expr
             line = buf.accessor.line_from_pos(pos)
             evalr = PHPTreeEvaluator(ctlr, buf, trg, citdl_expr, line)
             buf.mgr.request_eval(evalr)
@@ -1018,37 +1050,47 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
 
         return php_ver, include_path
 
-    def _extra_dirs_from_env(self, env):
-        extra_dirs = set()
-        include_project = env.get_pref("codeintel_scan_files_in_project", True)
-        if include_project:
-            proj_base_dir = env.get_proj_base_dir()
-            if proj_base_dir is not None:
-                extra_dirs.add(proj_base_dir)  # Bug 68850.
-        for pref in env.get_all_prefs("phpExtraPaths"):
-            if not pref:
-                continue
-            extra_dirs.update(d.strip() for d in pref.split(os.pathsep)
-                              if exists(d.strip()))
-        if extra_dirs:
-            log.debug("PHP extra lib dirs: %r", extra_dirs)
-            max_depth = env.get_pref("codeintel_max_recursive_dir_depth", 10)
-            php_assocs = env.assoc_patterns_from_lang("PHP")
-            extra_dirs = tuple(
-                util.gen_dirs_under_dirs(extra_dirs,
-                                         max_depth=max_depth,
+    def _expand_extra_dirs(self, env, extra_dirs):
+        max_depth = env.get_pref("codeintel_max_recursive_dir_depth", 10)
+        php_assocs = env.assoc_patterns_from_lang("PHP")
+        return util.gen_dirs_under_dirs(extra_dirs, max_depth=max_depth,
                                          interesting_file_patterns=php_assocs)
-            )
-        else:
-            extra_dirs = ()  # ensure retval is a tuple
-        return extra_dirs
+
+    #def _extra_dirs_from_env(self, env):
+    #    extra_dirs = set()
+    #    include_project = env.get_pref("codeintel_scan_files_in_project", True)
+    #    if include_project:
+    #        proj_base_dir = env.get_proj_base_dir()
+    #        if proj_base_dir is not None:
+    #            extra_dirs.add(proj_base_dir)  # Bug 68850.
+    #    for pref in env.get_all_prefs("scanExtraPaths"):
+    #        if not pref:
+    #            continue
+    #        extra_dirs.update(d.strip() for d in pref.split(os.pathsep)
+    #                          if exists(d.strip()))
+    #    if extra_dirs:
+    #        log.debug("PHP extra lib dirs: %r", extra_dirs)
+    #        max_depth = env.get_pref("codeintel_max_recursive_dir_depth", 10)
+    #        php_assocs = env.assoc_patterns_from_lang("PHP")
+    #        extra_dirs = tuple(
+    #            util.gen_dirs_under_dirs(extra_dirs,
+    #                                     max_depth=max_depth,
+    #                                     interesting_file_patterns=php_assocs)
+    #        )
+    #        exclude_patterns = env.get_pref("codeintel_scan_exclude_dir")
+    #        if not exclude_patterns is None:
+    #            for p in exclude_patterns:
+    #                extra_dirs = [d for d in extra_dirs if not re.search(p, d)]
+    #    else:
+    #        extra_dirs = ()  # ensure retval is a tuple
+    #    return extra_dirs
 
     def _buf_indep_libs_from_env(self, env):
         """Create the buffer-independent list of libs."""
         cache_key = "php-libs"
         if cache_key not in env.cache:
             env.add_pref_observer("php", self._invalidate_cache)
-            env.add_pref_observer("phpExtraPaths",
+            env.add_pref_observer("codeintel_scan_extra_dir",
                                   self._invalidate_cache_and_rescan_extra_dirs)
             env.add_pref_observer("phpConfigFile",
                                   self._invalidate_cache)
@@ -1087,9 +1129,9 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
 
             # - extradirslib
             extra_dirs = self._extra_dirs_from_env(env)
-            for extra_dir in extra_dirs:
+            if extra_dirs:
                 libs.append(db.get_lang_lib("PHP", "extradirslib",
-                                            [extra_dir], "PHP"))
+                                            extra_dirs, "PHP"))
 
             # - inilib (i.e. dirs in the include_path in PHP.ini)
             include_dirs = [d for d in include_path
@@ -1104,6 +1146,10 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                                              max_depth=max_depth,
                                              interesting_file_patterns=php_assocs)
                 )
+                exclude_patterns = env.get_pref("codeintel_scan_exclude_dir")
+                if not exclude_patterns is None:
+                    for p in exclude_patterns:
+                        include_dirs = [d for d in include_dirs if not re.search(p, d)]
                 if include_dirs:
                     libs.append(db.get_lang_lib("PHP", "inilib",
                                                 include_dirs, "PHP"))
