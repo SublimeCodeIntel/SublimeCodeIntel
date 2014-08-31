@@ -569,7 +569,7 @@ def set_default_dirs(dirs):
 
 
 def get_default_database():
-    global _g_default_database, _g_default_database
+    global _g_default_dirs, _g_default_database
     if _g_default_database is None:
         _g_default_database = Database(dirs=_g_default_dirs)
     return _g_default_database

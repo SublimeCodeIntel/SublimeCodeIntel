@@ -114,6 +114,7 @@ class Buffer(object):
         self._env = env
         self.path = path if path is not None else "<Unsaved>"
         self.encoding = encoding
+        self.last_citdl_expr = None
         if lang is not None:
             self.lang = lang
 

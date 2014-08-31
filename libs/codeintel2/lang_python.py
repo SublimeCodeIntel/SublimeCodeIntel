@@ -458,7 +458,10 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
         sys_path = stdout_lines[2:]
         return ver, prefix, libdir, sitelibdir, sys_path
 
-    def _gen_python_import_paths_from_dirs(self, dirs):
+    def _expand_extra_dirs(self, env, extra_dirs):
+        return self._gen_python_import_paths_from_dirs(extra_dirs)
+
+    def _gen_python_import_paths_from_dirs(self, extra_dirs):
         """Generate all Python import paths from a given list of dirs.
 
         This involves handling .pth files on the given dirs. It generates
@@ -469,7 +472,8 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
         - Python's .pth files can have *executable* Python code. This
           currently is not handled (those kinds of lines are skipped).
         """
-        for dir in dirs:
+
+        for dir in extra_dirs:
             if not exists(dir):
                 continue
             yield dir
@@ -490,19 +494,19 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
             if exists(path):
                 yield path
 
-    def _extra_dirs_from_env(self, env):
-        extra_dirs = set()
-        for pref in env.get_all_prefs(self.extraPathsPrefName):
-            if not pref:
-                continue
-            extra_dirs.update(d.strip() for d in pref.split(os.pathsep)
-                              if exists(d.strip()))
-        if extra_dirs:
-            extra_dirs = set(
-                self._gen_python_import_paths_from_dirs(extra_dirs)
-            )
-            log.debug("Python extra lib dirs: %r", extra_dirs)
-        return tuple(extra_dirs)
+    #def _extra_dirs_from_env(self, env):
+    #    extra_dirs = set()
+    #    for pref in env.get_all_prefs(self.extraPathsPrefName):
+    #        if not pref:
+    #            continue
+    #        for path in pref:
+    #            extra_dirs.update(d.strip() for d in path.split(os.pathsep) if exists(d.strip()))
+    #    if extra_dirs:
+    #        extra_dirs = set(
+    #            self._gen_python_import_paths_from_dirs(extra_dirs)
+    #        )
+    #        log.debug("Python extra lib dirs: %r", extra_dirs)
+    #    return tuple(extra_dirs)
 
     def interpreter_from_env(self, env):
         """Returns:
@@ -512,6 +516,7 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
         """
         # Gather information about the current python.
         python = None
+
         if env.has_pref(self.interpreterPrefName):
             python = env.get_pref(self.interpreterPrefName).strip() or None
 

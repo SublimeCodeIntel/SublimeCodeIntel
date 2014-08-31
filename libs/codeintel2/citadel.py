@@ -78,6 +78,33 @@ class CitadelLangIntel(LangIntel):
     evaluation is based on CIDB/CITDL/CIX.
     """
 
+    ##to be overridden
+    def _expand_extra_dirs(self, env, extra_dirs):
+        max_depth = env.get_pref("codeintel_max_recursive_dir_depth", 10)
+        return util.gen_dirs_under_dirs(extra_dirs, max_depth=max_depth)
+
+    def _extra_dirs_from_env(self, env):
+        extra_dirs = set()
+
+        for pref in env.get_pref("codeintel_scan_extra_dir"):
+            if not pref:
+                continue
+            extra_dirs.update(d.strip() for d in pref.split(os.pathsep) if exists(d.strip()))
+
+        if extra_dirs:
+            extra_dirs = tuple(
+                self._expand_extra_dirs(env, extra_dirs)
+            )
+            exclude_patterns = env.get_pref("codeintel_scan_exclude_dir")
+            if not exclude_patterns is None:
+                for p in exclude_patterns:
+                    extra_dirs = [d for d in extra_dirs if not re.search(p, d)]
+        else:
+            extra_dirs = ()  # ensure retval is a tuple
+
+        log.info("%s extradirslib dirs: %r", self.lang, extra_dirs)
+        return extra_dirs
+
 
 class CitadelBuffer(Buffer):
     """Virtual base class for language Buffers whose completion evaluation
