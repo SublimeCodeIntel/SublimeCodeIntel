@@ -396,7 +396,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                         # Show autocompletions:
                         completions[vid] = _completions
                         view.run_command('auto_complete', {
-                            'disable_auto_insert': True,
+                            'disable_auto_insert': len(_completions) == 1,
                             'api_completions_only': True,
                             'next_completion_if_showing': False,
                             'auto_complete_commit_on_tab': True,
