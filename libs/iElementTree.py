@@ -126,6 +126,7 @@ else:
         return tree, ids
 
     def tostring(element, encoding=None, method=None):
+        import io
         stream = io.StringIO() if encoding == 'unicode' else io.BytesIO()
         ElementTree(element).write(stream, encoding, method=method)
         return stream.getvalue()
