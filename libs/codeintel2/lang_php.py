@@ -1091,9 +1091,9 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
 
             # - extradirslib
             extra_dirs = self._extra_dirs_from_env(env)
-            for extra_dir in extra_dirs:
+            if extra_dirs:
                 libs.append(db.get_lang_lib("PHP", "extradirslib",
-                                            [extra_dir], "PHP"))
+                                            extra_dirs, "PHP"))
 
             # - inilib (i.e. dirs in the include_path in PHP.ini)
             include_dirs = [d for d in include_path
