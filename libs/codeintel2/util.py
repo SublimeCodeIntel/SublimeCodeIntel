@@ -803,7 +803,7 @@ def make_short_name_dict(names, length=3):
                 l.append(name)
         # pprint(outdict)
     for values in list(outdict.values()):
-        values.sort(CompareNPunctLast)
+        values.sort(key=OrdPunctLast)
     return outdict
 
 
