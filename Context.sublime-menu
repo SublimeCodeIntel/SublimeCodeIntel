@@ -1,3 +1,4 @@
 [
-    {"caption": "Jump to Symbol Definition", "command": "goto_python_definition"}
+    {"caption": "Jump to Symbol Definition", "command": "goto_python_definition"},
+    {"caption": "Back to Symbol Definition", "command": "back_to_python_definition"}
 ]
