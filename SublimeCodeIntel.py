@@ -978,8 +978,16 @@ ALL_SETTINGS = [
     'sublime_auto_complete',
 ]
 
+# init on change listener for .sublime-settings file
+settings_name = 'SublimeCodeIntel'
+settings = sublime.load_settings(settings_name + '.sublime-settings')
+settings.clear_on_change(settings_name)
+settings.add_on_change(settings_name, settings_changed)
 
 def settings_changed():
+    settings = sublime.load_settings(settings_name + '.sublime-settings')
+    settings.clear_on_change(settings_name)
+    settings.add_on_change(settings_name, settings_changed)
     for window in sublime.windows():
         for view in window.views():
             reload_settings(view)
@@ -987,16 +995,13 @@ def settings_changed():
 
 def reload_settings(view):
     '''Restores user settings.'''
-    settings_name = 'SublimeCodeIntel'
-    settings = sublime.load_settings(settings_name + '.sublime-settings')
-    settings.clear_on_change(settings_name)
-    settings.add_on_change(settings_name, settings_changed)
 
+    settings = load_relevant_settings()
     view_settings = view.settings()
 
     for setting_name in ALL_SETTINGS:
         if settings.get(setting_name) is not None:
-            setting = settings.get(setting_name)
+            setting = settings[setting_name]
             view_settings.set(setting_name, setting)
 
     if view_settings.get('codeintel') is None:
@@ -1009,6 +1014,23 @@ def reload_settings(view):
             view_settings.set('auto_complete', False)
 
     return view_settings
+
+def load_relevant_settings():
+    settings = {}
+    basic_plugin_settings = sublime.load_settings(settings_name + '.sublime-settings')
+
+    for setting_name in ALL_SETTINGS:
+        if basic_plugin_settings.get(setting_name) is not None:
+            settings[setting_name] = basic_plugin_settings.get(setting_name)
+
+    #override basic plugin settings with settings from .sublime-project file
+    project_file_content = sublime.active_window().project_data()
+    if "codeintel_settings" in project_file_content:
+        for setting_name in ALL_SETTINGS:
+            if setting_name in project_file_content["codeintel_settings"]:
+                settings[setting_name] = project_file_content["codeintel_settings"][setting_name]
+
+    return settings
 
 
 def codeintel_enabled(view, default=None):
