@@ -495,8 +495,8 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
         for pref in env.get_all_prefs(self.extraPathsPrefName):
             if not pref:
                 continue
-            extra_dirs.update(d.strip() for d in pref.split(os.pathsep)
-                              if exists(d.strip()))
+            for path in pref:
+                extra_dirs.update(d.strip() for d in path.split(os.pathsep) if exists(d.strip()))
         if extra_dirs:
             extra_dirs = set(
                 self._gen_python_import_paths_from_dirs(extra_dirs)
@@ -512,8 +512,10 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
         """
         # Gather information about the current python.
         python = None
-        if env.has_pref(self.interpreterPrefName):
-            python = env.get_pref(self.interpreterPrefName).strip() or None
+
+
+        if env.has_envvar(self.interpreterPrefName):
+            python = env.get_envvar(self.interpreterPrefName).strip() or None
 
         if not python or not exists(python):
             import which

@@ -140,11 +140,25 @@ class PHPTreeEvaluator(TreeEvaluator):
 
     # Calltips with this expression value are ignored. See bug:
     # http://bugs.activestate.com/show_bug.cgi?id=61497
-    php_ignored_calltip_expressions = ("if", "elseif",
-                                       "for", "foreach",
-                                       "while",
-                                       "switch",
-                                       )
+    php_ignored_calltip_expressions = (
+        "if",
+        "elseif",
+        "for",
+        "foreach",
+        "while",
+        "switch",
+        "array",
+        "list",
+        "die",
+        "exit",
+        "header",
+        "require",
+        "require_once",
+        "echo",
+        "var_dump",
+        "print_r",
+        "var_export",
+    )
 
     php_magic_global_method_cplns = [("function", name) for name in
                                      sorted(php_magic_global_method_data.keys())]
