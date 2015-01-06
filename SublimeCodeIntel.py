@@ -96,6 +96,8 @@ arch_path = os.path.join(__path__, 'arch')
 if arch_path not in sys.path:
     sys.path.insert(0, arch_path)
 
+active_manager_id = None
+
 from codeintel2.common import CodeIntelError, EvalTimeout, LogEvalController, TRG_FORM_CPLN, TRG_FORM_CALLTIP, TRG_FORM_DEFN
 from codeintel2.manager import Manager
 from codeintel2.environment import SimplePrefsEnvironment
@@ -331,9 +333,11 @@ def guess_lang(view=None, path=None):
     _codeintel_syntax_map = dict((k.lower(), v) for k, v in view.settings().get('codeintel_syntax_map', {}).items())
     _lang = lang = syntax and _codeintel_syntax_map.get(syntax.lower(), syntax)
 
-    folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
-    folders_id = str(hash(frozenset(folders)))
-    mgr = codeintel_manager(folders_id)
+
+
+    #folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
+    #folders_id = str(hash(frozenset(folders)))
+    mgr = codeintel_manager()
 
     if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
         lang = None
@@ -389,7 +393,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                 if cplns is not None:
                     function = None if 'import ' in text else 'function'
                     _completions = sorted(
-                        [('%s  (%s)' % (n, t), n + ('($0)' if t == function else '')) for t, n in cplns],
+                        [('%s〔%s〕' % (('$' if t == 'variable' else '')+n, t), (('$' if t == 'variable' else '')+n).replace("$","\\$") + ('($0)' if t == function else '')) for t, n in cplns],
                         key=lambda o: o[1]
                     )
                     if _completions:
@@ -552,8 +556,8 @@ def codeintel_callbacks(force=False):
             callback(view, *args, **kwargs)
         sublime.set_timeout(_callback, 0)
     # saving and culling cached parts of the database:
-    for folders_id in list(_ci_mgr_.keys()):
-        mgr = codeintel_manager(folders_id)
+    for manager_id in list(_ci_mgr_.keys()):
+        mgr = codeintel_manager(manager_id)
         now = time.time()
         if now >= _ci_next_savedb_ or force:
             if _ci_next_savedb_:
@@ -565,6 +569,7 @@ def codeintel_callbacks(force=False):
                 log.debug('Culling memory')
                 mgr.db.cull_mem()  # Every 30 seconds
             _ci_next_cullmem_ = now + 30
+
 queue_dispatcher = codeintel_callbacks
 
 
@@ -574,18 +579,41 @@ def codeintel_cleanup(id):
     if id in _ci_next_scan_:
         del _ci_next_scan_[id]
 
+def codeintel_manager(manager_id=None):
+    global _ci_mgr_, condeintel_log_filename, condeintel_log_file, active_manager_id
 
-def codeintel_manager(folders_id):
-    folders_id = None
-    global _ci_mgr_, condeintel_log_filename, condeintel_log_file
-    mgr = _ci_mgr_.get(folders_id)
+
+    codeintel_database_dir = None
+
+    if (manager_id is not None):
+        mgr = _ci_mgr_.get(manager_id, None)
+        return mgr
+
+    sublime_project_filename = sublime.active_window().project_file_name()
+
+    if sublime_project_filename is not None:
+        # hash project filename and timestamp
+        manager_id = str(hash(sublime_project_filename+str(tryGetMTime(sublime_project_filename))))
+        mgr = _ci_mgr_.get(manager_id, None)
+    else:
+    # project file not loaded yet or None
+        manager_id = None
+        mgr = _ci_mgr_.get(manager_id, None)
+
+    if active_manager_id != manager_id:
+    ##if active manager_id changed: load relevant settings again!
+        settings = load_relevant_settings()
+        codeintel_database_dir = settings.get('codeintel_database_dir', None)
+
+    active_manager_id = manager_id
+
     if mgr is None:
         for thread in threading.enumerate():
             if thread.name == "CodeIntel Manager":
                 thread.finalize()  # this finalizes the index, citadel and the manager and waits them to end (join)
         mgr = Manager(
             extra_module_dirs=None,
-            db_base_dir=None,  # os.path.expanduser(os.path.join('~', '.codeintel', 'databases', folders_id)),
+            db_base_dir=codeintel_database_dir,  # os.path.expanduser(os.path.join('~', '.codeintel', 'databases', folders_id)),
             db_catalog_dirs=[],
             db_import_everything_langs=None,
         )
@@ -599,7 +627,7 @@ def codeintel_manager(folders_id):
         msg = "Starting logging SublimeCodeIntel v%s rev %s (%s) on %s" % (VERSION, get_revision()[:12], os.stat(__file__)[stat.ST_MTIME], datetime.datetime.now().ctime())
         print("%s\n%s" % (msg, "=" * len(msg)), file=condeintel_log_file)
 
-        _ci_mgr_[folders_id] = mgr
+        _ci_mgr_[manager_id] = mgr
     return mgr
 
 
@@ -630,7 +658,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         catalogs = []
         now = time.time()
 
-        mgr = codeintel_manager(folders_id)
+        mgr = codeintel_manager()
         mgr.db.event_reporter = lambda m: logger(view, 'event', m)
 
         try:
@@ -710,29 +738,36 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             }
             config.update(codeintel_config_lang)
 
+
             _config = {}
-            try:
-                tryReadDict(config_default_file, _config)
-            except Exception as e:
-                msg = "Malformed configuration file '%s': %s" % (config_default_file, e)
-                log.error(msg)
-                codeintel_log.error(msg)
-            try:
-                tryReadDict(config_file, _config)
-            except Exception as e:
-                msg = "Malformed configuration file '%s': %s" % (config_default_file, e)
-                log.error(msg)
-                codeintel_log.error(msg)
-            config.update(_config.get(lang, {}))
+            _config = load_relevant_settings()
+
+            ##BULLSHIT
+            #try:
+            #    tryReadDict(config_default_file, _config)
+            #except Exception as e:
+            #    msg = "Malformed configuration file '%s': %s" % (config_default_file, e)
+            #    log.error(msg)
+            #    codeintel_log.error(msg)
+            #try:
+            #    tryReadDict(config_file, _config)
+            #except Exception as e:
+            #    msg = "Malformed configuration file '%s': %s" % (config_default_file, e)
+            #    log.error(msg)
+            #    codeintel_log.error(msg)
+
+            config.update(_config["codeintel_config"].get(lang, {}))
 
             for conf in ['pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths']:
                 v = [p.strip() for p in config.get(conf, []) + folders if p.strip()]
                 config[conf] = os.pathsep.join(set(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join(project_base_dir, p)) if project_base_dir else p for p in v if p.strip()))
+
             for conf, p in config.items():
                 if isinstance(p, basestring) and p.startswith('~'):
                     config[conf] = os.path.expanduser(p)
 
             # Setup environment variables
+            # lang env settings
             env = config.get('env', {})
             _environ = dict(os.environ)
             for k, v in env.items():
@@ -964,6 +999,7 @@ def get_revision(path=None):
 
 ALL_SETTINGS = [
     'codeintel',
+    'codeintel_database_dir',
     'codeintel_snippets',
     'codeintel_tooltips',
     'codeintel_enabled_languages',
@@ -978,12 +1014,6 @@ ALL_SETTINGS = [
     'sublime_auto_complete',
 ]
 
-# init on change listener for .sublime-settings file
-settings_name = 'SublimeCodeIntel'
-settings = sublime.load_settings(settings_name + '.sublime-settings')
-settings.clear_on_change(settings_name)
-settings.add_on_change(settings_name, settings_changed)
-
 def settings_changed():
     settings = sublime.load_settings(settings_name + '.sublime-settings')
     settings.clear_on_change(settings_name)
@@ -991,6 +1021,12 @@ def settings_changed():
     for window in sublime.windows():
         for view in window.views():
             reload_settings(view)
+
+# init on change listener for .sublime-settings file
+settings_name = 'SublimeCodeIntel'
+settings = sublime.load_settings(settings_name + '.sublime-settings')
+settings.clear_on_change(settings_name)
+settings.add_on_change(settings_name, settings_changed)
 
 
 def reload_settings(view):
@@ -1000,9 +1036,8 @@ def reload_settings(view):
     view_settings = view.settings()
 
     for setting_name in ALL_SETTINGS:
-        if settings.get(setting_name) is not None:
-            setting = settings[setting_name]
-            view_settings.set(setting_name, setting)
+        if setting_name in settings:
+            view_settings.set(setting_name, settings[setting_name])
 
     if view_settings.get('codeintel') is None:
         view_settings.set('codeintel', True)
@@ -1025,7 +1060,7 @@ def load_relevant_settings():
 
     #override basic plugin settings with settings from .sublime-project file
     project_file_content = sublime.active_window().project_data()
-    if "codeintel_settings" in project_file_content:
+    if project_file_content is not None and "codeintel_settings" in project_file_content:
         for setting_name in ALL_SETTINGS:
             if setting_name in project_file_content["codeintel_settings"]:
                 settings[setting_name] = project_file_content["codeintel_settings"][setting_name]
@@ -1104,11 +1139,91 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
         vid = view.id()
+
+        #words from buffer
+        words = []
+        view_words = view.extract_completions(prefix, locations[0])
+        view_words = filter_words(view_words)
+        view_words = fix_truncation(view, view_words)
+        words += view_words
+        words = without_duplicates(words)
+        matches = [(w, w.replace('$', '\\$')) for w in words]
+
+        print(matches)
+
+        _completions = []
         if vid in completions:
             _completions = completions[vid]
             del completions[vid]
+
+        _completions.extend(matches)
+        if len(_completions) > 0:
             return _completions
+        else:
+            print(str(len(completions))+",".join(completions.keys()))
+
         return []
+
+
+
+# limits to prevent bogging down the system
+MIN_WORD_SIZE = 3
+MAX_WORD_SIZE = 50
+
+MAX_WORDS_PER_VIEW = 500
+MAX_FIX_TIME_SECS_PER_VIEW = 0.01
+
+def filter_words(words):
+    words = words[0:MAX_WORDS_PER_VIEW]
+    return [w for w in words if MIN_WORD_SIZE <= len(w) <= MAX_WORD_SIZE]
+
+# keeps first instance of every word and retains the original order
+# (n^2 but should not be a problem as len(words) <= MAX_VIEWS*MAX_WORDS_PER_VIEW)
+def without_duplicates(words):
+    result = []
+    for w in words:
+        if w not in result:
+            result.append(w)
+    return result
+
+
+# Ugly workaround for truncation bug in Sublime when using view.extract_completions()
+# in some types of files.
+def fix_truncation(view, words):
+    fixed_words = []
+    start_time = time.time()
+
+    for i, w in enumerate(words):
+        #The word is truncated if and only if it cannot be found with a word boundary before and after
+
+        # this fails to match strings with trailing non-alpha chars, like
+        # 'foo?' or 'bar!', which are common for instance in Ruby.
+        match = view.find(r'\b' + re.escape(w) + r'\b', 0)
+        truncated = is_empty_match(match)
+        if truncated:
+            #Truncation is always by a single character, so we extend the word by one word character before a word boundary
+            extended_words = []
+            view.find_all(r'\b' + re.escape(w) + r'\w\b', 0, "$0", extended_words)
+            if len(extended_words) > 0:
+                fixed_words += extended_words
+            else:
+                # to compensate for the missing match problem mentioned above, just
+                # use the old word if we didn't find any extended matches
+                fixed_words.append(w)
+        else:
+            #Pass through non-truncated words
+            fixed_words.append(w)
+
+        # if too much time is spent in here, bail out,
+        # and don't bother fixing the remaining words
+        if time.time() - start_time > MAX_FIX_TIME_SECS_PER_VIEW:
+            return fixed_words + words[i+1:]
+
+    return fixed_words
+
+def is_empty_match(match):
+  return match.empty()
+
 
 
 class CodeIntelAutoComplete(sublime_plugin.TextCommand):
