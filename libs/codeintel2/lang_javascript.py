@@ -697,44 +697,59 @@ class JavaScriptLangIntel(CitadelLangIntel,
         evalr = self._evaluatorClass(ctlr, buf, trg, citdl_expr, line)
         buf.mgr.request_eval(evalr)
 
-    def _extra_dirs_from_env(self, env):
-        extra_dirs = set()
-        include_project = env.get_pref("codeintel_scan_files_in_project", True)
-        if include_project:
-            proj_base_dir = env.get_proj_base_dir()
-            if proj_base_dir is not None:
-                extra_dirs.add(proj_base_dir)  # Bug 68850.
-        for pref in env.get_all_prefs(self.extraPathsPrefName):
-            if not pref:
-                continue
-            extra_dirs.update(d.strip() for d in pref.split(os.pathsep)
-                              if exists(d.strip()))
-        if extra_dirs:
-            log.debug("%s extra lib dirs: %r", self.lang, extra_dirs)
-            max_depth = env.get_pref("codeintel_max_recursive_dir_depth", 10)
-            # Always include common JS associations - bug 91915.
-            js_assocs = env.assoc_patterns_from_lang("JavaScript")
-            if self.lang != "JavaScript":
-                # Add any language specific associations.
-                js_assocs = set(js_assocs)
-                js_assocs.update(env.assoc_patterns_from_lang(self.lang))
-                js_assocs = list(js_assocs)
-            extra_dirs = tuple(
-                util.gen_dirs_under_dirs(extra_dirs,
-                                         max_depth=max_depth,
-                                         interesting_file_patterns=js_assocs)
-            )
 
-            # TODO Why doesn't it pick-up the value in the setting file???
+    def _expand_extra_dirs(self, env, extra_dirs):
+        max_depth = env.get_pref("codeintel_max_recursive_dir_depth", 10)
+        # Always include common JS associations - bug 91915.
+        js_assocs = env.assoc_patterns_from_lang("JavaScript")
+        if self.lang != "JavaScript":
+            # Add any language specific associations.
+            js_assocs = set(js_assocs)
+            js_assocs.update(env.assoc_patterns_from_lang(self.lang))
+            js_assocs = list(js_assocs)
+        return util.gen_dirs_under_dirs(extra_dirs,
+                                     max_depth=max_depth,
+                                     interesting_file_patterns=js_assocs)
 
-            exclude_patterns = env.get_pref("codeintel_scan_exclude_dir", ["/build/"])
-            if not exclude_patterns is None:
-                for p in exclude_patterns:
-                    extra_dirs = [d for d in extra_dirs if not re.search(p, d)]
 
-        else:
-            extra_dirs = ()  # ensure retval is a tuple
-        return extra_dirs
+    #def _extra_dirs_from_env(self, env):
+    #    extra_dirs = set()
+    #    include_project = env.get_pref("codeintel_scan_files_in_project", True)
+    #    if include_project:
+    #        proj_base_dir = env.get_proj_base_dir()
+    #        if proj_base_dir is not None:
+    #            extra_dirs.add(proj_base_dir)  # Bug 68850.
+    #    for pref in env.get_all_prefs(self.extraPathsPrefName):
+    #        if not pref:
+    #            continue
+    #        extra_dirs.update(d.strip() for d in pref.split(os.pathsep)
+    #                          if exists(d.strip()))
+    #    if extra_dirs:
+    #        log.debug("%s extra lib dirs: %r", self.lang, extra_dirs)
+    #        max_depth = env.get_pref("codeintel_max_recursive_dir_depth", 10)
+    #        # Always include common JS associations - bug 91915.
+    #        js_assocs = env.assoc_patterns_from_lang("JavaScript")
+    #        if self.lang != "JavaScript":
+    #            # Add any language specific associations.
+    #            js_assocs = set(js_assocs)
+    #            js_assocs.update(env.assoc_patterns_from_lang(self.lang))
+    #            js_assocs = list(js_assocs)
+    #        extra_dirs = tuple(
+    #            util.gen_dirs_under_dirs(extra_dirs,
+    #                                     max_depth=max_depth,
+    #                                     interesting_file_patterns=js_assocs)
+    #        )
+
+    #        # TODO Why doesn't it pick-up the value in the setting file???
+
+    #        exclude_patterns = env.get_pref("codeintel_scan_exclude_dir", ["/build/"])
+    #        if not exclude_patterns is None:
+    #            for p in exclude_patterns:
+    #                extra_dirs = [d for d in extra_dirs if not re.search(p, d)]
+
+    #    else:
+    #        extra_dirs = ()  # ensure retval is a tuple
+    #    return extra_dirs
 
     def _get_stdlibs_from_env(self, env=None):
         return [self.mgr.db.get_stdlib(self.lang)]
