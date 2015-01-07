@@ -1253,7 +1253,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         add_word_completions = True#config
         add_explicit_completions = False
 
-        word_completions = 0 if add_word_completions else sublime.INHIBIT_WORD_COMPLETIONS;
+        word_completions = 0 if add_word_completions and len(prefix) != 0 else sublime.INHIBIT_WORD_COMPLETIONS;
         explicit_completions = 0 if add_explicit_completions else sublime.INHIBIT_EXPLICIT_COMPLETIONS;
 
         if len(_completions) > 0:
