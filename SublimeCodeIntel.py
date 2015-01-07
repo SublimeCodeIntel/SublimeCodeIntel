@@ -333,12 +333,11 @@ def guess_lang(view=None, path=None):
     _lang = lang = syntax and _codeintel_syntax_map.get(syntax.lower(), syntax)
 
 
-
     #folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
     #folders_id = str(hash(frozenset(folders)))
-    mgr = codeintel_manager()
+    mgr = None if settings_manager.settings_id is None else codeintel_manager()
 
-    if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
+    if mgr and not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
         lang = None
         if mgr.is_citadel_lang(syntax) or mgr.is_cpln_lang(syntax):
             _lang = lang = syntax
@@ -1058,7 +1057,7 @@ class SettingsManager():
             self.user_settings_file = sublime.load_settings(self.settings_name + '.sublime-settings')
             self.setChangeCallbackToSettingsFile()
 
-        if (self.needsUpdate()):
+        if self.needsUpdate():
             self.needs_update = False
             self.settings = self.load_relevant_settings()
             self.updateSettingsOnViews()
