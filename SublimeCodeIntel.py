@@ -255,8 +255,7 @@ def tooltip(view, calltips, original_pos):
 
 def set_status(view, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel', logger=None):
     if timeout is None:
-        timeout = {'error': 3000, 'warning': 5000, 'info': 10000,
-                    'event': 10000}.get(ltype, 3000)
+        timeout = {'error': 3000, 'warning': 5000, 'info': 10000, 'event': 10000}.get(ltype, 3000)
 
     if msg is None:
         msg, ltype = ltype, 'debug'
@@ -582,32 +581,20 @@ def codeintel_cleanup(id):
 def codeintel_manager(manager_id=None):
     global _ci_mgr_, condeintel_log_filename, condeintel_log_file, active_manager_id
 
-
-    codeintel_database_dir = None
-
     if (manager_id is not None):
         mgr = _ci_mgr_.get(manager_id, None)
         return mgr
 
-    sublime_project_filename = sublime.active_window().project_file_name()
+    settings = settings_manager.getSettings()
+    codeintel_database_dir = settings.get("codeintel_database_dir")
 
-    if sublime_project_filename is not None:
-        # hash project filename and timestamp
-        manager_id = str(hash(sublime_project_filename+str(tryGetMTime(sublime_project_filename))))
-        mgr = _ci_mgr_.get(manager_id, None)
-    else:
-    # project file not loaded yet or None
-        manager_id = None
-        mgr = _ci_mgr_.get(manager_id, None)
 
-    if active_manager_id != manager_id:
-    ##if active manager_id changed: load relevant settings again!
-        settings = load_relevant_settings()
-        codeintel_database_dir = settings.get('codeintel_database_dir', None)
+    manager_id = settings_manager.settings_id
+    mgr = _ci_mgr_.get(manager_id, None)
 
-    active_manager_id = manager_id
 
     if mgr is None:
+        #sublime.message_dialog(str(codeintel_database_dir)+" NEW MANAGER: "+str(settings_manager.settings_id))
         for thread in threading.enumerate():
             if thread.name == "CodeIntel Manager":
                 thread.finalize()  # this finalizes the index, citadel and the manager and waits them to end (join)
@@ -643,13 +630,9 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     is_dirty = view.is_dirty()
     vid = view.id()
     folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
-    folders_id = str(hash(frozenset(folders)))
-    view_settings = view.settings()
-    codeintel_config = view_settings.get('codeintel_config', {})
-    _codeintel_max_recursive_dir_depth = view_settings.get('codeintel_max_recursive_dir_depth', 10)
-    _codeintel_scan_files_in_project = view_settings.get('codeintel_scan_files_in_project', True)
-    _codeintel_scan_exclude_dir = view_settings.get('codeintel_scan_exclude_dir', [])
-    _codeintel_selected_catalogs = view_settings.get('codeintel_selected_catalogs', [])
+    #folders_id = str(hash(frozenset(folders)))
+
+
 
     def _codeintel_scan():
         global despair, despaired
@@ -711,7 +694,19 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                     codeintel_log.warning(msg)
                 valid = False
 
-            codeintel_config_lang = codeintel_config.get(lang, {})
+
+
+            settings = settings_manager.getSettings()
+
+            codeintel_language_settings = settings.get('codeintel_language_settings', {})
+            _codeintel_max_recursive_dir_depth = settings.get('codeintel_max_recursive_dir_depth', 10)
+            _codeintel_scan_files_in_project = settings.get('codeintel_scan_files_in_project', True)
+            _codeintel_scan_exclude_dir = settings.get('codeintel_scan_exclude_dir', [])
+            _codeintel_selected_catalogs = settings.get('codeintel_selected_catalogs', [])
+
+
+            #set language defined settings
+            codeintel_config_lang = codeintel_language_settings.get(lang, {})
             codeintel_max_recursive_dir_depth = codeintel_config_lang.get('codeintel_max_recursive_dir_depth', _codeintel_max_recursive_dir_depth)
             codeintel_scan_files_in_project = codeintel_config_lang.get('codeintel_scan_files_in_project', _codeintel_scan_files_in_project)
             codeintel_scan_exclude_dir = codeintel_config_lang.get('codeintel_scan_exclude_dir', _codeintel_scan_exclude_dir)
@@ -740,7 +735,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
 
 
             _config = {}
-            _config = load_relevant_settings()
+            _config = settings_manager.getSettings()
 
             ##BULLSHIT
             #try:
@@ -756,11 +751,11 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             #    log.error(msg)
             #    codeintel_log.error(msg)
 
-            config.update(_config["codeintel_config"].get(lang, {}))
+            config.update(_config["codeintel_language_settings"].get(lang, {}))
 
             for conf in ['pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths']:
                 v = [p.strip() for p in config.get(conf, []) + folders if p.strip()]
-                config[conf] = os.pathsep.join(set(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join(project_base_dir, p)) if project_base_dir else p for p in v if p.strip()))
+                config[conf] = os.pathsep.join(set(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join( project_base_dir, p)) if project_base_dir else p for p in v if p.strip()))
 
             for conf, p in config.items():
                 if isinstance(p, str) and p.startswith('~'):
@@ -997,6 +992,9 @@ def get_revision(path=None):
     return u'GIT-unknown'
 
 
+
+SETTINGS_NAME = 'SublimeCodeIntel' # name of the *.sublime-settings file
+
 ALL_SETTINGS = [
     'codeintel',
     'codeintel_database_dir',
@@ -1010,24 +1008,124 @@ ALL_SETTINGS = [
     'codeintel_selected_catalogs',
     'codeintel_syntax_map',
     'codeintel_scan_exclude_dir',
-    'codeintel_config',
+    'codeintel_language_settings',
     'sublime_auto_complete',
 ]
 
+
+
+class SettingsManager():
+    def __init__(self, settings_name):
+        self.settings = {}
+        self.settings_id = None
+        self.user_settings_file = None
+        self.settings_name = settings_name
+        self.projectfile_mtime = 0
+        self.needs_update = True
+
+    def settings_changed(self):
+        print("SETTINGS CHANGEDt")
+        self.setChangeCallbackToSettingsFile()
+        self.needs_update = True
+
+    def setChangeCallbackToSettingsFile(self):
+        self.user_settings_file.clear_on_change(self.settings_name)
+        self.user_settings_file.add_on_change(self.settings_name, self.settings_changed)
+
+    def needsUpdate(self):
+        sublime_project_filename = sublime.active_window().project_file_name()
+
+        if sublime_project_filename is not None:
+            # check if project-file changed
+            projectfile_mtime = os.stat(sublime_project_filename)[stat.ST_MTIME]
+            if self.projectfile_mtime != projectfile_mtime:
+                self.needs_update = True
+            self.projectfile_mtime = projectfile_mtime
+        #else:
+        ## project file not loaded yet or None
+        #    #manager_id = None
+        #    self.needs_update = True
+        #    pass
+        #
+
+        return self.needs_update
+
+    def generateSettingsId(self):
+        self.settings_id = hash(time.time() + self.projectfile_mtime)
+
+    def getSettings(self):
+        if self.user_settings_file is None:
+            self.user_settings_file = sublime.load_settings(self.settings_name + '.sublime-settings')
+            self.setChangeCallbackToSettingsFile()
+
+        if (self.needsUpdate()):
+            self.needs_update = False
+            self.settings = self.load_relevant_settings()
+            self.updateSettingsOnViews()
+            self.generateSettingsId()
+
+        return self.settings
+
+    def updateSettingsOnViews(self):
+        print("updateSettingsOnViews")
+        for window in sublime.windows():
+            for view in window.views():
+                view_settings = view.settings()
+                for setting_name in ALL_SETTINGS:
+                    if setting_name in self.settings:
+                        view_settings.set(setting_name, self.settings[setting_name])
+
+                if view_settings.get('codeintel') is None:
+                    view_settings.set('codeintel', True)
+
+                path = view.file_name()
+                lang = guess_lang(view, path)
+                if lang and lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_enabled_languages', [])]:
+                    #always disable sublime auto_complete for live enabled languages
+                    view_settings.set('auto_complete', False)
+                    #if not view_settings.get('sublime_auto_complete'):
+                    #    view_settings.set('auto_complete', False)
+
+    def load_relevant_settings(self):
+        global ALL_SETTINGS
+        settings = {}
+
+        for setting_name in ALL_SETTINGS:
+            if self.user_settings_file.get(setting_name) is not None:
+                settings[setting_name] = self.user_settings_file.get(setting_name)
+
+        #override basic plugin settings with settings from .sublime-project file
+        project_file_content = sublime.active_window().project_data()
+        if project_file_content is not None and "codeintel_settings" in project_file_content:
+            for setting_name in ALL_SETTINGS:
+                if setting_name in project_file_content["codeintel_settings"]:
+                    settings[setting_name] = project_file_content["codeintel_settings"][setting_name]
+
+        return settings
+
+settings_manager = SettingsManager(SETTINGS_NAME)
+
+
+
+
+
+
 def settings_changed():
-    settings = sublime.load_settings(settings_name + '.sublime-settings')
-    settings.clear_on_change(settings_name)
-    settings.add_on_change(settings_name, settings_changed)
+    global user_settings_file
+    user_settings_file.clear_on_change(settings_name)
+    user_settings_file.add_on_change(settings_name, settings_changed)
     for window in sublime.windows():
         for view in window.views():
             reload_settings(view)
 
 # init on change listener for .sublime-settings file
 settings_name = 'SublimeCodeIntel'
-settings = sublime.load_settings(settings_name + '.sublime-settings')
-settings.clear_on_change(settings_name)
-settings.add_on_change(settings_name, settings_changed)
+user_settings_file = sublime.load_settings(settings_name + '.sublime-settings')
+user_settings_file.clear_on_change(settings_name)
+user_settings_file.add_on_change(settings_name, settings_changed)
 
+
+super_jonas_test = "SUPER_ JONASÄ TEST"
 
 def reload_settings(view):
     '''Restores user settings.'''
@@ -1039,18 +1137,24 @@ def reload_settings(view):
         if setting_name in settings:
             view_settings.set(setting_name, settings[setting_name])
 
+
+
+
     if view_settings.get('codeintel') is None:
         view_settings.set('codeintel', True)
 
     path = view.file_name()
     lang = guess_lang(view, path)
     if lang and lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_enabled_languages', [])]:
-        if not view_settings.get('sublime_auto_complete'):
-            view_settings.set('auto_complete', False)
+        #always disable sublime auto_complete for live enabled languages
+        view_settings.set('auto_complete', False)
+        #if not view_settings.get('sublime_auto_complete'):
+        #    view_settings.set('auto_complete', False)
 
     return view_settings
 
 def load_relevant_settings():
+
     settings = {}
     basic_plugin_settings = sublime.load_settings(settings_name + '.sublime-settings')
 
@@ -1142,90 +1246,24 @@ class PythonCodeIntel(sublime_plugin.EventListener):
     def on_query_completions(self, view, prefix, locations):
         vid = view.id()
 
-        #words from buffer
-        words = []
-        view_words = view.extract_completions(prefix, locations[0])
-        view_words = filter_words(view_words)
-        view_words = fix_truncation(view, view_words)
-        words += view_words
-        words = without_duplicates(words)
-        matches = [(w, w.replace('$', '\\$')) for w in words]
-
-        print(matches)
-
         _completions = []
         if vid in completions:
             _completions = completions[vid]
             del completions[vid]
 
-        _completions.extend(matches)
+        add_word_completions = True#config
+        add_explicit_completions = False
+
+        word_completions = 0 if add_word_completions else sublime.INHIBIT_WORD_COMPLETIONS;
+        explicit_completions = 0 if add_explicit_completions else sublime.INHIBIT_EXPLICIT_COMPLETIONS;
+
         if len(_completions) > 0:
-            return _completions
+            #return _completions
+            return (_completions, word_completions | explicit_completions)
         else:
             print(str(len(completions))+",".join(completions.keys()))
 
         return []
-
-
-
-# limits to prevent bogging down the system
-MIN_WORD_SIZE = 3
-MAX_WORD_SIZE = 50
-
-MAX_WORDS_PER_VIEW = 500
-MAX_FIX_TIME_SECS_PER_VIEW = 0.01
-
-def filter_words(words):
-    words = words[0:MAX_WORDS_PER_VIEW]
-    return [w for w in words if MIN_WORD_SIZE <= len(w) <= MAX_WORD_SIZE]
-
-# keeps first instance of every word and retains the original order
-# (n^2 but should not be a problem as len(words) <= MAX_VIEWS*MAX_WORDS_PER_VIEW)
-def without_duplicates(words):
-    result = []
-    for w in words:
-        if w not in result:
-            result.append(w)
-    return result
-
-
-# Ugly workaround for truncation bug in Sublime when using view.extract_completions()
-# in some types of files.
-def fix_truncation(view, words):
-    fixed_words = []
-    start_time = time.time()
-
-    for i, w in enumerate(words):
-        #The word is truncated if and only if it cannot be found with a word boundary before and after
-
-        # this fails to match strings with trailing non-alpha chars, like
-        # 'foo?' or 'bar!', which are common for instance in Ruby.
-        match = view.find(r'\b' + re.escape(w) + r'\b', 0)
-        truncated = is_empty_match(match)
-        if truncated:
-            #Truncation is always by a single character, so we extend the word by one word character before a word boundary
-            extended_words = []
-            view.find_all(r'\b' + re.escape(w) + r'\w\b', 0, "$0", extended_words)
-            if len(extended_words) > 0:
-                fixed_words += extended_words
-            else:
-                # to compensate for the missing match problem mentioned above, just
-                # use the old word if we didn't find any extended matches
-                fixed_words.append(w)
-        else:
-            #Pass through non-truncated words
-            fixed_words.append(w)
-
-        # if too much time is spent in here, bail out,
-        # and don't bother fixing the remaining words
-        if time.time() - start_time > MAX_FIX_TIME_SECS_PER_VIEW:
-            return fixed_words + words[i+1:]
-
-    return fixed_words
-
-def is_empty_match(match):
-  return match.empty()
-
 
 
 class CodeIntelAutoComplete(sublime_plugin.TextCommand):
