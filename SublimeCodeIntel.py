@@ -125,7 +125,7 @@ log.handlers = [stderr_hdlr]
 codeintel_log.setLevel(logging.INFO)  # INFO
 for logger in ('codeintel.db', 'codeintel.pythoncile'):
     logging.getLogger(logger).setLevel(logging.WARNING)  # WARNING
-for logger in ('css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
+for logger in ('citadel', 'css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
              'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
              'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
     logging.getLogger("codeintel." + logger).setLevel(logging.INFO)  # WARNING
@@ -629,8 +629,9 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     is_dirty = view.is_dirty()
     vid = view.id()
     folders = getattr(view.window(), 'folders', lambda: [])()  # FIXME: it's like this for backward compatibility (<= 2060)
-    #folders_id = str(hash(frozenset(folders)))
 
+
+    #folders_id = str(hash(frozenset(folders)))
 
 
     def _codeintel_scan():
@@ -648,42 +649,10 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             if env._folders != folders:
                 raise KeyError
             if now > env._time:
-                mtime = max(tryGetMTime(env._config_file), tryGetMTime(env._config_default_file))
-                if env._mtime < mtime:
+                if env._mtime != settings_manager.settings_id:
                     raise KeyError
         except KeyError:
-            if env is not None:
-                config_default_file = env._config_default_file
-                project_dir = env._project_dir
-                project_base_dir = env._project_base_dir
-                config_file = env._config_file
-            else:
-                config_default_file = os.path.join(CODEINTEL_HOME_DIR, 'config')
-                if not (config_default_file and os.path.exists(config_default_file)):
-                    config_default_file = None
-                project_dir = None
-                project_base_dir = None
-                for folder_path in folders + [path]:
-                    if folder_path:
-                        # Try to find a suitable project directory (or best guess):
-                        for folder in ['.codeintel', '.git', '.hg', '.svn', 'trunk']:
-                            project_dir = find_back(folder_path, folder)
-                            if project_dir:
-                                if folder == '.codeintel':
-                                    if project_dir == CODEINTEL_HOME_DIR or os.path.exists(os.path.join(project_dir, 'databases')):
-                                        continue
-                                if folder.startswith('.'):
-                                    project_base_dir = os.path.abspath(os.path.join(project_dir, '..'))
-                                else:
-                                    project_base_dir = project_dir
-                                break
-                        if project_base_dir:
-                            break
-                if not (project_dir and os.path.exists(project_dir)):
-                    project_dir = None
-                config_file = project_dir and folder == '.codeintel' and os.path.join(project_dir, 'config')
-                if not (config_file and os.path.exists(config_file)):
-                    config_file = None
+            pass
 
             valid = True
             if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
@@ -730,31 +699,22 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 'codeintel_scan_exclude_dir': codeintel_scan_exclude_dir,
                 'codeintel_selected_catalogs': catalogs,
             }
+
+
             config.update(codeintel_config_lang)
 
 
             _config = {}
             _config = settings_manager.getSettings()
 
-            ##BULLSHIT
-            #try:
-            #    tryReadDict(config_default_file, _config)
-            #except Exception as e:
-            #    msg = "Malformed configuration file '%s': %s" % (config_default_file, e)
-            #    log.error(msg)
-            #    codeintel_log.error(msg)
-            #try:
-            #    tryReadDict(config_file, _config)
-            #except Exception as e:
-            #    msg = "Malformed configuration file '%s': %s" % (config_default_file, e)
-            #    log.error(msg)
-            #    codeintel_log.error(msg)
+            ## scan_extra_dir
+            if settings.get('codeintel_scan_files_in_project', True):
+                scan_extra_dir = list(folders)
+            else:
+                scan_extra_dir = []
 
-            config.update(_config["codeintel_language_settings"].get(lang, {}))
-
-            for conf in ['pythonExtraPaths', 'rubyExtraPaths', 'perlExtraPaths', 'javascriptExtraPaths', 'phpExtraPaths']:
-                v = [p.strip() for p in config.get(conf, []) + folders if p.strip()]
-                config[conf] = os.pathsep.join(set(p if p.startswith('/') else os.path.expanduser(p) if p.startswith('~') else os.path.abspath(os.path.join( project_base_dir, p)) if project_base_dir else p for p in v if p.strip()))
+            scan_extra_dir.extend(config.get("codeintel_scan_extra_dir", []))
+            config["codeintel_scan_extra_dir"] = scan_extra_dir
 
             for conf, p in config.items():
                 if isinstance(p, basestring) and p.startswith('~'):
@@ -774,12 +734,8 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
 
             env = SimplePrefsEnvironment(**config)
             env._valid = valid
-            env._mtime = mtime or max(tryGetMTime(config_file), tryGetMTime(config_default_file))
+            env._mtime = settings_manager.settings_id
             env._folders = folders
-            env._config_default_file = config_default_file
-            env._project_dir = project_dir
-            env._project_base_dir = project_base_dir
-            env._config_file = config_file
             env.__class__.get_proj_base_dir = lambda self: project_base_dir
             _ci_envs_[vid] = env
         env._time = now + 5  # don't check again in less than five seconds
@@ -1187,6 +1143,9 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         codeintel_cleanup(view.file_name())
 
     def on_modified(self, view):
+
+        #settings_manager.get('codeintel_live')
+
         if not view.settings().get('codeintel_live', True):
             return
 
@@ -1410,12 +1369,15 @@ class SublimecodeintelWindowCommand(sublime_plugin.WindowCommand):
 
 class SublimecodeintelCommand(SublimecodeintelWindowCommand):
     def is_enabled(self, active=None):
+
         enabled = super(SublimecodeintelCommand, self).is_enabled()
+
 
         if active is not None:
             view = self.window.active_view()
             enabled = enabled and codeintel_enabled(view, True) == active
 
+            print("WINDOW COMMAND ENABLED "+str(enabled))
         return bool(enabled)
 
     def run_(self, args={}):
