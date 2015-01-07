@@ -519,9 +519,6 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
 
         if env.has_pref(self.interpreterPrefName):
             python = env.get_pref(self.interpreterPrefName).strip() or None
-            print("\n INTERPRETER FOUND \n")
-        else:
-            print("\n INTERPRETER NOPT FOUND \n")
 
         if not python or not exists(python):
             import which
@@ -570,8 +567,6 @@ class PythonLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
             libs = []
 
             # - extradirslib
-            print("NO HOMO ", env)
-
             extra_dirs = self._extra_dirs_from_env(env)
             if extra_dirs:
                 libs.append(db.get_lang_lib(self.lang, "extradirslib",

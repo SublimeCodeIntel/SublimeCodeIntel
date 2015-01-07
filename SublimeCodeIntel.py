@@ -96,7 +96,7 @@ arch_path = os.path.join(__path__, 'arch')
 if arch_path not in sys.path:
     sys.path.insert(0, arch_path)
 
-active_manager_id = None
+cplns_were_empty = None
 
 from codeintel2.common import CodeIntelError, EvalTimeout, LogEvalController, TRG_FORM_CPLN, TRG_FORM_CALLTIP, TRG_FORM_DEFN
 from codeintel2.manager import Manager
@@ -385,6 +385,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
             vid = view.id()
 
             def _trigger(calltips, cplns=None):
+                global cplns_were_empty
                 if cplns is not None or calltips is not None:
                     codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
 
@@ -397,12 +398,31 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                     if _completions:
                         # Show autocompletions:
                         completions[vid] = _completions
-                        view.run_command('auto_complete', {
-                            'disable_auto_insert': True,
-                            'api_completions_only': False,
-                            'next_completion_if_showing': False,
-                            'auto_complete_commit_on_tab': True,
-                        })
+
+
+
+                ## run
+
+                if cplns_were_empty is not (cplns is None):
+                    print("HIDE\n")
+                    view.run_command('hide_auto_complete')
+
+
+
+                def show_autocomplete():
+                    view.run_command('auto_complete', {
+                        'disable_auto_insert': True,
+                        'api_completions_only': False,
+                        'next_completion_if_showing': False,
+                        'auto_complete_commit_on_tab': True,
+                    })
+
+                #if not cplns_were_empty or (cplns is not None):
+                sublime.set_timeout(show_autocomplete, 0)
+
+
+                cplns_were_empty = cplns is None
+
                 if calltips:
                     tooltip(view, calltips, original_pos)
 
@@ -578,7 +598,7 @@ def codeintel_cleanup(id):
         del _ci_next_scan_[id]
 
 def codeintel_manager(manager_id=None):
-    global _ci_mgr_, condeintel_log_filename, condeintel_log_file, active_manager_id
+    global _ci_mgr_, condeintel_log_filename, condeintel_log_file
 
     if (manager_id is not None):
         mgr = _ci_mgr_.get(manager_id, None)
@@ -652,7 +672,6 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 if env._mtime != settings_manager.settings_id:
                     raise KeyError
         except KeyError:
-            pass
 
             valid = True
             if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
@@ -661,7 +680,6 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                     log.debug(msg)
                     codeintel_log.warning(msg)
                 valid = False
-
 
 
             settings = settings_manager.getSettings()
@@ -736,7 +754,6 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             env._valid = valid
             env._mtime = settings_manager.settings_id
             env._folders = folders
-            env.__class__.get_proj_base_dir = lambda self: project_base_dir
             _ci_envs_[vid] = env
         env._time = now + 5  # don't check again in less than five seconds
 
@@ -1143,6 +1160,17 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         codeintel_cleanup(view.file_name())
 
     def on_modified(self, view):
+        view_sel = view.sel()
+        if not view_sel:
+            return
+
+        sel = view_sel[0]
+        pos = sel.end()
+        text = view.substr(sublime.Region(pos - 1, pos))
+
+        #no autocomplete if last char is empty string
+        if not text.strip():
+            return
 
         #settings_manager.get('codeintel_live')
 
@@ -1154,13 +1182,6 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         if not lang or lang.lower() not in [l.lower() for l in view.settings().get('codeintel_live_enabled_languages', [])]:
             return
 
-        view_sel = view.sel()
-        if not view_sel:
-            return
-
-        sel = view_sel[0]
-        pos = sel.end()
-        text = view.substr(sublime.Region(pos - 1, pos))
         is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
 
         # print('on_modified', view.command_history(1), view.command_history(0), view.command_history(-1))
