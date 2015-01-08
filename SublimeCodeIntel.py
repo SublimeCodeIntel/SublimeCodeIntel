@@ -316,6 +316,38 @@ def guess_lang(view=None, path=None):
     if not view or not codeintel_enabled(view):
         return None
 
+    #######################################
+    ##try to guess lang using sublime scope
+
+    view_sel = view.sel()
+    if not view_sel:
+        sublime.message_dialog("NO VIEW SELECTION IN GUESS LANG")
+        return
+
+    sel = view_sel[0]
+    pos = sel.end()
+
+    check_for_scopes = {
+        "json": "JSON",
+        "js": "JavaScript",
+        "python.3": "Python3",
+        "python": "Python",
+        "php": "PHP"
+    }
+    ##order is important - longest keys first
+    ordered_checks = collections.OrderedDict(sorted(check_for_scopes.items(), key=lambda t: len(t[0]), reverse=True))
+
+    scope_name = view.scope_name(pos)
+    for scope in scope_name.split(" "):
+        if "source" in scope:
+            for check in ordered_checks:
+                if scope[7:].startswith(check):
+                    return check_for_scopes[check]
+
+
+    ###################################################################
+    ##try to guess lang by sublime syntax setting (see your status bar)
+
     syntax = None
     if view:
         syntax = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
@@ -326,6 +358,8 @@ def guess_lang(view=None, path=None):
         return languages[vid][_k_]
     except KeyError:
         pass
+
+
     languages.setdefault(vid, {})
 
     lang = None
@@ -363,6 +397,8 @@ def guess_lang(view=None, path=None):
             logger(view, 'debug', "Invalid language: %s" % _lang)
 
     languages[vid][_k_] = lang
+
+
     return lang
 
 
@@ -399,15 +435,8 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                         # Show autocompletions:
                         completions[vid] = _completions
 
-
-
-                ## run
-
                 if cplns_were_empty is not (cplns is None):
-                    print("HIDE\n")
-                    view.run_command('hide_auto_complete')
-
-
+                     view.run_command('hide_auto_complete')
 
                 def show_autocomplete():
                     view.run_command('auto_complete', {
@@ -419,7 +448,6 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
 
                 #if not cplns_were_empty or (cplns is not None):
                 sublime.set_timeout(show_autocomplete, 0)
-
 
                 cplns_were_empty = cplns is None
 
@@ -605,7 +633,7 @@ def codeintel_manager(manager_id=None):
         return mgr
 
     settings = settings_manager.getSettings()
-    codeintel_database_dir = settings.get("codeintel_database_dir")
+    codeintel_database_dir = os.path.expanduser(settings.get("codeintel_database_dir"))
 
 
     manager_id = settings_manager.settings_id
@@ -664,14 +692,19 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
         mgr = codeintel_manager()
         mgr.db.event_reporter = lambda m: logger(view, 'event', m)
 
+        ##config values are provided per view(!) and are stored in an Environment Object
         try:
             env = _ci_envs_[vid]
             if env._folders != folders:
+                raise KeyError
+            if env._lang != lang:
+                ##if the language changes within one view (HTML/PHP) we need to update our Environment Object on each change!
                 raise KeyError
             if now > env._time:
                 if env._mtime != settings_manager.settings_id:
                     raise KeyError
         except KeyError:
+            #generate new Environment
 
             valid = True
             if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
@@ -682,21 +715,10 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 valid = False
 
 
-            settings = settings_manager.getSettings()
+            ##load settings for this language
+            config = settings_manager.getSettings(lang)
 
-            codeintel_language_settings = settings.get('codeintel_language_settings', {})
-            _codeintel_max_recursive_dir_depth = settings.get('codeintel_max_recursive_dir_depth', 10)
-            _codeintel_scan_files_in_project = settings.get('codeintel_scan_files_in_project', True)
-            _codeintel_scan_exclude_dir = settings.get('codeintel_scan_exclude_dir', [])
-            _codeintel_selected_catalogs = settings.get('codeintel_selected_catalogs', [])
-
-
-            #set language defined settings
-            codeintel_config_lang = codeintel_language_settings.get(lang, {})
-            codeintel_max_recursive_dir_depth = codeintel_config_lang.get('codeintel_max_recursive_dir_depth', _codeintel_max_recursive_dir_depth)
-            codeintel_scan_files_in_project = codeintel_config_lang.get('codeintel_scan_files_in_project', _codeintel_scan_files_in_project)
-            codeintel_scan_exclude_dir = codeintel_config_lang.get('codeintel_scan_exclude_dir', _codeintel_scan_exclude_dir)
-            codeintel_selected_catalogs = codeintel_config_lang.get('codeintel_selected_catalogs', _codeintel_selected_catalogs)
+            codeintel_selected_catalogs = config.get('codeintel_selected_catalogs')
 
             avail_catalogs = mgr.db.get_catalogs_zone().avail_catalogs()
 
@@ -711,22 +733,8 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             log.debug(msg)
             codeintel_log.debug(msg)
 
-            config = {
-                'codeintel_max_recursive_dir_depth': codeintel_max_recursive_dir_depth,
-                'codeintel_scan_files_in_project': codeintel_scan_files_in_project,
-                'codeintel_scan_exclude_dir': codeintel_scan_exclude_dir,
-                'codeintel_selected_catalogs': catalogs,
-            }
-
-
-            config.update(codeintel_config_lang)
-
-
-            _config = {}
-            _config = settings_manager.getSettings()
-
             ## scan_extra_dir
-            if settings.get('codeintel_scan_files_in_project', True):
+            if config.get('codeintel_scan_files_in_project', True):
                 scan_extra_dir = list(folders)
             else:
                 scan_extra_dir = []
@@ -753,6 +761,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             env = SimplePrefsEnvironment(**config)
             env._valid = valid
             env._mtime = settings_manager.settings_id
+            env._lang = lang
             env._folders = folders
             _ci_envs_[vid] = env
         env._time = now + 5  # don't check again in less than five seconds
@@ -985,10 +994,10 @@ ALL_SETTINGS = [
 ]
 
 
-
 class SettingsManager():
     def __init__(self, settings_name):
         self.settings = {}
+        self.language_settings = {}
         self.settings_id = None
         self.user_settings_file = None
         self.settings_name = settings_name
@@ -1025,7 +1034,7 @@ class SettingsManager():
     def generateSettingsId(self):
         self.settings_id = hash(time.time() + self.projectfile_mtime)
 
-    def getSettings(self):
+    def getSettings(self, lang=None):
         if self.user_settings_file is None:
             self.user_settings_file = sublime.load_settings(self.settings_name + '.sublime-settings')
             self.setChangeCallbackToSettingsFile()
@@ -1036,10 +1045,18 @@ class SettingsManager():
             self.updateSettingsOnViews()
             self.generateSettingsId()
 
-        return self.settings
+            ##store settings by language
+            codeintel_language_settings = self.settings.get("codeintel_language_settings")
+            for language in codeintel_language_settings:
+                lang_settings = dict(list(self.settings.items()) + list(codeintel_language_settings.get(language).items()))
+                lang_settings.pop("codeintel_language_settings")
+                self.language_settings[language] = lang_settings
 
+
+        return self.settings if lang is None else self.language_settings[lang]
+
+    #DEPRECATED
     def updateSettingsOnViews(self):
-        print("updateSettingsOnViews")
         for window in sublime.windows():
             for view in window.views():
                 view_settings = view.settings()
@@ -1078,75 +1095,10 @@ class SettingsManager():
 settings_manager = SettingsManager(SETTINGS_NAME)
 
 
-
-
-
-
-def settings_changed():
-    global user_settings_file
-    user_settings_file.clear_on_change(settings_name)
-    user_settings_file.add_on_change(settings_name, settings_changed)
-    for window in sublime.windows():
-        for view in window.views():
-            reload_settings(view)
-
-# init on change listener for .sublime-settings file
-settings_name = 'SublimeCodeIntel'
-user_settings_file = sublime.load_settings(settings_name + '.sublime-settings')
-user_settings_file.clear_on_change(settings_name)
-user_settings_file.add_on_change(settings_name, settings_changed)
-
-
-super_jonas_test = "SUPER_ JONASÄ TEST"
-
-def reload_settings(view):
-    '''Restores user settings.'''
-
-    settings = load_relevant_settings()
-    view_settings = view.settings()
-
-    for setting_name in ALL_SETTINGS:
-        if setting_name in settings:
-            view_settings.set(setting_name, settings[setting_name])
-
-
-
-
-    if view_settings.get('codeintel') is None:
-        view_settings.set('codeintel', True)
-
-    path = view.file_name()
-    lang = guess_lang(view, path)
-    if lang and lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_enabled_languages', [])]:
-        #always disable sublime auto_complete for live enabled languages
-        view_settings.set('auto_complete', False)
-        #if not view_settings.get('sublime_auto_complete'):
-        #    view_settings.set('auto_complete', False)
-
-    return view_settings
-
-def load_relevant_settings():
-
-    settings = {}
-    basic_plugin_settings = sublime.load_settings(settings_name + '.sublime-settings')
-
-    for setting_name in ALL_SETTINGS:
-        if basic_plugin_settings.get(setting_name) is not None:
-            settings[setting_name] = basic_plugin_settings.get(setting_name)
-
-    #override basic plugin settings with settings from .sublime-project file
-    project_file_content = sublime.active_window().project_data()
-    if project_file_content is not None and "codeintel_settings" in project_file_content:
-        for setting_name in ALL_SETTINGS:
-            if setting_name in project_file_content["codeintel_settings"]:
-                settings[setting_name] = project_file_content["codeintel_settings"][setting_name]
-
-    return settings
-
-
 def codeintel_enabled(view, default=None):
     if view.settings().get('codeintel') is None:
-        reload_settings(view)
+        ##updates settings if necessary
+        settings_manager.getSettings()
     return view.settings().get('codeintel', default)
 
 
@@ -1160,9 +1112,19 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         codeintel_cleanup(view.file_name())
 
     def on_modified(self, view):
+        path = view.file_name()
+        lang = guess_lang(view, path)
+
+        settings_manager.getSettings()
+
+        if not view.settings().get('codeintel_live', True):
+            #if live completion is disabled, we're wrong here!
+            return
+
         view_sel = view.sel()
         if not view_sel:
             return
+
 
         sel = view_sel[0]
         pos = sel.end()
@@ -1173,9 +1135,6 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             return
 
         #settings_manager.get('codeintel_live')
-
-        if not view.settings().get('codeintel_live', True):
-            return
 
         path = view.file_name()
         lang = guess_lang(view, path)
@@ -1230,6 +1189,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             _completions = completions[vid]
             del completions[vid]
 
+        ##TODO add to settings
         add_word_completions = True#config
         add_explicit_completions = False
 
@@ -1354,7 +1314,7 @@ class CodeintelCommand(sublime_plugin.TextCommand):
 
     def reset(self):
         """Restores user settings."""
-        reload_settings(self.view)
+        settings_manager.getSettings()
         logger(self.view, 'info', "SublimeCodeIntel Reseted!")
 
     def enable(self, enable):
