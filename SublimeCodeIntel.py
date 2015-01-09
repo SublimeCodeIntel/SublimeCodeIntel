@@ -445,7 +445,9 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                         completions[vid] = _completions
 
 
-
+                if cplns_were_empty is not (cplns is None):
+                    print("\n"+"HIDING: different cmple empty states"+"\n")
+                    view.run_command('hide_auto_complete')
 
 
                 if not citdl_expr or not last_citdl_expr or not citdl_expr.startswith(last_citdl_expr):
@@ -453,7 +455,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                         print("\n"+"HIDING CITDL: "+str(last_citdl_expr)+" "+str(citdl_expr)+"\n")
                         view.run_command('hide_auto_complete')
 
-                if trigger is None or last_trigger_name != trigger.name or cplns_were_empty is not (cplns is None):
+                if trigger is None or last_trigger_name != trigger.name:
                     print("\n"+"HIDING: "+str(last_trigger_name)+" "+str(trigger.name if trigger else '')+"\n")
                     view.run_command('hide_auto_complete')
 
@@ -479,7 +481,6 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                         'auto_complete_commit_on_tab': True,
                     })
 
-                #if not cplns_were_empty or (cplns is not None):
                 sublime.set_timeout(show_autocomplete, 0)
 
                 cplns_were_empty = cplns is None
