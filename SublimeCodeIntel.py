@@ -97,6 +97,8 @@ if arch_path not in sys.path:
     sys.path.insert(0, arch_path)
 
 cplns_were_empty = None
+last_trigger_name = None
+last_citdl_expr = None
 
 from codeintel2.common import CodeIntelError, EvalTimeout, LogEvalController, TRG_FORM_CPLN, TRG_FORM_CALLTIP, TRG_FORM_DEFN
 from codeintel2.manager import Manager
@@ -122,13 +124,13 @@ condeintel_log_file = None
 log = logging.getLogger("SublimeCodeIntel")
 codeintel_log.handlers = [codeintel_hdlr]
 log.handlers = [stderr_hdlr]
-codeintel_log.setLevel(logging.INFO)  # INFO
+codeintel_log.setLevel(logging.ERROR)  # INFO
 for logger in ('codeintel.db', 'codeintel.pythoncile'):
-    logging.getLogger(logger).setLevel(logging.WARNING)  # WARNING
+    logging.getLogger(logger).setLevel(logging.ERROR)  # WARNING
 for logger in ('citadel', 'css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
              'perl', 'php', 'python', 'python3', 'rhtml', 'ruby', 'smarty',
              'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
-    logging.getLogger("codeintel." + logger).setLevel(logging.INFO)  # WARNING
+    logging.getLogger("codeintel." + logger).setLevel(logging.ERROR)  # WARNING
 log.setLevel(logging.ERROR)  # ERROR
 
 cpln_fillup_chars = {
@@ -424,8 +426,11 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
         if not next or next != '_' and not next.isalnum():
             vid = view.id()
 
-            def _trigger(calltips, cplns=None):
-                global cplns_were_empty
+            def _trigger(trigger, citdl_expr, calltips, cplns=None):
+                global cplns_were_empty, last_trigger_name, last_citdl_expr
+
+                #print("\n"+"last_trigger_name"+str(last_trigger_name)+"\n")
+
                 if cplns is not None or calltips is not None:
                     codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
 
@@ -439,13 +444,36 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                         # Show autocompletions:
                         completions[vid] = _completions
 
-                if cplns_were_empty is not (cplns is None):
-                     view.run_command('hide_auto_complete')
+
+
+
+
+                if not citdl_expr or not last_citdl_expr or not citdl_expr.startswith(last_citdl_expr):
+                    print("\n"+"HIDING CITDL: "+str(last_citdl_expr)+" "+str(citdl_expr)+"\n")
+                    view.run_command('hide_auto_complete')
+
+                if trigger is None or last_trigger_name != trigger.name or cplns_were_empty is not (cplns is None):
+                    print("\n"+"HIDING: "+str(last_trigger_name)+" "+str(trigger.name if trigger else '')+"\n")
+                    view.run_command('hide_auto_complete')
+
+                api_completions_only = False
+                if trigger:
+                    print("CURRENT TRIGGERNAME: "+str(trigger.name ))
+                    if trigger.name == "php-complete-static-members":
+                        api_completions_only = True
+                        print("api_completions_only: "+str(api_completions_only))
+
+                last_trigger_name = trigger.name if trigger else None
+                last_citdl_expr = citdl_expr
+
+
+
+
 
                 def show_autocomplete():
                     view.run_command('auto_complete', {
                         'disable_auto_insert': True,
-                        'api_completions_only': False,
+                        'api_completions_only': api_completions_only,
                         'next_completion_if_showing': False,
                         'auto_complete_commit_on_tab': True,
                     })
@@ -477,7 +505,6 @@ _ci_next_cullmem_ = 0
 MAX_DELAY = -1  # Does not apply
 queue_thread_name = "codeintel callbacks"
 
-
 def queue_dispatcher(force=False):
     """
     Default implementation of queue dispatcher (just clears the queue)
@@ -495,12 +522,10 @@ def queue_loop():
         modifications for some time as to not slow down the UI with autocompletes."""
     global __signaled_, __signaled_first_
     while __loop_:
-        print('acquire...')
         __semaphore_.acquire()
-        print('finito...')
         __signaled_first_ = 0
         __signaled_ = 0
-        print("DISPATCHING!", len(QUEUE))
+        #print("DISPATCHING!", len(QUEUE))
         queue_dispatcher()
 
 
@@ -539,10 +564,10 @@ def _delay_queue(timeout, preemptive):
     new__signaled_ = now + _timeout - 0.01
     if __signaled_ >= now - 0.01 and (preemptive or new__signaled_ >= __signaled_ - 0.01):
         __signaled_ = new__signaled_
-        print('delayed to', (preemptive, __signaled_ - now))
+        #print('delayed to', (preemptive, __signaled_ - now))
 
         def _signal():
-            print("Signal")
+            #print("Signal")
             if time.time() < __signaled_:
                 return
             __semaphore_.release()
@@ -590,10 +615,8 @@ __active_codeintel_thread.start()
 ################################################################################
 
 if not __pre_initialized_:
-    print("start a timer")
     # Start a timer
     def _signal_loop():
-        print("_signal_loop")
         __semaphore_.release()
         sublime.set_timeout(_signal_loop, 20000)
     _signal_loop()
@@ -601,7 +624,6 @@ if not __pre_initialized_:
 #queue_dispatcher
 def codeintel_callbacks(force=False):
     global _ci_next_savedb_, _ci_next_cullmem_
-    print("queue_dispatcher")
     __lock_.acquire()
     try:
         views = list(QUEUE.values())
@@ -647,15 +669,13 @@ def codeintel_manager(manager_id=None):
         mgr = _ci_mgr_.get(manager_id, None)
         return mgr
 
-    settings = settings_manager.getSettings()
-    codeintel_database_dir = os.path.expanduser(settings.get("codeintel_database_dir"))
-
 
     manager_id = settings_manager.settings_id
     mgr = _ci_mgr_.get(manager_id, None)
 
 
     if mgr is None:
+        codeintel_database_dir = os.path.expanduser(settings_manager.get("codeintel_database_dir"))
         #sublime.message_dialog(str(codeintel_database_dir)+" NEW MANAGER: "+str(settings_manager.settings_id))
         for thread in threading.enumerate():
             if thread.name == "CodeIntel Manager":
@@ -888,14 +908,23 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
                         set_status(view, 'warning', msg)
                         result = True
 
-        ret = []
+
+
+        ##collect citdl_expr from this run
+        citdl_expr = buf.last_citdl_expr
+
+
+        ret = {
+            "trigger":trg,
+            "citdl_expr": citdl_expr
+        }
         for f in forms:
             if f == 'cplns':
-                ret.append(cplns)
+                ret["cplns"] = cplns
             elif f == 'calltips':
-                ret.append(calltips)
+                ret["calltips"] = calltips
             elif f == 'defns':
-                ret.append(defns)
+                ret["defns"] = defns
 
         total = (time.time() - start) * 1000
         if total > 1000:
@@ -909,7 +938,7 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             def _callback():
                 view_sel = view.sel()
                 if view_sel and view.line(view_sel[0]) == view.line(pos):
-                    callback(*ret)
+                    callback(**ret)
             logger(view, 'info', "")
             sublime.set_timeout(_callback, 0)
         else:
@@ -917,6 +946,8 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             print(msg, file=condeintel_log_file)
             logger(view, 'info', msg, timeout=3000)
     codeintel_scan(view, path, content, lang, _codeintel, pos, forms)
+
+
 
 
 def find_back(start_at, look_for):
@@ -986,6 +1017,80 @@ def get_revision(path=None):
         else:
             break
     return u'GIT-unknown'
+
+
+
+
+class WordCompletionsFromBuffer():
+    # limits to prevent bogging down the system
+    MIN_WORD_SIZE = 3
+    MAX_WORD_SIZE = 50
+
+    MAX_WORDS_PER_VIEW = 500
+    MAX_FIX_TIME_SECS_PER_VIEW = 0.01
+
+    def getCompletions(self, view, prefix, locations):
+        #words from buffer
+        words = []
+        view_words = view.extract_completions(prefix, locations[0])
+        view_words = self.filter_words(view_words)
+        view_words = self.fix_truncation(view, view_words)
+        words += view_words
+        words = self.without_duplicates(words)
+        matches = [(w, w.replace('$', '\\$')) for w in words]
+
+        return matches
+
+    def filter_words(self, words):
+        words = words[0:self.MAX_WORDS_PER_VIEW]
+        return [w for w in words if self.MIN_WORD_SIZE <= len(w) <= self.MAX_WORD_SIZE]
+
+    # keeps first instance of every word and retains the original order
+    # (n^2 but should not be a problem as len(words) <= MAX_VIEWS*MAX_WORDS_PER_VIEW)
+    def without_duplicates(self, words):
+        result = []
+        for w in words:
+            if w not in result:
+                result.append(w)
+        return result
+
+
+    # Ugly workaround for truncation bug in Sublime when using view.extract_completions()
+    # in some types of files.
+    def fix_truncation(self, view, words):
+        fixed_words = []
+        start_time = time.time()
+
+        for i, w in enumerate(words):
+            #The word is truncated if and only if it cannot be found with a word boundary before and after
+
+            # this fails to match strings with trailing non-alpha chars, like
+            # 'foo?' or 'bar!', which are common for instance in Ruby.
+            match = view.find(r'\b' + re.escape(w) + r'\b', 0)
+            truncated = self.is_empty_match(match)
+            if truncated:
+                #Truncation is always by a single character, so we extend the word by one word character before a word boundary
+                extended_words = []
+                view.find_all(r'\b' + re.escape(w) + r'\w\b', 0, "$0", extended_words)
+                if len(extended_words) > 0:
+                    fixed_words += extended_words
+                else:
+                    # to compensate for the missing match problem mentioned above, just
+                    # use the old word if we didn't find any extended matches
+                    fixed_words.append(w)
+            else:
+                #Pass through non-truncated words
+                fixed_words.append(w)
+
+            # if too much time is spent in here, bail out,
+            # and don't bother fixing the remaining words
+            if time.time() - start_time > self.MAX_FIX_TIME_SECS_PER_VIEW:
+                return fixed_words + words[i+1:]
+
+        return fixed_words
+
+    def is_empty_match(self, match):
+        return match.empty()
 
 
 
@@ -1159,8 +1264,10 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         text = view.substr(sublime.Region(pos - 1, pos))
 
         #no autocomplete if last char is empty string
+        #hide completions if visible
         if not text.strip():
             #sublime.message_dialog("LAST CHAR IS EMPTY")
+            view.run_command('hide_auto_complete')
             return
 
         is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
@@ -1205,21 +1312,30 @@ class PythonCodeIntel(sublime_plugin.EventListener):
     def on_query_completions(self, view, prefix, locations):
         vid = view.id()
 
+
         _completions = []
         if vid in completions:
             _completions = completions[vid]
             del completions[vid]
 
-        ##TODO add to settings
-        add_word_completions = True#config
-        add_explicit_completions = False
+        wordsFromBuffer = WordCompletionsFromBuffer()
+        word_completions = wordsFromBuffer.getCompletions(view, prefix, locations)
 
-        word_completions = 0 if add_word_completions and len(prefix) != 0 else sublime.INHIBIT_WORD_COMPLETIONS;
-        explicit_completions = 0 if add_explicit_completions else sublime.INHIBIT_EXPLICIT_COMPLETIONS;
+        #print("\n"+str(word_completions)+"\n")
+        #print("\n"+str(_completions)+"\n")
+
+        all_completions = list(_completions + word_completions)
+
+        ##add sublime completions to the mix / not recomended
+        sublime_word_completions = False
+        sublime_explicit_completions = False
+
+        word_completions = 0 if sublime_word_completions and len(prefix) != 0 else sublime.INHIBIT_WORD_COMPLETIONS;
+        explicit_completions = 0 if sublime_explicit_completions else sublime.INHIBIT_EXPLICIT_COMPLETIONS;
 
         #if len(_completions) > 0:
             #return _completions
-        return (_completions, word_completions | explicit_completions)
+        return (all_completions, word_completions | explicit_completions)
         #else:
         #    #print(str(len(completions))+",".join(completions.keys()))
         #    pass
