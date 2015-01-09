@@ -449,8 +449,9 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
 
 
                 if not citdl_expr or not last_citdl_expr or not citdl_expr.startswith(last_citdl_expr):
-                    print("\n"+"HIDING CITDL: "+str(last_citdl_expr)+" "+str(citdl_expr)+"\n")
-                    view.run_command('hide_auto_complete')
+                    if not (not citdl_expr and not last_citdl_expr):
+                        print("\n"+"HIDING CITDL: "+str(last_citdl_expr)+" "+str(citdl_expr)+"\n")
+                        view.run_command('hide_auto_complete')
 
                 if trigger is None or last_trigger_name != trigger.name or cplns_were_empty is not (cplns is None):
                     print("\n"+"HIDING: "+str(last_trigger_name)+" "+str(trigger.name if trigger else '')+"\n")
