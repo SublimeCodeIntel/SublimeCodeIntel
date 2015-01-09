@@ -601,6 +601,7 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
 
     #@util.hotshotit
     def async_eval_at_trg(self, buf, trg, ctlr):
+        buf.last_citdl_expr = None
         if _xpcom_:
             trg = UnwrapObject(trg)
             ctlr = UnwrapObject(ctlr)
@@ -640,6 +641,7 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                 ctlr.error(str(ex))
                 ctlr.done("error")
                 return
+            buf.last_citdl_expr = citdl_expr
             line = buf.accessor.line_from_pos(pos)
             evalr = PHPTreeEvaluator(ctlr, buf, trg, citdl_expr, line)
             buf.mgr.request_eval(evalr)
