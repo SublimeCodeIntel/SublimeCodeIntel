@@ -84,6 +84,7 @@ import threading
 import logging
 from cStringIO import StringIO
 
+
 CODEINTEL_HOME_DIR = os.path.expanduser(os.path.join('~', '.codeintel'))
 __file__ = os.path.normpath(os.path.abspath(__file__))
 __path__ = os.path.dirname(__file__)
@@ -321,7 +322,7 @@ def guess_lang(view=None, path=None):
     #######################################
     ##try to guess lang using sublime scope
 
-    check_for_scopes = {
+    source_scopes = {
         "json": "JSON",
         "js": "JavaScript",
         "python.3": "Python3",
@@ -330,7 +331,7 @@ def guess_lang(view=None, path=None):
     }
 
     ##order is important - longest keys first
-    ordered_checks = collections.OrderedDict(sorted(check_for_scopes.items(), key=lambda t: len(t[0]), reverse=True))
+    ordered_checks = collections.OrderedDict(sorted(source_scopes.items(), key=lambda t: len(t[0]), reverse=True))
 
     view_sel = view.sel()
     if not view_sel:
@@ -346,7 +347,12 @@ def guess_lang(view=None, path=None):
         if "source" in scope:
             for check in ordered_checks:
                 if scope[7:].startswith(check):
-                    return check_for_scopes[check]
+                    return source_scopes[check]
+
+    #check for html
+    if "text.html" in scope_name:
+        return "HTML"
+
 
     ###################################################################
     ##try to guess lang by sublime syntax setting (see your status bar)
@@ -1101,6 +1107,7 @@ class SettingsManager():
 
     SETTINGS_FILE_NAME = 'SublimeCodeIntel' # name of the *.sublime-settings file
 
+    #you can set these in your *.sublime-project file
     CORE_SETTINGS = [
         'codeintel',
         'codeintel_database_dir',
@@ -1126,15 +1133,24 @@ class SettingsManager():
         self._settings = {}
         self.language_settings = {}
         self.settings_id = None
-        self.user_settings_file = None
         self.projectfile_mtime = 0
         self.needs_update = True
         self.ALL_SETTINGS = list(self.CORE_SETTINGS + self.OVERRIDE_SETTINGS)
+        self.user_settings_file = None
+        sublime_settings_file = sublime.load_settings('Preferences.sublime-settings')
+        self.sublime_auto_complete = sublime_settings_file.get('auto_complete')
+        #sublime.message_dialog(str(self.sublime_auto_complete))
 
     def get(self, config_key, default=None, language=None):
         if language is not None:
             if language in self.language_settings:
                 return self.language_settings[language].get(config_key, default)
+            else:
+                ##special case for "codeintel_live"
+                #if language has no specific setting but is enabled, take the general setting
+                if config_key is "codeintel_live":
+                    if self._settings.get("codeintel_live"):
+                        return language in self._settings["codeintel_enabled_languages"]
 
         return self._settings.get(config_key, default)
 
@@ -1187,16 +1203,21 @@ class SettingsManager():
             self._settings = self.load_relevant_settings()
             self.updateSettingsOnViews()
             self.generateSettingsId()
+            self.updateLanguageSpecificSettings()
 
-            ##store settings by language
-            codeintel_language_settings = self._settings.get("codeintel_language_settings")
-            for language in codeintel_language_settings:
-                lang_settings = dict(list(self._settings.items()) + list(codeintel_language_settings.get(language).items()))
-                #reinforce core settings / override not permitted!
-                for core_setting in self.CORE_SETTINGS:
-                    lang_settings[core_setting] = self._settings.get(core_setting, None)
 
-                self.language_settings[language] = lang_settings
+    def updateLanguageSpecificSettings(self):
+        ##store settings by language
+        codeintel_language_settings = self._settings.get("codeintel_language_settings")
+
+        for language in codeintel_language_settings:
+            lang_settings = dict(list(self._settings.items()) + list(codeintel_language_settings.get(language).items()))
+            #reinforce core settings / override not permitted!
+            for core_setting in self.CORE_SETTINGS:
+                lang_settings[core_setting] = self._settings.get(core_setting, None)
+
+            self.language_settings[language] = lang_settings
+
 
     def generateSettingsId(self):
         self._settings_id = hash(time.time() + self.projectfile_mtime)
@@ -1216,14 +1237,6 @@ class SettingsManager():
 
                 if view_settings.get('codeintel') is None:
                     view_settings.set('codeintel', True)
-
-                path = view.file_name()
-                lang = guess_lang(view, path)
-                if lang and lang.lower() in [l.lower() for l in view.settings().get('codeintel_live_enabled_languages', [])]:
-                    #always disable sublime auto_complete for live enabled languages
-                    view_settings.set('auto_complete', False)
-                    #if not view_settings.get('sublime_auto_complete'):
-                    #    view_settings.set('auto_complete', False)
 
 settings_manager = SettingsManager()
 
@@ -1250,12 +1263,19 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         path = view.file_name()
         lang = guess_lang(view, path)
 
+        if not settings_manager.get('codeintel_live', default=True, language=lang):
+            #restore the original sublime auto_complete settings from Preferences.sublime-settings file in User package
+            #this is for files with mixed languages (HTML/PHP)
+            view.settings().set('auto_complete', settings_manager.sublime_auto_complete)
+            #if live completion is disabled, we're wrong here!
+            return
+
         if not lang or lang.lower() not in [l.lower() for l in settings_manager.get('codeintel_enabled_languages', [])]:
             return
 
-        if not settings_manager.get('codeintel_live', True, language=lang):
-            #if live completion is disabled, we're wrong here!
-            return
+        ##disable sublimes auto_complete for now / this is for files with mixed languages (HTML/PHP)
+        view.settings().set('auto_complete', False)
+
 
         view_sel = view.sel()
         if not view_sel:
