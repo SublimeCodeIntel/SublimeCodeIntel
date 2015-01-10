@@ -147,6 +147,7 @@ cpln_stop_chars = {
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ '\".",
     'Python': "~`!@#$%^&*()-=+{}[]|\\;:'\",.<>?/ ",
     'PHP': "~`@%^&*()=+{}]|\\;:'\",.<>?/ ",
+    'Python3': "~`!@#$%^&*()-=+{}[]|\\;:'\",.<>?/ ",
     'Perl': "-~`!@#$%^&*()=+{}[]|\\;:'\",.<>?/ ",
     'CSS': " ('\";{},.>/",
     'JavaScript': "~`!@#%^&*()-=+{}[]|\\;:'\",.<>?/ ",
@@ -275,8 +276,6 @@ def set_status(view, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel', lo
         status_lock.release()
 
     def _set_status():
-        view_sel = view.sel()
-        lineno = view.rowcol(view_sel[0].end())[0] if view_sel else 0
         status_lock.acquire()
         try:
             current_type, current_msg, current_order = status_msg.get(lid, [None, None, 0])
@@ -287,6 +286,10 @@ def set_status(view, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel', lo
                     view.set_status(lid, "%s: %s" % (ltype.capitalize(), msg))
                     status_msg[lid] = [ltype, msg, order]
                 if 'warning' not in lid:
+                    #for not "warnings" only
+                    view_sel = view.sel()
+                    #this line is throwing error sometimes?!
+                    lineno = view.rowcol(view_sel[0].end())[0] if view_sel else 0
                     status_lineno[lid] = lineno
         finally:
             status_lock.release()
@@ -426,56 +429,59 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
             return
 
         lpos = view.line(sel).begin()
-        text = view.substr(sublime.Region(lpos, pos + 1))
-        next = text[-1] if len(text) == pos + 1 - lpos else None
+        text_in_current_line = view.substr(sublime.Region(lpos, pos + 1))
+        next_char = text_in_current_line[-1] if len(text_in_current_line) == pos + 1 - lpos else None
 
-        if not next or next != '_' and not next.isalnum():
+
+        if (not next_char or next_char != '_') and not next_char.isalnum():
             vid = view.id()
 
             def _trigger(trigger, citdl_expr, calltips, cplns=None):
-                global cplns_were_empty, last_trigger_name, last_citdl_expr
+                global cplns_were_empty, last_trigger_name, last_citdl_expr, cpln_stop_chars
 
-                #print("\n"+"last_trigger_name"+str(last_trigger_name)+"\n")
+                add_word_completions = True#make it a config!
+
 
                 if cplns is not None or calltips is not None:
                     codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
 
-                if cplns is not None:
-                    function = None if 'import ' in text else 'function'
-                    _completions = sorted(
-                        [('%s〔%s〕' % (('$' if t == 'variable' else '')+n, t), (('$' if t == 'variable' else '')+n).replace("$","\\$") + ('($0)' if t == function else '')) for t, n in cplns],
-                        key=lambda o: o[1]
-                    )
-                    if _completions:
-                        # Show autocompletions:
-                        completions[vid] = _completions
 
-
-                if cplns_were_empty is not (cplns is None):
-                    print("\n"+"HIDING: different cmple empty states"+"\n")
+                #completions are available now, but were empty on last round,
+                #we have to close and reopen the completions tab to show them
+                if cplns_were_empty and cplns is not None:
                     view.run_command('hide_auto_complete')
 
-
-                if not citdl_expr or not last_citdl_expr or not citdl_expr.startswith(last_citdl_expr):
+                if not citdl_expr or not last_citdl_expr:
                     if not (not citdl_expr and not last_citdl_expr):
-                        print("\n"+"HIDING CITDL: "+str(last_citdl_expr)+" "+str(citdl_expr)+"\n")
+                        print("\n"+"HIDING, b/c CITDL_EXPR CHANGED: FROM "+str(last_citdl_expr)+" TO "+str(citdl_expr)+"\n")
                         view.run_command('hide_auto_complete')
 
-                if trigger is None or last_trigger_name != trigger.name:
-                    print("\n"+"HIDING: "+str(last_trigger_name)+" "+str(trigger.name if trigger else '')+"\n")
+                if (trigger is None and last_trigger_name is not None) or last_trigger_name != (trigger.name if trigger else None):
+                    print("\n"+"HIDING, b/c TRIGGER CHANGED: FROM "+str(last_trigger_name)+" TO "+str(trigger.name if trigger else 'None')+"\n")
                     view.run_command('hide_auto_complete')
+
+                ## cpln_stop_chars could be implemented here ?
+
 
                 api_completions_only = False
                 if trigger:
                     print("CURRENT TRIGGERNAME: "+str(trigger.name ))
-                    if trigger.name == "php-complete-static-members":
+                    if trigger.name in ["php-complete-static-members", "python3-complete-object-members"]:
                         api_completions_only = True
-                        print("api_completions_only: "+str(api_completions_only))
+                        add_word_completions = False
 
                 last_trigger_name = trigger.name if trigger else None
                 last_citdl_expr = citdl_expr
 
 
+
+
+                if cplns is not None:
+                    on_query_info = {}
+                    on_query_info["params"] = (add_word_completions, text_in_current_line)
+                    on_query_info["cplns"] = cplns
+
+                    completions[vid] = on_query_info
 
 
 
@@ -743,9 +749,8 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             if env._lang != lang:
                 ##if the language changes within one view (HTML/PHP) we need to update our Environment Object on each change!
                 raise KeyError
-            if now > env._time:
-                if env._mtime != settings_manager.settings_id:
-                    raise KeyError
+            if env._mtime != settings_manager.settings_id:
+                raise KeyError
         except KeyError:
             #generate new Environment
 
@@ -792,6 +797,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             # Setup environment variables
             # lang env settings
             env = config.get('env', {})
+            #basis is os environment
             _environ = dict(os.environ)
             for k, v in env.items():
                 _old = None
@@ -807,10 +813,12 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             env._lang = lang
             env._folders = folders
             _ci_envs_[vid] = env
-        env._time = now + 5  # don't check again in less than five seconds
+        #env._time = now + 5  # don't check again in less than five seconds
 
+        #this happens in any case:
         msgs = []
         if env._valid:
+            #is citadel language or other supported language
             if forms:
                 set_status(view, 'tip', "")
                 set_status(view, 'event', "")
@@ -823,7 +831,9 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 codeintel_log.warning(msg)
                 msgs.append(('info', msg))
 
+            ##CREATE THE BUFFER##
             buf = mgr.buf_from_content(content, lang, env, path or "<Unsaved>", 'utf-8')
+            #####################
 
             if mgr.is_citadel_lang(lang):
                 now = datetime.datetime.now()
@@ -843,6 +853,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                             mtime = os.stat(path)[stat.ST_MTIME]
                         buf.scan(mtime=mtime, skip_scan_time_check=is_dirty)
         else:
+            #unsupported language
             buf = None
         if callback:
             msg = "Doing CodeIntel for '%s' (hold on)..." % lang
@@ -1273,7 +1284,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         if not lang or lang.lower() not in [l.lower() for l in settings_manager.get('codeintel_enabled_languages', [])]:
             return
 
-        ##disable sublimes auto_complete for now / this is for files with mixed languages (HTML/PHP)
+        ##disable sublime's auto_complete for now / this is for files with mixed languages (HTML/PHP)
         view.settings().set('auto_complete', False)
 
 
@@ -1334,19 +1345,34 @@ class PythonCodeIntel(sublime_plugin.EventListener):
     def on_query_completions(self, view, prefix, locations):
         vid = view.id()
 
+        add_word_completions = True
+
 
         _completions = []
         if vid in completions:
-            _completions = completions[vid]
+            on_query_info = completions[vid]
+
+            cplns = on_query_info["cplns"]
             del completions[vid]
 
-        wordsFromBuffer = WordCompletionsFromBuffer()
-        word_completions = wordsFromBuffer.getCompletions(view, prefix, locations)
+            add_word_completions, text_in_current_line = on_query_info["params"]
 
-        #print("\n"+str(word_completions)+"\n")
-        #print("\n"+str(_completions)+"\n")
 
-        all_completions = list(_completions + word_completions)
+            function = None if 'import ' in text_in_current_line else 'function'
+            _completions = sorted(
+                [('%s〔%s〕' % (('$' if t == 'variable' else '')+n, t), (('$' if t == 'variable' else '')+n).replace("$","\\$") + ('($0)' if t == function else '')) for t, n in cplns],
+                key=lambda o: o[1]
+            )
+
+
+
+
+        if add_word_completions:
+            wordsFromBuffer = WordCompletionsFromBuffer()
+            word_completions = wordsFromBuffer.getCompletions(view, prefix, locations)
+            all_completions = list(_completions + word_completions)
+        else:
+            all_completions = _completions
 
         ##add sublime completions to the mix / not recomended
         sublime_word_completions = False
@@ -1393,7 +1419,7 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
             content = view.substr(sublime.Region(0, view.size()))
             file_name = view.file_name()
 
-            def _trigger(defns):
+            def _trigger(trigger, citdl_expr, defns):
                 if defns is not None:
                     defn = defns[0]
                     if defn.name and defn.doc:
