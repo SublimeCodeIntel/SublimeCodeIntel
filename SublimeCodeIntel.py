@@ -1385,6 +1385,9 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             cplns = on_query_info["cplns"]
             del completions[vid]
 
+            if completion_type == "snippets":
+                return cplns
+
             if completion_type == "cplns":
                 if cplns is not None:
                     _completions = format_completions_by_language(cplns, lang, text_in_current_line)
