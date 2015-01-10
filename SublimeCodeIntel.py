@@ -182,13 +182,22 @@ class TooltipOutputCommand(sublime_plugin.TextCommand):
 
 def tooltip_popup(view, snippets):
     vid = view.id()
-    completions[vid] = snippets
-    view.run_command('auto_complete', {
-        'disable_auto_insert': True,
-        'api_completions_only': True,
-        'next_completion_if_showing': False,
-        'auto_complete_commit_on_tab': True,
-    })
+
+    on_query_info = {}
+    on_query_info["params"] = ("snippets", "none", "", None)
+    on_query_info["cplns"] = snippets
+
+    completions[vid] = on_query_info
+
+    def open_auto_complete():
+        view.run_command('auto_complete', {
+            'disable_auto_insert': True,
+            'api_completions_only': True,
+            'next_completion_if_showing': False,
+            'auto_complete_commit_on_tab': True,
+        })
+
+    sublime.set_timeout(open_auto_complete, 0)
 
 
 def tooltip(view, calltips, original_pos):
@@ -480,11 +489,10 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
 
                 #if cplns is not None:
                 on_query_info = {}
-                on_query_info["params"] = (add_word_completions, text_in_current_line, lang)
+                on_query_info["params"] = ("cplns", add_word_completions, text_in_current_line, lang)
                 on_query_info["cplns"] = cplns
 
                 completions[vid] = on_query_info
-
 
 
 
@@ -1369,19 +1377,20 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
         _completions = []
         if vid in completions:
-            on_query_info = completions[vid]
-            add_word_completions, text_in_current_line, lang = on_query_info["params"]
 
+            on_query_info = completions[vid]
+            completion_type, add_word_completions, text_in_current_line, lang = on_query_info["params"]
             cplns = on_query_info["cplns"]
             del completions[vid]
 
-            if cplns is not None:
-                _completions = format_completions_by_language(cplns, lang, text_in_current_line)
+            if completion_type == "cplns":
+                if cplns is not None:
+                    _completions = format_completions_by_language(cplns, lang, text_in_current_line)
 
-            if add_word_completions in ["buffer", "all"]:
-                wordsFromBuffer = WordCompletionsFromBuffer()
-                word_completions = wordsFromBuffer.getCompletions(view, prefix, locations, add_word_completions)
-                _completions = list(_completions + word_completions)
+                if add_word_completions in ["buffer", "all"]:
+                    wordsFromBuffer = WordCompletionsFromBuffer()
+                    word_completions = wordsFromBuffer.getCompletions(view, prefix, locations, add_word_completions)
+                    _completions = list(_completions + word_completions)
 
         ##add sublime completions to the mix / not recomended
         sublime_word_completions = False
