@@ -324,10 +324,35 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                             lang, TRG_FORM_CPLN, "namespace-members",
                             pos, implicit)
 
-            elif last_style == self.variable_style or \
-                    (not implicit and last_char == "$"):
+            elif last_style == self.variable_style or (not implicit and last_char == "$"):
                 if DEBUG:
                     print("Variable style")
+
+                if prev_char == ":":
+                    if not prev_char == ":":
+                        return None
+                    ac.setCacheFetchSize(10)
+                    p, c, style = ac.getPrecedingPosCharStyle(
+                        prev_style, self.comment_styles)
+                    if DEBUG:
+                        print("Preceding: %d, %r, %d" % (p, c, style))
+                    if style is None:
+                        return None
+                    elif style == self.keyword_style:
+                        # Check if it's a "self::" or "parent::" expression
+                        p, text = ac.getTextBackWithStyle(self.keyword_style,
+                                                          # Ensure we don't go
+                                                          # too far
+                                                          max_text_len=6)
+                        if DEBUG:
+                            print("Keyword text: %d, %r" % (p, text))
+                            ac.dump()
+                        print(text)
+                        #if text not in ("parent", "self", "static"):
+                        #    return None
+                    return Trigger(lang, TRG_FORM_CPLN, "static-members",
+                                   pos, implicit)
+
                 # Completion for variables (builtins and user defined variables),
                 # must occur after a "$" character.
                 if not implicit and last_char == '$':
@@ -635,6 +660,11 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
             buf.mgr.request_eval(evalr)
 
         else:
+            if trg.type == "static-members":
+                if buf.accessor.char_at_pos(trg.pos-1) == "$":
+                    #adjust trigger position so that static properties
+                    #with leading "$" will scatter the citdl_expr
+                    trg.pos -= 1
             try:
                 citdl_expr = self.citdl_expr_from_trg(buf, trg)
             except CodeIntelError as ex:

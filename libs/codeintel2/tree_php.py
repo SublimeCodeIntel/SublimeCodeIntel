@@ -303,6 +303,24 @@ class PHPTreeEvaluator(TreeEvaluator):
                 if namespace and namespace.startswith("\\"):
                     cplns.append((ilk, namespace.strip("\\")))
             return cplns
+        elif trg.type == "static-members":
+            ##same as else / except for static::$propertys
+            print("TRY FROM HERE")
+            print(str(self.expr))
+            hit = self._hit_from_citdl(self.expr, start_scope)
+            if hit[0] is not None:
+                self.log("self.expr: %r", self.expr)
+                # special handling for parent, explicitly set the
+                # protected and private member access for this case
+                if self.expr == "parent" or \
+                   self.expr.startswith("parent."):
+                    self.log("Allowing protected parent members")
+                    return list(
+                        self._members_from_hit(hit, allowProtected=True,
+                                               allowPrivate=False))
+                else:
+                    return list(self._members_from_hit(hit))
+
         else:
             hit = self._hit_from_citdl(self.expr, start_scope)
             if hit[0] is not None:
@@ -779,6 +797,7 @@ class PHPTreeEvaluator(TreeEvaluator):
                     # Static variables use the '$' prefix, constants do not.
                     if "static" in attributes:
                         name_prefix = '$'
+                        child.tag = "static property"
                     elif child.get("ilk") != "constant":
                         continue
                 elif "static" in attributes:
