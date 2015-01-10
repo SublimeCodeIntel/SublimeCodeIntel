@@ -439,23 +439,27 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
             def _trigger(trigger, citdl_expr, calltips, cplns=None):
                 global cplns_were_empty, last_trigger_name, last_citdl_expr, cpln_stop_chars
 
-                add_word_completions = True#make it a config!
+                add_word_completions = settings_manager.get("codeintel_word_completions", language=lang)
 
 
                 if cplns is not None or calltips is not None:
                     codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
 
 
+                #under certain circumstances we have to close before reopening the currently open completions-panel
+
                 #completions are available now, but were empty on last round,
                 #we have to close and reopen the completions tab to show them
                 if cplns_were_empty and cplns is not None:
                     view.run_command('hide_auto_complete')
 
+                #citdl_expr changed, so might the completions!
                 if not citdl_expr or not last_citdl_expr:
                     if not (not citdl_expr and not last_citdl_expr):
                         log.debug("hiding automplete-panel, b/c CITDL_EXPR CHANGED: FROM %r TO %r" % (last_citdl_expr, citdl_expr))
                         view.run_command('hide_auto_complete')
 
+                #the trigger changed, so will the completions!
                 if (trigger is None and last_trigger_name is not None) or last_trigger_name != (trigger.name if trigger else None):
                     log.debug("hiding automplete-panel, b/c trigger changed: FROM %r TO %r " % (last_trigger_name, (trigger.name if trigger else 'None') ))
                     view.run_command('hide_auto_complete')
@@ -468,18 +472,18 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                     log.debug("current triggername: %r" % trigger.name)
                     if trigger.name in ["php-complete-static-members", "python3-complete-object-members"]:
                         api_completions_only = True
-                        add_word_completions = False
+                        add_word_completions = "None"
 
                 last_trigger_name = trigger.name if trigger else None
                 last_citdl_expr = citdl_expr
 
 
-                if cplns is not None:
-                    on_query_info = {}
-                    on_query_info["params"] = (add_word_completions, text_in_current_line, lang)
-                    on_query_info["cplns"] = cplns
+                #if cplns is not None:
+                on_query_info = {}
+                on_query_info["params"] = (add_word_completions, text_in_current_line, lang)
+                on_query_info["cplns"] = cplns
 
-                    completions[vid] = on_query_info
+                completions[vid] = on_query_info
 
 
 
@@ -1038,22 +1042,30 @@ def get_revision(path=None):
 
 
 
-
+#thanks to https://github.com/alienhard
+#and his SublimeAllAutocomplete
 class WordCompletionsFromBuffer():
     # limits to prevent bogging down the system
     MIN_WORD_SIZE = 3
     MAX_WORD_SIZE = 50
 
+    MAX_VIEWS = 20
     MAX_WORDS_PER_VIEW = 500
     MAX_FIX_TIME_SECS_PER_VIEW = 0.01
 
-    def getCompletions(self, view, prefix, locations):
+    def getCompletions(self, view, prefix, locations, add_word_completions):
         #words from buffer
         words = []
-        view_words = view.extract_completions(prefix, locations[0])
-        view_words = self.filter_words(view_words)
-        view_words = self.fix_truncation(view, view_words)
-        words += view_words
+        if add_word_completions == "buffer":
+            words = view.extract_completions(prefix, locations[0])
+        if add_word_completions == "all":
+            views = sublime.active_window().views()
+            views = views[0:self.MAX_VIEWS]
+            for v in views:
+                words += v.extract_completions(prefix)
+
+        words = self.filter_words(words)
+        words = self.fix_truncation(view, words)
         words = self.without_duplicates(words)
         matches = [(w, w.replace('$', '\\$')) for w in words]
 
@@ -1124,11 +1136,12 @@ class SettingsManager():
         'codeintel_enabled_languages',
         #'codeintel_live_enabled_languages',
         'codeintel_syntax_map',
-        'sublime_auto_complete'
+        #'sublime_auto_complete'
     ]
 
     #these settings can be overriden "per language"
     OVERRIDE_SETTINGS = [
+        'codeintel_word_completions',
         'codeintel_language_settings',
         'codeintel_live',
         'codeintel_max_recursive_dir_depth',
@@ -1356,28 +1369,21 @@ class PythonCodeIntel(sublime_plugin.EventListener):
     def on_query_completions(self, view, prefix, locations):
         vid = view.id()
 
-        add_word_completions = True
-
-
         _completions = []
         if vid in completions:
             on_query_info = completions[vid]
+            add_word_completions, text_in_current_line, lang = on_query_info["params"]
 
             cplns = on_query_info["cplns"]
             del completions[vid]
 
-            add_word_completions, text_in_current_line, lang = on_query_info["params"]
+            if cplns is not None:
+                _completions = format_completions_by_language(cplns, lang, text_in_current_line)
 
-            _completions = sorted( format_completions_by_language(cplns, lang, text_in_current_line), key=lambda o: o[1] )
-
-
-
-        if add_word_completions:
-            wordsFromBuffer = WordCompletionsFromBuffer()
-            word_completions = wordsFromBuffer.getCompletions(view, prefix, locations)
-            all_completions = list(_completions + word_completions)
-        else:
-            all_completions = _completions
+            if add_word_completions in ["buffer", "all"]:
+                wordsFromBuffer = WordCompletionsFromBuffer()
+                word_completions = wordsFromBuffer.getCompletions(view, prefix, locations, add_word_completions)
+                _completions = list(_completions + word_completions)
 
         ##add sublime completions to the mix / not recomended
         sublime_word_completions = False
@@ -1386,14 +1392,9 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         word_completions = 0 if sublime_word_completions and len(prefix) != 0 else sublime.INHIBIT_WORD_COMPLETIONS;
         explicit_completions = 0 if sublime_explicit_completions else sublime.INHIBIT_EXPLICIT_COMPLETIONS;
 
-        #if len(_completions) > 0:
-            #return _completions
-        return (all_completions, word_completions | explicit_completions)
-        #else:
-        #    #print(str(len(completions))+",".join(completions.keys()))
-        #    pass
+        #is the sorting actually doing anything??
+        return (sorted(_completions, key=lambda o: o[1], reverse=False), word_completions | explicit_completions)
 
-        #return ([], word_completions | explicit_completions)
 
 
 class CodeIntelAutoComplete(sublime_plugin.TextCommand):
