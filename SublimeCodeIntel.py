@@ -453,11 +453,11 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
 
                 if not citdl_expr or not last_citdl_expr:
                     if not (not citdl_expr and not last_citdl_expr):
-                        print("\n"+"HIDING, b/c CITDL_EXPR CHANGED: FROM "+str(last_citdl_expr)+" TO "+str(citdl_expr)+"\n")
+                        log.debug("hiding automplete-panel, b/c CITDL_EXPR CHANGED: FROM %r TO %r" % (last_citdl_expr, citdl_expr))
                         view.run_command('hide_auto_complete')
 
                 if (trigger is None and last_trigger_name is not None) or last_trigger_name != (trigger.name if trigger else None):
-                    print("\n"+"HIDING, b/c TRIGGER CHANGED: FROM "+str(last_trigger_name)+" TO "+str(trigger.name if trigger else 'None')+"\n")
+                    log.debug("hiding automplete-panel, b/c trigger changed: FROM %r TO %r " % (last_trigger_name, (trigger.name if trigger else 'None') ))
                     view.run_command('hide_auto_complete')
 
                 ## cpln_stop_chars could be implemented here ?
@@ -465,7 +465,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
 
                 api_completions_only = False
                 if trigger:
-                    print("CURRENT TRIGGERNAME: "+str(trigger.name ))
+                    log.debug("current triggername: %r" % trigger.name)
                     if trigger.name in ["php-complete-static-members", "python3-complete-object-members"]:
                         api_completions_only = True
                         add_word_completions = False
@@ -474,14 +474,13 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                 last_citdl_expr = citdl_expr
 
 
-
-
                 if cplns is not None:
                     on_query_info = {}
-                    on_query_info["params"] = (add_word_completions, text_in_current_line)
+                    on_query_info["params"] = (add_word_completions, text_in_current_line, lang)
                     on_query_info["cplns"] = cplns
 
                     completions[vid] = on_query_info
+
 
 
 
@@ -1259,6 +1258,16 @@ def codeintel_enabled(view, default=None):
     return view.settings().get('codeintel', default)
 
 
+def format_completions_by_language(cplns, language, text_in_current_line):
+    function = None if 'import ' in text_in_current_line else 'function'
+    if language == "PHP":
+        return [('%s〔%s〕' % (('$' if t == 'variable' else '')+n, t), (('$' if t == 'variable' else '')+n).replace("$","\\$") + ('($0)' if t == function else '')) for t, n in cplns]
+    else:
+        return [('%s〔%s〕' % (n, t), (n).replace("$","\\$") + ('($0)' if t == function else '')) for t, n in cplns]
+
+
+
+
 class PythonCodeIntel(sublime_plugin.EventListener):
     def on_close(self, view):
         vid = view.id()
@@ -1357,15 +1366,9 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             cplns = on_query_info["cplns"]
             del completions[vid]
 
-            add_word_completions, text_in_current_line = on_query_info["params"]
+            add_word_completions, text_in_current_line, lang = on_query_info["params"]
 
-
-            function = None if 'import ' in text_in_current_line else 'function'
-            _completions = sorted(
-                [('%s〔%s〕' % (('$' if t == 'variable' else '')+n, t), (('$' if t == 'variable' else '')+n).replace("$","\\$") + ('($0)' if t == function else '')) for t, n in cplns],
-                key=lambda o: o[1]
-            )
-
+            _completions = sorted( format_completions_by_language(cplns, lang, text_in_current_line), key=lambda o: o[1] )
 
 
 
