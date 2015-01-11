@@ -1096,14 +1096,14 @@ class PerlLangIntel(CitadelLangIntel,
 
         return perl_ver, config_dirs, import_path
 
-    def _extra_dirs_from_env(self, env):
-        extra_dirs = set()
-        for pref in env.get_all_prefs("perlExtraPaths"):
-            if not pref:
-                continue
-            extra_dirs.update(d.strip() for d in pref.split(os.pathsep)
-                              if exists(d.strip()))
-        return tuple(extra_dirs)
+    #def _extra_dirs_from_env(self, env):
+    #    extra_dirs = set()
+    #    for pref in env.get_all_prefs("perlExtraPaths"):
+    #        if not pref:
+    #            continue
+    #        extra_dirs.update(d.strip() for d in pref.split(os.pathsep)
+    #                          if exists(d.strip()))
+    #    return tuple(extra_dirs)
 
     def _buf_indep_libs_from_env(self, env):
         """Create the buffer-independent list of libs."""
