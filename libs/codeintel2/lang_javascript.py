@@ -150,40 +150,36 @@ class JavaScriptLexer(Lexer):
             SilverCity.WordList()
         ]
 
-
 class PureJavaScriptStyleClassifier:
     def __init__(self):
         self.is_udl = False
-        self.operator_style = SCE_C_OPERATOR
+        self.operator_style   = SCE_C_OPERATOR
         self.identifier_style = SCE_C_IDENTIFIER
-        self.keyword_style = SCE_C_WORD
-        self.comment_styles = (SCE_C_COMMENT,
-                               SCE_C_COMMENTDOC,
-                               SCE_C_COMMENTLINE,
-                               SCE_C_COMMENTLINEDOC,
-                               SCE_C_COMMENTDOCKEYWORD,
-                               SCE_C_COMMENTDOCKEYWORDERROR)
-        self.string_styles = (
-            SCE_C_STRING, SCE_C_CHARACTER, SCE_C_STRINGEOL)
+        self.keyword_style    = SCE_C_WORD
+        self.comment_styles   = (SCE_C_COMMENT,
+                                 SCE_C_COMMENTDOC,
+                                 SCE_C_COMMENTLINE,
+                                 SCE_C_COMMENTLINEDOC,
+                                 SCE_C_COMMENTDOCKEYWORD,
+                                 SCE_C_COMMENTDOCKEYWORDERROR)
+        self.string_styles    = (SCE_C_STRING, SCE_C_CHARACTER, SCE_C_STRINGEOL)
         self.whitespace_style = SCE_C_DEFAULT
-        self.ignore_styles = self.comment_styles + (self.whitespace_style, )
-
+        self.ignore_styles    = self.comment_styles + (self.whitespace_style, )
 
 class UDLJavaScriptStyleClassifier:
     def __init__(self):
         self.is_udl = True
-        self.operator_style = SCE_UDL_CSL_OPERATOR
+        self.operator_style   = SCE_UDL_CSL_OPERATOR
         self.identifier_style = SCE_UDL_CSL_IDENTIFIER
-        self.keyword_style = SCE_UDL_CSL_WORD
-        self.comment_styles = (SCE_UDL_CSL_COMMENT,
-                               SCE_UDL_CSL_COMMENTBLOCK,)
-        self.string_styles = (SCE_UDL_CSL_STRING, )
+        self.keyword_style    = SCE_UDL_CSL_WORD
+        self.comment_styles   = (SCE_UDL_CSL_COMMENT,
+                                 SCE_UDL_CSL_COMMENTBLOCK,)
+        self.string_styles    = (SCE_UDL_CSL_STRING, )
         self.whitespace_style = SCE_UDL_CSL_DEFAULT
-        self.ignore_styles = self.comment_styles + (self.whitespace_style, )
+        self.ignore_styles    = self.comment_styles + (self.whitespace_style, )
 
 pureJSClassifier = PureJavaScriptStyleClassifier()
 udlJSClassifier = UDLJavaScriptStyleClassifier()
-
 
 class JavaScriptLangIntel(CitadelLangIntel,
                           ParenStyleCalltipIntelMixin,
@@ -426,10 +422,9 @@ class JavaScriptLangIntel(CitadelLangIntel,
                                 # explicit can be longer than 3-chars, skip over
                                 # the rest of the word/identifier.
                                 ac = AccessorCache(accessor, p)
-                                p, ch, style = ac.getPrecedingPosCharStyle(
-                                    last_style,
-                                    jsClassifier.ignore_styles,
-                                    max_look_back=80)
+                                p, ch, style = ac.getPrecedingPosCharStyle(last_style,
+                                                    jsClassifier.ignore_styles,
+                                                    max_look_back=80)
 
                         # Now we know that we are three identifier characters
                         # preceeded by something different, which is not that
@@ -443,8 +438,8 @@ class JavaScriptLangIntel(CitadelLangIntel,
                             if ac is None:
                                 ac = AccessorCache(accessor, p)
                             p, ch, style = ac.getPrecedingPosCharStyle(style,
-                                                                       jsClassifier.ignore_styles,
-                                                                       max_look_back=80)
+                                                jsClassifier.ignore_styles,
+                                                max_look_back=80)
                         if style is not None:
                             ch = accessor.char_at_pos(p)
                             if ch == ".":
@@ -874,16 +869,6 @@ class JavaScriptBuffer(CitadelBuffer):
     sce_prefixes = ["SCE_C_"]
 
     cb_show_if_empty = True
-
-    def __init__(self, *args, **kwargs):
-        CitadelBuffer.__init__(self, *args, **kwargs)
-
-        if isinstance(self.accessor, KoDocumentAccessor):
-            # Encourage the database to pre-scan dirs relevant to completion
-            # for this buffer -- because of recursive-dir-include-everything
-            # semantics for JavaScript this first-time scan can take a while.
-            request = PreloadBufLibsRequest(self)
-            self.mgr.idxr.stage_request(request, 1.0)
 
     @property
     def libs(self):
@@ -3227,17 +3212,32 @@ class JavaScriptCiler:
                 p += 1
             args, p = self._getArgumentsFromPos(styles, text, p)
             return (TYPE_FUNCTION, [], args, p)
-        else:
-            typeNames, p, isAlias = self._getVariableType(
-                styles, text, p, assignmentChar)
-            if len(namelist) > 2 and namelist[-2:] == ["prototype", "constructor"]:
-                # Foo.prototype.constructor = bar; don't treat as an alias
-                pass
-            elif isAlias and typeNames != namelist:
-                log.debug("_getVariableDetail: %r is an alias to %r",
-                          namelist, typeNames)
-                return (TYPE_ALIAS, typeNames, None, p)
-            return (TYPE_VARIABLE, typeNames, None, p)
+
+        if "=>" in text[p:]:
+            # Check for ES6 fat arrow function
+            # Example: var f = (arg1, arg2) => { body }
+            #          var g = arg_only => expr
+
+            arrow_index = text.index("=>")
+            maybe_args = text[p + 1:arrow_index]
+            if maybe_args[0] == "(" and maybe_args[-1] == ")":
+                # Maybe have args...
+                args, new_p = self._getArgumentsFromPos(styles, text, p + 1)
+                if args is not None:
+                    return (TYPE_FUNCTION, [], args, arrow_index)
+            elif arrow_index == p + 2 and styles[p+1] == self.JS_IDENTIFIER:
+                # single argument
+                return (TYPE_FUNCTION, [], [text[p+1]], arrow_index)
+
+        typeNames, p, isAlias = self._getVariableType(styles, text, p, assignmentChar)
+        if len(namelist) > 2 and namelist[-2:] == ["prototype", "constructor"]:
+            # Foo.prototype.constructor = bar; don't treat as an alias
+            pass
+        elif isAlias and typeNames != namelist:
+            log.debug("_getVariableDetail: %r is an alias to %r",
+                      namelist, typeNames)
+            return (TYPE_ALIAS, typeNames, None, p)
+        return (TYPE_VARIABLE, typeNames, None, p)
 
     def _variableHandler(self, lineno, styles, text, p, namelist,
                          allowedAssignmentChars="=",
@@ -4143,9 +4143,17 @@ class JavaScriptCiler:
                                 "Entering state %d, line: %d, col: %d", self.state, start_line, start_column)
                         elif isinstance(self.lastScope, JSFunction) and self.text[-3:] == ['{', '(', ')']:
                             # It's a function argument closure.
-                            self.lastScope = self._convertFunctionToClosureVariable(
-                                self.lastScope)
-                    # elif op == "=":
+                            self.lastScope = self._convertFunctionToClosureVariable(self.lastScope)
+                    elif op == "=":
+                        try:
+                            next_ch = text[next_op_index]
+                        except IndexError:
+                            continue
+                        if next_ch == ">":
+                            # ES6, => fat arrow function
+                            self.text[-1] = "=>"
+                            next_op_index += 1
+                    #elif op == "=":
                     #    if text == op:
                     #        log.debug("Entering S_IN_ASSIGNMENT state, line: %d, col: %d", start_line, start_column)
                     #        self.state = S_IN_ASSIGNMENT
