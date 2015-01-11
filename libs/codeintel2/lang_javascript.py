@@ -4108,7 +4108,10 @@ class JavaScriptCiler:
                         return
                 # log.debug("token_next: line %d, %r, text: %r" % (self.lineno,
                 # text, self.text))
-                for op in text:
+                next_op_index = 0
+                while next_op_index < len(text):
+                    op = text[next_op_index]
+                    next_op_index += 1
                     self.styles.append(style)
                     self.text.append(op)
                     # if self.state == S_OBJECT_ARGUMENT:
@@ -4117,10 +4120,8 @@ class JavaScriptCiler:
                     if op == "(":
                         if self.bracket_depth == 0:
                             # We can start defining arguments now
-                            log.debug(
-                                "Entering S_IN_ARGS state, line: %d, col: %d", start_line, start_column)
-                            newscope = self._findScopeFromContext(
-                                self.styles, self.text)
+                            log.debug("Entering S_IN_ARGS state, line: %d, col: %d", start_line, start_column)
+                            newscope = self._findScopeFromContext(self.styles, self.text)
                             self._pushAndSetState(S_IN_ARGS)
                             if newscope and self.currentScope != newscope:
                                 log.debug("Adjusting scope to: %r %r",
@@ -4139,8 +4140,7 @@ class JavaScriptCiler:
                             self._popPreviousState(keep_style_and_text=True)
                             if self.state != S_IN_ARGS and last_state == S_IN_ARGS:
                                 self._handleFunctionWithArguments()
-                            log.debug(
-                                "Entering state %d, line: %d, col: %d", self.state, start_line, start_column)
+                            log.debug("Entering state %d, line: %d, col: %d", self.state, start_line, start_column)
                         elif isinstance(self.lastScope, JSFunction) and self.text[-3:] == ['{', '(', ')']:
                             # It's a function argument closure.
                             self.lastScope = self._convertFunctionToClosureVariable(self.lastScope)

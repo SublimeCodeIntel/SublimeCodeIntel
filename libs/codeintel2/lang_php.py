@@ -1090,7 +1090,7 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
         cache_key = "php-libs"
         if cache_key not in env.cache:
             env.add_pref_observer("php", self._invalidate_cache)
-            env.add_pref_observer("phpExtraPaths",
+            env.add_pref_observer("codeintel_scan_extra_dir",
                                   self._invalidate_cache_and_rescan_extra_dirs)
             env.add_pref_observer("phpConfigFile",
                                   self._invalidate_cache)
