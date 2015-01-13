@@ -59,6 +59,7 @@ Configuration files (`~/.codeintel/config' or `project_root/.codeintel/config').
         }
     }
 """
+from __future__ import print_function, unicode_literals
 
 VERSION = "3.0.1"
 
@@ -73,7 +74,13 @@ import sublime
 import sublime_plugin
 import threading
 import logging
-from io import StringIO
+
+try:
+    from io import StringIO
+    string_types = str
+except ImportError:
+    from cStringIO import StringIO
+    string_types = basestring
 
 
 CODEINTEL_HOME_DIR = os.path.expanduser(os.path.join('~', '.codeintel'))
@@ -801,7 +808,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
             config["codeintel_scan_extra_dir"] = scan_extra_dir
 
             for conf, p in config.items():
-                if isinstance(p, str) and p.startswith('~'):
+                if isinstance(p, string_types) and p.startswith('~'):
                     config[conf] = os.path.expanduser(p)
 
             # Setup environment variables
