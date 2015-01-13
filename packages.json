@@ -1,26 +1,23 @@
 {
-    "schema_version": "2.0",
+    "schema_version": "3.0.0",
     "packages": [
         {
             "name": "SublimeCodeIntel",
-            "description": "Full-featured code intelligence and smart autocomplete engine",
-            "author": "German M. Bravo (Kronuz)",
             "details": "https://github.com/SublimeCodeIntel/SublimeCodeIntel",
+            "description": "Full-featured code intelligence and smart autocomplete engine",
             "homepage": "http://sublimecodeintel.github.io/SublimeCodeIntel/",
+            "author": "German M. Bravo (Kronuz)",
             "readme": "https://raw.github.com/SublimeCodeIntel/SublimeCodeIntel/master/README.rst",
-            "issues": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/issues",
             "donate": "http://sublimecodeintel.github.io/SublimeCodeIntel/donate.html",
             "labels": ["auto-complete", "code navigation", "snippets"],
             "releases": [
                 {
-                    "platforms": "*",
                     "sublime_text": "<3000",
                     "version": "2.1.0",
                     "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.1.0.zip",
                     "date": "2015-01-13 00:00:00"
                 },
                 {
-                    "platforms": "*",
                     "sublime_text": ">=3000",
                     "version": "2.1.0+st3",
                     "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.1.0+st3.zip",
