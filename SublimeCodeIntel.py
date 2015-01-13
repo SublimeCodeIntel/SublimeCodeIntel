@@ -543,7 +543,7 @@ def codeintel_callbacks(force=False):
     global _ci_next_savedb_, _ci_next_cullmem_
     __lock_.acquire()
     try:
-        views = QUEUE.values()
+        views = list(QUEUE.values())
         QUEUE.clear()
     finally:
         __lock_.release()
@@ -552,7 +552,7 @@ def codeintel_callbacks(force=False):
             callback(view, *args, **kwargs)
         sublime.set_timeout(_callback, 0)
     # saving and culling cached parts of the database:
-    for folders_id in _ci_mgr_.keys():
+    for folders_id in list(_ci_mgr_.keys()):
         mgr = codeintel_manager(folders_id)
         now = time.time()
         if now >= _ci_next_savedb_ or force:
