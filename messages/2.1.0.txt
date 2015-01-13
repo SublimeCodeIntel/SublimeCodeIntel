@@ -1,0 +1,49 @@
+SublimeCodeIntel v2.1.0 Release Notes
+=====================================
+I'd like to extend a big thank you to wizza-smile for his hard work towards
+improving SublimeCodeIntel, without his help this realease wouldn't have been
+possible.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!! HELP WANTED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  Maintaining this project is hard, I do it in my spare time, but I'm
+  alone. If anyone is interested in contributing, please contact me. I
+  really need much more help maintaining SublimeCodeIntel.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[Restart Sublime Text after reading this. In case of trouble, please read the Troubleshooting section in the README]
+
+A full-featured code intelligence and smart autocomplete engine for Sublime Text.
+(Code intelligence plugin ported from Open Komodo Editor to Sublime Text)
+
+If you like SublimeCodeIntel, please make a donation: http://sublimecodeintel.github.io/SublimeCodeIntel/donate.html
+
+
+For more information:
+---------------------
+Please take the time to read the documentation:
+
+* Online - http://sublimecodeintel.github.io/SublimeCodeIntel/
+
+
+CHANGES/FIXES
+-------------
+
++ New settings concept. Settings can now be defined in *.sublime-project file
+
++ Define the directory, where your projects codeintel database should reside (new setting "codeintel_database_dir")
+
++ Sublime style word completions from buffer (new setting "codeintel_word_completions" possible values: "buffer", "all" or "none")
+
++ cCmpletions are now showing user-defined snippets (the way its supposed to be, isnt it?)
+
++ PHP local variables support
+
++ PHP static variables support
+
++ PHP completions from HTML embedded blocks
+
++ Fix the "codeintel_scan_exclude_dir" setting (it was doing nothing at all so far!)
+
++ Improved speed for PHP completions dramatically by fixing the number of import libs
+
++ No longer crashes when saving settings file
