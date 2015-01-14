@@ -108,6 +108,11 @@
     "codeintel_selected_catalogs": [],
 
     /*
+        When editing within a defined scope, no live completion will trigger. ex: ["comment"]
+     */
+    "codeintel_exclude_scopes_from_complete_triggers": ["comment"],
+
+    /*
        Defines a configuration for each language.
     */
     "codeintel_language_settings": {
