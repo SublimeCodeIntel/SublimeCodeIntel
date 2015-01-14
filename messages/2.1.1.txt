@@ -1,0 +1,40 @@
+SublimeCodeIntel v2.1.1 Release Notes
+=====================================
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! HELP WANTED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!    Maintaining this project is hard, I do it in my spare time, but I'm     !!
+!!    basically all alone. If anyone is interested in contributing, please    !!
+!!    contact me. I really need much more help maintaining SublimeCodeIntel   !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+I'd like to continue extending a big THANK YOU to wizza-smile for his hard work
+towards improving SublimeCodeIntel, without his help this realease wouldn't have
+been possible.
+
+** Restart Sublime Text after reading this **
+
+In case of trouble, please read the Troubleshooting section in the README.
+
+A full-featured code intelligence and smart autocomplete engine for Sublime Text.
+(Code intelligence plugin ported from Open Komodo Editor to Sublime Text)
+
+If you like SublimeCodeIntel, please make a donation: http://sublimecodeintel.github.io/SublimeCodeIntel/donate.html
+
+
+For more information:
+---------------------
+Please take the time to read the documentation:
+
+* Online - http://sublimecodeintel.github.io/SublimeCodeIntel/
+
+
+CHANGES/FIXES
+-------------
+
++ Currently, this version features all the new great enhancements by
+  wizza-smile which he is currently working on, in his own fork of
+  SublimeCodeIntel: SublimeCodeIntel3 at https://github.com/wizza-smile/SublimeCodeIntel3
+
++ Sublime Text 2 compatibility fixed.
+
++ Fix the "codeintel_scan_exclude_dir" setting (it was doing nothing at all so far!).
