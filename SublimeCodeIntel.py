@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -69,11 +70,17 @@ import sys
 import stat
 import time
 import datetime
-import collections
+from collections import deque
 import sublime
 import sublime_plugin
 import threading
 import logging
+import json
+
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 
 try:
     from io import StringIO
@@ -167,7 +174,7 @@ status_lineno = {}
 status_lock = threading.Lock()
 
 HISTORY_SIZE = 64
-# map of window id -> collections.deque([], HISTORY_SIZE)
+# map of window id -> deque([], HISTORY_SIZE)
 jump_history_by_window = {}
 
 
@@ -381,7 +388,7 @@ def guess_lang(view=None, path=None, sublime_scope=None):
     }
 
     # order is important - longest keys first
-    ordered_checks = collections.OrderedDict(
+    ordered_checks = OrderedDict(
         sorted(source_scopes.items(), key=lambda t: len(t[0]), reverse=True))
 
     scopes = sublime_scope if sublime_scope else getSublimeScope(view)
@@ -792,6 +799,9 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     # FIXME: it's like this for backward compatibility (<= 2060)
     folders = getattr(view.window(), 'folders', lambda: [])()
 
+    # load settings for this language
+    config = settings_manager.getSettings(lang)
+
     def _codeintel_scan():
         global despair, despaired
         env = None
@@ -825,9 +835,6 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                     log.debug(msg)
                     codeintel_log.warning(msg)
                 valid = False
-
-            # load settings for this language
-            config = settings_manager.getSettings(lang)
 
             codeintel_selected_catalogs = config.get(
                 'codeintel_selected_catalogs')
@@ -1237,6 +1244,69 @@ class SettingsManager():
         self.sublime_auto_complete = sublime_settings_file.get('auto_complete')
         # sublime.message_dialog(str(self.sublime_auto_complete))
 
+    def project_data(self):
+        """
+        ST2/ST3-compatible wrapper for getting the project data for a window as a dictionary, made possible with
+        titoBouzout's getProjectFile method in SideBarEnhancements (refactored to project_data)
+        """
+        window = sublime.active_window()
+        if not window:
+            return None
+        if hasattr(window, 'project_data'):
+            return window.project_data()
+        # get the project file, returning None if it doesn't exist, just like ST3's get_project_file()
+        projectFileName = self.project_file_name()
+        if projectFileName is None:
+            return None
+        # read the project json file
+        data = file(projectFileName, 'r').read()
+        data = data.replace('\t', ' ')
+        return json.loads(data, strict=False)
+
+    def project_file_name(self):
+        """
+        ST2/ST3-compatible wrapper for getting the project file for a window, made possible with
+        titoBouzout's getProjectFile method in SideBarEnhancements (refactored to project_file_name)
+        """
+        window = sublime.active_window()
+        if not window:
+            return None
+        if hasattr(window, 'project_file_name'):
+            return window.project_file_name()
+        if not window.folders():
+            return None
+        data = file(os.path.normpath(os.path.join(sublime.packages_path(), '..', 'Settings', 'Session.sublime_session')), 'r').read()
+        data = data.replace('\t', ' ')
+        data = json.loads(data, strict=False)
+        projects = data['workspaces']['recent_workspaces']
+
+        if os.path.lexists(os.path.join(sublime.packages_path(), '..', 'Settings', 'Auto Save Session.sublime_session')):
+            data = file(os.path.normpath(os.path.join(sublime.packages_path(), '..', 'Settings', 'Auto Save Session.sublime_session')), 'r').read()
+            data = data.replace('\t', ' ')
+            data = json.loads(data, strict=False)
+            if hasattr(data, 'workspaces') and hasattr(data['workspaces'], 'recent_workspaces') and data['workspaces']['recent_workspaces']:
+                projects += data['workspaces']['recent_workspaces']
+            projects = list(set(projects))
+        for project_file in projects:
+            project_file = re.sub(r'^/([^/])/', '\\1:/', project_file)
+            project_json = json.loads(file(project_file, 'r').read(), strict=False)
+            if 'folders' in project_json:
+                folders = project_json['folders']
+                found_all = True
+                for directory in window.folders():
+                    found = False
+                    for folder in folders:
+                        folder_path = re.sub(r'^/([^/])/', '\\1:/', folder['path'])
+                        if folder_path == directory.replace('\\', '/'):
+                            found = True
+                            break
+                    if not found:
+                        found_all = False
+                        break
+            if found_all:
+                return project_file
+        return None
+
     def get(self, config_key, default=None, language=None):
         if language is not None:
             if language in self.language_settings:
@@ -1266,7 +1336,7 @@ class SettingsManager():
 
         # override basic plugin settings with settings from .sublime-project
         # file
-        project_file_content = sublime.active_window().project_data()
+        project_file_content = self.project_data()
         if project_file_content is not None and "codeintel_settings" in project_file_content:
             for setting_name in self.ALL_SETTINGS:
                 if setting_name in project_file_content["codeintel_settings"]:
@@ -1280,7 +1350,7 @@ class SettingsManager():
         self.needs_update = True
 
     def needsUpdate(self):
-        sublime_project_filename = sublime.active_window().project_file_name()
+        sublime_project_filename = self.project_file_name()
 
         if sublime_project_filename is not None:
             # check if project-file changed
@@ -1585,7 +1655,7 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                             window = sublime.active_window()
                             if window.id() not in jump_history_by_window:
                                 jump_history_by_window[
-                                    window.id()] = collections.deque([], HISTORY_SIZE)
+                                    window.id()] = deque([], HISTORY_SIZE)
                             jump_history = jump_history_by_window[window.id()]
 
                             # Save current position so we can return to it
