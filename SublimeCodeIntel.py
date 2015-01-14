@@ -193,7 +193,7 @@ def tooltip_popup(view, snippets):
     vid = view.id()
 
     on_query_info = {}
-    on_query_info["params"] = ("snippets", "none", "", None)
+    on_query_info["params"] = ("tooltips", "none", "", None, None)
     on_query_info["cplns"] = snippets
 
     completions[vid] = on_query_info
@@ -209,10 +209,11 @@ def tooltip_popup(view, snippets):
     sublime.set_timeout(open_auto_complete, 0)
 
 
-def tooltip(view, calltips, original_pos):
-    view_settings = view.settings()
-    codeintel_snippets = view_settings.get('codeintel_snippets', True)
-    codeintel_tooltips = view_settings.get('codeintel_tooltips', 'popup')
+def tooltip(view, calltips, original_pos, lang):
+    codeintel_snippets = settings_manager.get(
+        'codeintel_snippets', default=True, language=lang)
+    codeintel_tooltips = settings_manager.get(
+        'codeintel_tooltips', default='popup', language=lang)
 
     snippets = []
     for calltip in calltips:
@@ -245,7 +246,6 @@ def tooltip(view, calltips, original_pos):
             (('  ' if i > 0 else '') + l, snippet or '${0}') for i, l in enumerate(tip_info))
 
     if codeintel_tooltips == 'popup':
-
         tooltip_popup(view, snippets)
     elif codeintel_tooltips in ('status', 'panel'):
         if codeintel_tooltips == 'status':
@@ -490,7 +490,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                 if calltips and caller != "on_modified":
                     if trigger:
                         print("current triggername: %r" % trigger.name)
-                    tooltip(view, calltips, original_pos)
+                    tooltip(view, calltips, original_pos, lang)
                     return
 
                 # under certain circumstances we have to close before reopening
@@ -520,7 +520,15 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                 if trigger:
                     log.debug("current triggername: %r" % trigger.name)
                     print("current triggername: %r" % trigger.name)
-                    if trigger.name in ["php-complete-static-members", "python3-complete-object-members", "javascript-complete-object-members"]:
+                    api_cplns_only_trigger = [
+                        "php-complete-static-members",
+                        "php-complete-object-members",
+                        "python3-complete-module-members",
+                        "python3-complete-object-members",
+                        "python3-complete-available-imports",
+                        "javascript-complete-object-members"
+                    ]
+                    if trigger.name in api_cplns_only_trigger:
                         api_completions_only = True
                         add_word_completions = "None"
 
@@ -530,7 +538,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                 # if cplns is not None:
                 on_query_info = {}
                 on_query_info["params"] = (
-                    "cplns", add_word_completions, text_in_current_line, lang)
+                    "cplns", add_word_completions, text_in_current_line, lang, trigger)
                 on_query_info["cplns"] = cplns
 
                 completions[vid] = on_query_info
@@ -783,8 +791,6 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     vid = view.id()
     # FIXME: it's like this for backward compatibility (<= 2060)
     folders = getattr(view.window(), 'folders', lambda: [])()
-
-    # folders_id = str(hash(frozenset(folders)))
 
     def _codeintel_scan():
         global despair, despaired
@@ -1201,14 +1207,12 @@ class SettingsManager():
         'codeintel',
         'codeintel_database_dir',
         'codeintel_enabled_languages',
-        # 'codeintel_live_enabled_languages',
-        'codeintel_syntax_map',
-        # 'sublime_auto_complete'
+        'codeintel_syntax_map'
     ]
 
     # these settings can be overriden "per language"
     OVERRIDE_SETTINGS = [
-        'codeintel_word_completions',
+        'codeintel_exclude_scopes_from_complete_triggers',
         'codeintel_language_settings',
         'codeintel_live',
         'codeintel_max_recursive_dir_depth',
@@ -1216,7 +1220,8 @@ class SettingsManager():
         'codeintel_scan_files_in_project',
         'codeintel_selected_catalogs',
         'codeintel_snippets',
-        'codeintel_tooltips'
+        'codeintel_tooltips',
+        'codeintel_word_completions'
     ]
 
     def __init__(self):
@@ -1282,7 +1287,6 @@ class SettingsManager():
             projectfile_mtime = os.stat(
                 sublime_project_filename)[stat.ST_MTIME]
             if self.projectfile_mtime != projectfile_mtime:
-                print(sublime_project_filename)
                 self.needs_update = True
                 self.projectfile_mtime = projectfile_mtime
 
@@ -1302,7 +1306,6 @@ class SettingsManager():
             self.updateSettingsOnViews()
             self.generateSettingsId()
             self.updateLanguageSpecificSettings()
-            print(self.get("codeintel_database_dir"))
 
     def updateLanguageSpecificSettings(self):
         # store settings by language
@@ -1348,13 +1351,16 @@ def codeintel_enabled(view, default=None):
         # updates settings if necessary
         if settings_manager.getSettings():
             return True
-    return view.settings().get('codeintel', default)
+    return settings_manager.get('codeintel', default=default)
 
 
-def format_completions_by_language(cplns, language, text_in_current_line):
+def format_completions_by_language(cplns, language, text_in_current_line, trigger):
     function = None if 'import ' in text_in_current_line else 'function'
     if language == "PHP":
-        return [('%s〔%s〕' % (('$' if t == 'variable' else '') + n, t), (('$' if t == 'variable' else '') + n).replace("$", "\\$") + ('($0)' if t == function else '')) for t, n in cplns]
+        if not trigger or trigger.name != "php-complete-object-members":
+            return [('%s〔%s〕' % (('$' if t == 'variable' else '') + n, t), (('$' if t == 'variable' else '') + n).replace("$", "\\$") + ('($0)' if t == function else '')) for t, n in cplns]
+        else:
+            return [('%s〔%s〕' % (n, t), (n).replace("$", "\\$") + ('($0)' if t == function else '')) for t, n in cplns]
     else:
         return [('%s〔%s〕' % (n, t), (n).replace("$", "\\$") + ('($0)' if t == function else '')) for t, n in cplns]
 
@@ -1365,6 +1371,24 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         # possibly the project was changed
         settings_manager.update()
         # print(settings_manager.get("codeintel_database_dir"))
+
+    # rescan a buffer on_pre_save, if it is dirty
+    def on_pre_save(self, view):
+        if view.is_dirty():
+            try:
+                env = _ci_envs_[view.id()]
+            except KeyError:
+                return
+
+            lang = guess_lang(view)
+            path = view.file_name()
+            mtime = os.stat(path)[stat.ST_MTIME]
+
+            content = view.substr(sublime.Region(0, view.size()))
+            mgr = codeintel_manager()
+            buf = mgr.buf_from_content(
+                content, lang, env, path or "<Unsaved>", 'utf-8')
+            buf.scan(mtime=mtime, skip_scan_time_check=True)
 
     def on_close(self, view):
         vid = view.id()
@@ -1379,19 +1403,18 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         if not view_sel:
             return
 
-        settings_manager.update()
-
-        exclude_scopes = [
-            # "comment"
-        ]
-
         sublime_scope = getSublimeScope(view)
-        for exclude_scope in exclude_scopes:
-            if exclude_scope in sublime_scope:
-                return
 
         path = view.file_name()
         lang = guess_lang(view, path, sublime_scope)
+
+        settings_manager.update()
+        exclude_scopes = settings_manager.get(
+            "codeintel_exclude_scopes_from_complete_triggers", language=lang, default=[])
+
+        for exclude_scope in exclude_scopes:
+            if exclude_scope in sublime_scope:
+                return
 
         if not settings_manager.get('codeintel_live', default=True, language=lang):
             # restore the original sublime auto_complete settings from Preferences.sublime-settings file in User package
@@ -1464,7 +1487,6 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
         vid = view.id()
-        print("query_completions")
 
         # add sublime completions to the mix / not recomended
         sublime_word_completions = False
@@ -1478,25 +1500,36 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         if vid in completions:
 
             on_query_info = completions[vid]
-            completion_type, add_word_completions, text_in_current_line, lang = on_query_info[
+            completion_type, add_word_completions, text_in_current_line, lang, trigger = on_query_info[
                 "params"]
             cplns = on_query_info["cplns"]
             del completions[vid]
 
-            if completion_type == "snippets":
-                print(len(prefix))
-                print(str(cplns))
+            if completion_type == "tooltips":
                 return (cplns, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
             if completion_type == "cplns":
                 if cplns is not None:
                     _completions = format_completions_by_language(
-                        cplns, lang, text_in_current_line)
+                        cplns, lang, text_in_current_line, trigger)
 
                 if add_word_completions in ["buffer", "all"]:
-                    wordsFromBuffer = WordCompletionsFromBuffer()
-                    word_completions_from_buffer = wordsFromBuffer.getCompletions(
+                    wordsFromBufferMgr = WordCompletionsFromBuffer()
+                    word_completions_from_buffer = wordsFromBufferMgr.getCompletions(
                         view, prefix, locations, add_word_completions)
+                    if cplns is not None:
+                        # remove buffer completions that are already in
+                        # codeintel completions
+                        def extendForLanguages(n, lang):
+                            for i in n:
+                                yield i[1]
+                                if lang == "PHP":
+                                    yield "$" + i[1]
+                        cplns_list = [
+                            i for i in extendForLanguages(cplns, lang)]
+                        word_completions_from_buffer = [
+                            x for x in word_completions_from_buffer if x[0] not in cplns_list]
+
                     _completions = list(
                         _completions + word_completions_from_buffer)
 
