@@ -13,15 +13,15 @@
             "releases": [
                 {
                     "sublime_text": "<3000",
-                    "version": "2.1.0",
-                    "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.1.0.zip",
-                    "date": "2015-01-13 00:00:00"
+                    "version": "2.1.1",
+                    "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.1.1.zip",
+                    "date": "2015-01-14 00:00:00"
                 },
                 {
                     "sublime_text": ">=3000",
-                    "version": "2.1.0+st3",
-                    "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.1.0+st3.zip",
-                    "date": "2015-01-13 00:00:00"
+                    "version": "2.1.1+st3",
+                    "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v2.1.1+st3.zip",
+                    "date": "2015-01-14 00:00:00"
                 }
             ]
         }

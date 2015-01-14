@@ -149,25 +149,37 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 What's New
 ----------
 
+v2.1.1 (2015-01-14):
+
++ Currently, this version features all the new great enhancements by
+  `wizza-smile <https://github.com/wizza-smile>`_ which he is currently working
+  on, in his own fork of SublimeCodeIntel: SublimeCodeIntel3 at
+  https://github.com/wizza-smile/SublimeCodeIntel3
+
++ Sublime Text 2 compatibility fixed.
+
++ Fix the "codeintel_scan_exclude_dir" setting (it was doing nothing at all so far!).
+
+
 v2.1.0 (2015-01-13):
 
-+ New settings concept. Settings can now be defined in *.sublime-project file
++ New settings concept. Settings can now be defined in *.sublime-project file.
 
-+ Define the directory, where your projects codeintel database should reside (new setting "codeintel_database_dir")
++ Define the directory, where your projects codeintel database should reside
+  (new setting "codeintel_database_dir").
 
-+ Sublime style word completions from buffer (new setting "codeintel_word_completions" possible values: "buffer", "all" or "none")
++ Sublime style word completions from buffer (new setting
+  "codeintel_word_completions" possible values: "buffer", "all" or "none").
 
-+ cCmpletions are now showing user-defined snippets (the way its supposed to be, isnt it?)
++ Completions are now showing user-defined snippets.
 
-+ PHP local variables support
++ PHP local variables support.
 
-+ PHP static variables support
++ PHP static variables support.
 
-+ PHP completions from HTML embedded blocks
++ PHP completions from HTML embedded blocks.
 
-+ Fix the "codeintel_scan_exclude_dir" setting (it was doing nothing at all so far!)
-
-+ Improved speed for PHP completions dramatically by fixing the number of import libs
++ Improved speed for PHP completions dramatically by fixing the number of import libs.
 
 
 v2.0.6 (2013-09-21):
