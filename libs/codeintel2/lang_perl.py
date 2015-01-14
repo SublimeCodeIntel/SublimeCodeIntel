@@ -993,7 +993,7 @@ class PerlLangIntel(CitadelLangIntel,
             line = buf.accessor.line_from_pos(trg.pos)
             if trg.id[1] == TRG_FORM_DEFN and citdl_expr[0] == '$':
                 current_pos = trg.pos
-                lim = buf.accessor.length
+                lim = buf.accessor.length()
                 while buf.accessor.style_at_pos(current_pos) == ScintillaConstants.SCE_PL_SCALAR and current_pos < lim:
                     current_pos += 1
                 c = buf.accessor.char_at_pos(current_pos)
