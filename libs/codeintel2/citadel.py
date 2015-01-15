@@ -81,7 +81,7 @@ class CitadelLangIntel(LangIntel):
     ##to be overridden
     def _expand_extra_dirs(self, env, extra_dirs):
         max_depth = env.get_pref("codeintel_max_recursive_dir_depth", 10)
-        return util.gen_dirs_under_dirs(extra_dirs, max_depth=max_depth)
+        return codeintel2.util.gen_dirs_under_dirs(extra_dirs, max_depth=max_depth)
 
     def _extra_dirs_from_env(self, env):
         extra_dirs = set()
