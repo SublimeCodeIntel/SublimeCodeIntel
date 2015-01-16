@@ -149,6 +149,15 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 What's New
 ----------
 
+v2.1.2 (2015-01-16):
+
++ Fixed issue with ordereddict in ST3 (Python 3).
+
++ Fixed issue with unrevised languages.
+
++ Perl compatibility improved/fixed.
+
+
 v2.1.1 (2015-01-14):
 
 + Currently, this version features all the new great enhancements by
