@@ -461,9 +461,9 @@ class Database(object):
                 See http://github.com/SublimeCodeIntel/SublimeCodeIntel for details.
             """))
             open(join(self.base_dir, "VERSION"), 'w').write(self.VERSION)
-            config_file = join(self.base_dir, "config")
-            if not exists(config_file):
-                open(config_file, 'w').write("{}")
+            #config_file = join(self.base_dir, "config")
+            #if not exists(config_file):
+            #    open(config_file, 'w').write("{}")
             os.mkdir(join(self.base_dir, "db"))
         finally:
             self.release_lock()
