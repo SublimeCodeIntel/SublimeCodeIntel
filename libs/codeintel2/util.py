@@ -433,14 +433,15 @@ def markup_text(text, pos=None, trg_pos=None, start_pos=None):
         positions_and_markers.append((start_pos, '<$>'))
     positions_and_markers.sort()
 
-    text = str(text).encode("utf-8")
+    if not isinstance(text, bytes):
+        text = text.encode("utf-8")
     m_text = ""
     m_pos = 0
     for position, marker in positions_and_markers:
-        m_text += text[m_pos:position] + marker
+        m_text += text[m_pos:position].decode('utf-8', 'ignore') + marker
         m_pos = position
-    m_text += text[m_pos:]
-    return m_text.decode("utf-8")
+    m_text += text[m_pos:].decode('utf-8', 'ignore')
+    return m_text
 
 
 def lines_from_pos(unmarked_text, positions):
