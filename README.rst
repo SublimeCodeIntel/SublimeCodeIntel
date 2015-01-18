@@ -133,6 +133,9 @@ If you are having problems or SublimeCodeIntel seems slow/unresponsive/non-worki
 
 2. Regenerate indexing database.
 
+3. Open a new issue.
+
+
 Ignored package?
 ~~~~~~~~~~~~~~~~
 
@@ -163,7 +166,7 @@ Opening an issue
 
 If the problems persists after trying the above solutions, open a new issue in https://github.com/SublimeCodeIntel/SublimeCodeIntel/issues/
 
-When opening new issues, please provide all the messages from the Sublime Text console (the console is accessed via the ``ctrl+``` shortcut or the ``View > Show Console`` menu) and the ``~/.codeintel/codeintel.log`` file (``%userprofile%\.codeintel\codeintel.log`` in Windows) as well as mentioning the Sublime Text version, the platform you are using and the languages you are using the code intelligence on.
+When opening new issues, please check no other issues exist which report the same problem and provide all the messages from the Sublime Text console (the console is accessed via the ``ctrl+``` shortcut or the ``View > Show Console`` menu) and the ``~/.codeintel/codeintel.log`` file (``%userprofile%\.codeintel\codeintel.log`` in Windows) as well as mentioning the Sublime Text version, the platform you are using and the languages you are using the code intelligence on.
 
 
 Building
