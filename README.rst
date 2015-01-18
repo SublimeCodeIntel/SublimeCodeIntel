@@ -127,6 +127,25 @@ Available settings:
 Troubleshooting
 ---------------
 
+If you are having problems or SublimeCodeIntel seems slow/unresponsive/non-working, there are some things you should try:
+
+1. Make sure the SublimeCodeIntel is not being treated as an ignored package.
+
+2. Regenerate indexing database.
+
+Ignored package?
+~~~~~~~~~~~~~~~~
+
+To make sure Sublime Text didn't add SublimeCodeIntel to the list of ignored packages (this happens some times when packages are being installed/upgraded):
+
+* Select the ``Preferences/Settings - Default`` menu item
+
+* Find the ``ignored_packages`` setting and remove SublimeCodeIntel from the list.
+
+
+Regenerate index
+~~~~~~~~~~~~~~~~
+
 To force re-indexation of the code intelligence database you need to follow these steps:
 
 * Close Sublime Text
@@ -135,7 +154,16 @@ To force re-indexation of the code intelligence database you need to follow thes
 
 * Delete the whole directory ``~/.codeintel`` and all of its content. Particularly, if you want to delete only the indexes, the code intelligence database indexes are located inside ``~/.codeintel/db``.
 
-* Start Sublime Text and enjoy a clean re-indexing!
+* Start Sublime Text
+
+* Try doing some code intelligence with the files in your project and enjoy a clean re-indexing! (Remember that the database is being regenerated with this procedure, so you'll see it takes some time to autocomplete the first few times, you'll have to wait a bit for things to be fast again)
+
+Opening an issue
+~~~~~~~~~~~~~~~~
+
+If the problem persists after trying the above solutions, open a new issue in https://github.com/SublimeCodeIntel/SublimeCodeIntel/issues/
+
+When opening new issues, please provide all the messages from the Sublime Text console (the console is accessed via the ``ctrl+` `` shortcut or the ``View > Show Console`` menu) and the ``~/.codeintel/codeintel.log`` file (``%userprofile%\.codeintel\codeintel.log`` in Windows) as well as mentioning the Sublime Text version, the platform you are using and the languages you are using the code intelligence on.
 
 
 Building
