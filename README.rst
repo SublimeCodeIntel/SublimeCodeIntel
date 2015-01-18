@@ -161,9 +161,9 @@ To force re-indexation of the code intelligence database you need to follow thes
 Opening an issue
 ~~~~~~~~~~~~~~~~
 
-If the problem persists after trying the above solutions, open a new issue in https://github.com/SublimeCodeIntel/SublimeCodeIntel/issues/
+If the problems persists after trying the above solutions, open a new issue in https://github.com/SublimeCodeIntel/SublimeCodeIntel/issues/
 
-When opening new issues, please provide all the messages from the Sublime Text console (the console is accessed via the ``ctrl+` `` shortcut or the ``View > Show Console`` menu) and the ``~/.codeintel/codeintel.log`` file (``%userprofile%\.codeintel\codeintel.log`` in Windows) as well as mentioning the Sublime Text version, the platform you are using and the languages you are using the code intelligence on.
+When opening new issues, please provide all the messages from the Sublime Text console (the console is accessed via the ``ctrl+\``` shortcut or the ``View > Show Console`` menu) and the ``~/.codeintel/codeintel.log`` file (``%userprofile%\.codeintel\codeintel.log`` in Windows) as well as mentioning the Sublime Text version, the platform you are using and the languages you are using the code intelligence on.
 
 
 Building
