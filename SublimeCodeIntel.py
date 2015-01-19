@@ -528,7 +528,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                     view.run_command('hide_auto_complete')
 
                 # citdl_expr changed, so might the completions!
-                if not citdl_expr or not last_citdl_expr:
+                if citdl_expr != last_citdl_expr:
                     if not (not citdl_expr and not last_citdl_expr):
                         log.debug(
                             "hiding automplete-panel, b/c CITDL_EXPR CHANGED: FROM %r TO %r" % (last_citdl_expr, citdl_expr))
@@ -554,7 +554,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                         "python3-complete-available-imports",
                         "javascript-complete-object-members"
                     ]
-                    if trigger.name in api_cplns_only_trigger:
+                    if cplns is not None and trigger.name in api_cplns_only_trigger:
                         api_completions_only = True
                         add_word_completions = "None"
 
