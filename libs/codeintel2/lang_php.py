@@ -289,9 +289,23 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                         p, c, prev_style = ac.getPrecedingPosCharStyle(
                             prev_style, self.comment_styles_or_whitespace)
                     if prev_style in (self.identifier_style, self.keyword_style):
-                        return Trigger(
-                            lang, TRG_FORM_CALLTIP, "call-signature",
-                            pos, implicit)
+
+                        if buf.caller == "on_modified":
+                            ##call function trigger in within function brackets
+                            if last_char == "(" and buf.orig_pos-pos >= 3:
+                                ## at least 3 char have been typed to trigger
+                                if buf.accessor.char_at_pos(buf.orig_pos-1) in "(,\"":
+                                    #don't annoy with completions to early
+                                    return None
+                                trig_pos, ch, style = ac.getPrevPosCharStyle()
+                                return Trigger(
+                                    lang, TRG_FORM_CPLN, "functions",
+                                    buf.orig_pos-3, implicit)
+                        else:
+                            return Trigger(
+                                lang, TRG_FORM_CALLTIP, "call-signature",
+                                pos, implicit)
+
                 elif last_char == "\\":
                     # Ensure does not trigger when defining a new namespace,
                     # i.e., do not trigger for:
@@ -916,8 +930,12 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                 i = trg.pos - 1
             else:
                 i = trg.pos - 2  # skip past the trigger char
-            return self._citdl_expr_from_pos(trg, buf, i, trg.implicit,
+            citdl_expr = self._citdl_expr_from_pos(trg, buf, i, trg.implicit,
                                              DEBUG=DEBUG)
+            if trg.type == "functions" and len(citdl_expr) < 3:
+                #ensure function trigger has at least 3 chars typed
+                raise CodeIntelError
+            return citdl_expr
         elif trg.form == TRG_FORM_DEFN:
             return self.citdl_expr_under_pos(trg, buf, trg.pos, DEBUG)
         else:   # trg.form == TRG_FORM_CALLTIP:

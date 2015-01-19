@@ -83,6 +83,7 @@ class Buffer(object):
 
     # Language-specific attributes that subclasses must fill-in.
     lang = None             # language name
+    caller = None           # called by "on_modified" or by Command?
     cpln_fillup_chars = ""  # chars on which autocomplete UI will "fillup"
     cpln_stop_chars = ""    # chars on which autocomplete UI will stop
 
