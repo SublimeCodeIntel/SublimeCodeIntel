@@ -1258,11 +1258,15 @@ class SettingsManager():
         self.needs_update = True
         self.ALL_SETTINGS = list(self.CORE_SETTINGS + self.OVERRIDE_SETTINGS)
         self.user_settings_file = None
-        self.sublime_settings_file = sublime.load_settings(
-            'Preferences.sublime-settings')
+        self.sublime_settings_file = None
         self.sublime_auto_complete = None
 
-        # sublime.message_dialog(str(self.sublime_auto_complete))
+    def loadSublimeSettings(self):
+        window = sublime.active_window()
+        view = window.active_view()
+        if view:
+            self.sublime_settings_file = sublime.load_settings('Preferences.sublime-settings')
+            self.sublime_auto_complete = self.sublime_settings_file.get('auto_complete')
 
     def project_data(self):
         """
@@ -1383,8 +1387,8 @@ class SettingsManager():
         return self.needs_update
 
     def update(self):
-        if self.sublime_auto_complete is None and self.sublime_settings_file.get('auto_complete') is not None:
-            self.sublime_auto_complete = self.sublime_settings_file.get('auto_complete')
+        if self.sublime_auto_complete is None:
+            self.loadSublimeSettings()
 
         if self.user_settings_file is None:
             self.user_settings_file = sublime.load_settings(
@@ -1493,6 +1497,8 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
     def on_modified(self, view):
         view_sel = view.sel()
+        settings_manager.update()
+
         if not view_sel or settings_manager.sublime_auto_complete is None:
             return
 
@@ -1501,7 +1507,6 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         path = view.file_name()
         lang = guess_lang(view, path, sublime_scope)
 
-        settings_manager.update()
         exclude_scopes = settings_manager.get(
             "codeintel_exclude_scopes_from_complete_triggers", language=lang, default=[])
 
