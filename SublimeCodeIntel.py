@@ -792,7 +792,7 @@ def codeintel_manager(manager_id=None):
 
         # Connect the logging file to the handler
         condeintel_log_filename = os.path.join(
-            mgr.db.base_dir, 'codeintel.log')
+            codeintel_database_dir, 'codeintel.log')
         condeintel_log_file = open(condeintel_log_filename, 'w', 1)
         codeintel_log.handlers = [logging.StreamHandler(condeintel_log_file)]
         msg = "Starting logging SublimeCodeIntel v%s rev %s (%s) on %s" % (
