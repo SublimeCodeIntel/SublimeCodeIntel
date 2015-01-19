@@ -116,24 +116,34 @@ QUEUE = {}  # views waiting to be processed by codeintel
 
 
 # Setup the complex logging (status bar gets stuff from there):
+# http://docs.python.org/3.3/howto/logging.html#logging-basic-tutorial
 class NullHandler(logging.Handler):
 
     def emit(self, record):
         pass
 
-codeintel_hdlr = NullHandler()
-codeintel_hdlr.setFormatter(
-    logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
+condeintel_log_filename = ''
+condeintel_log_file = None
+
 stderr_hdlr = logging.StreamHandler(sys.stderr)
 stderr_hdlr.setFormatter(
     logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
-codeintel_log = logging.getLogger("codeintel")
-condeintel_log_filename = ''
-condeintel_log_file = None
+
+codeintel_hdlr = NullHandler()
+codeintel_hdlr.setFormatter(
+    logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
+
+# Logging for this file / send to the sublime console
 log = logging.getLogger("SublimeCodeIntel")
-codeintel_log.handlers = [codeintel_hdlr]
 log.handlers = [stderr_hdlr]
+log.setLevel(logging.ERROR)  # ERROR
+
+# the parent-logger for the rest of the plugin / send to the codeintel.log file in database dir
+codeintel_log = logging.getLogger("codeintel")
+codeintel_log.handlers = [codeintel_hdlr]
 codeintel_log.setLevel(logging.INFO)  # INFO
+
+# create all the child-loggers for various parts of the plugin
 for logger in ('codeintel.db', 'codeintel.pythoncile'):
     logging.getLogger(logger).setLevel(logging.WARNING)  # WARNING
 for logger in ('citadel', 'css', 'django', 'html', 'html5', 'javascript', 'mason', 'nodejs',
@@ -141,7 +151,6 @@ for logger in ('citadel', 'css', 'django', 'html', 'html5', 'javascript', 'mason
                'tcl', 'templatetoolkit', 'xbl', 'xml', 'xslt', 'xul'):
     logging.getLogger(
         "codeintel." + logger).setLevel(logging.WARNING)  # WARNING
-log.setLevel(logging.ERROR)  # ERROR
 
 cpln_fillup_chars = {
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ ",
