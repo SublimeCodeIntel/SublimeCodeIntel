@@ -799,6 +799,7 @@ def codeintel_manager(manager_id=None):
             VERSION, get_revision()[:12], os.stat(__file__)[stat.ST_MTIME], datetime.datetime.now().ctime())
         print("%s\n%s" % (msg, "=" * len(msg)), file=condeintel_log_file)
 
+        _ci_mgr_ = {}
         _ci_mgr_[manager_id] = mgr
     return mgr
 
