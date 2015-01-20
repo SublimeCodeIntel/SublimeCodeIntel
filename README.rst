@@ -149,6 +149,13 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 What's New
 ----------
 
+v2.1.3 (2015-01-20):
+
++ Features and enhancements from wizza-smile's fork.
+
++ PHP completions within function brackets.
+
+
 v2.1.2 (2015-01-16):
 
 + Fixed issue with ordereddict in ST3 (Python 3).
