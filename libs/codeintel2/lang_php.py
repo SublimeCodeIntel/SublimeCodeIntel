@@ -397,7 +397,21 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                 # fourth_char, fourth_style = last_four_char_and_styles[3]
                 if prev_style == last_style:
                     trig_pos, ch, style = ac.getPrevPosCharStyle()
-                    if style == last_style:
+
+                    if buf.accessor.char_at_pos(pos-2) == '_' and buf.accessor.char_at_pos(pos-3) == '_' and buf.accessor.style_at_pos(pos-4) == self.whitespace_style:
+                        # XXX - Check the php version, magic methods only
+                        #       appeared in php 5.
+                        #
+                        p, ch, style = ac.getPrevPosCharStyle(ignore_styles=self.comment_styles)
+                        last_keyword = ac.getTextBackWithStyle(self.keyword_style, max_text_len=9)[1].strip()
+                        if last_keyword == "function":
+                            if DEBUG:
+                                print("triggered:: complete magic-methods")
+                            return Trigger(
+                                lang, TRG_FORM_CPLN, "magic-methods",
+                                prev_pos, implicit)
+
+                    elif style == last_style:
                         p, ch, style = ac.getPrevPosCharStyle(
                             ignore_styles=self.comment_styles)
                         # style is None if no change of style (not ignored) was
@@ -448,19 +462,6 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                             print("identifier preceeded by an invalid style: " \
                                   "%r, p: %r" % (style, p, ))
 
-                    elif last_char == '_' and prev_char == '_' and \
-                            style == self.whitespace_style:
-                        # XXX - Check the php version, magic methods only
-                        #       appeared in php 5.
-                        p, ch, style = ac.getPrevPosCharStyle(
-                            ignore_styles=self.comment_styles)
-                        if style == self.keyword_style and \
-                           ac.getTextBackWithStyle(style, max_text_len=9)[1] == "function":
-                            if DEBUG:
-                                print("triggered:: complete magic-methods")
-                            return Trigger(
-                                lang, TRG_FORM_CPLN, "magic-methods",
-                                prev_pos, implicit)
 
             # PHPDoc completions
             elif last_char == "@" and last_style in self.comment_styles:
