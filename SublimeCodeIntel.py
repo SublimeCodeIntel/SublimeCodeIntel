@@ -1592,6 +1592,12 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                 forms = ('calltips',)
             else:
                 forms = ('calltips', 'cplns')
+
+            # fast trigger word completions from buffer
+            codeintel_word_completions = settings_manager.get("codeintel_word_completions", language=lang)
+            if codeintel_word_completions in ["buffer", "all"]:
+                triggerWordCompletions(view, lang, codeintel_word_completions)
+
             # will queue an autocomplete job
             autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600,
                          forms, is_fill_char, args=[path, pos, lang], kwargs={"caller":"on_modified"})
