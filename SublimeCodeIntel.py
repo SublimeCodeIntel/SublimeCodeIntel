@@ -1145,6 +1145,27 @@ def get_revision(path=None):
     return u'GIT-unknown'
 
 
+def triggerWordCompletions(view, lang, codeintel_word_completions):
+    global last_trigger_name, last_citdl_expr
+    # fast triggering
+    vid = view.id()
+
+    on_query_info = {}
+    on_query_info["params"] = ("cplns", codeintel_word_completions, "", None, None)
+    on_query_info["cplns"] = None
+
+    completions[vid] = on_query_info
+    last_citdl_expr = None
+    last_trigger_name = None
+
+    view.run_command('auto_complete', {
+        'disable_auto_insert': True,
+        'api_completions_only': True,
+        'next_completion_if_showing': False,
+        'auto_complete_commit_on_tab': True,
+    })
+
+
 # thanks to https://github.com/alienhard
 # and his SublimeAllAutocomplete
 class WordCompletionsFromBuffer():
