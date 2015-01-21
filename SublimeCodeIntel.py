@@ -1266,10 +1266,13 @@ class SettingsManager():
 
     def loadSublimeSettings(self):
         window = sublime.active_window()
+        if not window:
+            return None
         view = window.active_view()
-        if view:
-            self.sublime_settings_file = sublime.load_settings('Preferences.sublime-settings')
-            self.sublime_auto_complete = self.sublime_settings_file.get('auto_complete')
+        if not view:
+            return None
+        self.sublime_settings_file = sublime.load_settings('Preferences.sublime-settings')
+        self.sublime_auto_complete = self.sublime_settings_file.get('auto_complete')
 
     def project_data(self):
         """
