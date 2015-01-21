@@ -1305,13 +1305,21 @@ class SettingsManager():
             return window.project_file_name()
         if not window.folders():
             return None
-        data = file(os.path.normpath(os.path.join(sublime.packages_path(), '..', 'Settings', 'Session.sublime_session')), 'r').read()
-        data = data.decode('utf-8').replace('\t', ' ')
-        data = json.loads(data, strict=False)
-        projects = data['workspaces']['recent_workspaces']
-
-        if os.path.lexists(os.path.join(sublime.packages_path(), '..', 'Settings', 'Auto Save Session.sublime_session')):
-            data = file(os.path.normpath(os.path.join(sublime.packages_path(), '..', 'Settings', 'Auto Save Session.sublime_session')), 'r').read()
+        session_filename = os.path.normpath(os.path.join(sublime.packages_path(), '..', 'Settings', 'Session.sublime_session'))
+        try:
+            data = file(session_filename, 'r').read()
+        except IOError:
+            projects = []
+        else:
+            data = data.decode('utf-8').replace('\t', ' ')
+            data = json.loads(data, strict=False)
+            projects = data['workspaces']['recent_workspaces']
+        autosave_filename = os.path.normpath(os.path.join(sublime.packages_path(), '..', 'Settings', 'Auto Save Session.sublime_session'))
+        try:
+            data = file(autosave_filename, 'r').read()
+        except IOError:
+            pass
+        else:
             data = data.decode('utf-8').replace('\t', ' ')
             data = json.loads(data, strict=False)
             if hasattr(data, 'workspaces') and hasattr(data['workspaces'], 'recent_workspaces') and data['workspaces']['recent_workspaces']:
@@ -1333,8 +1341,8 @@ class SettingsManager():
                     if not found:
                         found_all = False
                         break
-            if found_all:
-                return project_file
+                if found_all:
+                    return project_file
         return None
 
     def get(self, config_key, default=None, language=None):
