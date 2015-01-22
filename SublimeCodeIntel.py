@@ -209,17 +209,12 @@ def tooltip_popup(view, snippets):
 
     completions[vid] = on_query_info
 
-    def open_auto_complete():
-        view.run_command('auto_complete', {
-            'disable_auto_insert': True,
-            'api_completions_only': True,
-            'next_completion_if_showing': False,
-            'auto_complete_commit_on_tab': True,
-        })
-
-    # FIXME: tooltip_popup is already called from the main thread, no need for extra set_timeout()?
-    # [codeintel -> _codeintel -> set_timeout(_callback) -> _trigger -> tooltip -> tooltip_popup -> set_timeout(open_auto_complete)]
-    sublime.set_timeout(open_auto_complete, 0)
+    view.run_command('auto_complete', {
+        'disable_auto_insert': True,
+        'api_completions_only': True,
+        'next_completion_if_showing': False,
+        'auto_complete_commit_on_tab': True,
+    })
 
 
 def tooltip(view, calltips, original_pos, lang):
@@ -541,18 +536,13 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
 
                 completions[vid] = on_query_info
 
-                def show_autocomplete():
-                    # Show autocompletions:
-                    view.run_command('auto_complete', {
-                        'disable_auto_insert': True,
-                        'api_completions_only': api_completions_only,
-                        'next_completion_if_showing': False,
-                        'auto_complete_commit_on_tab': True,
-                    })
-
-                # FIXME: _trigger is already called from the main thread, no need for extra set_timeout()?
-                # [codeintel -> _codeintel -> set_timeout(_callback) -> _trigger -> set_timeout(show_autocomplete)]
-                sublime.set_timeout(show_autocomplete, 0)
+                # Show autocompletions:
+                view.run_command('auto_complete', {
+                    'disable_auto_insert': True,
+                    'api_completions_only': api_completions_only,
+                    'next_completion_if_showing': False,
+                    'auto_complete_commit_on_tab': True,
+                })
 
                 cplns_were_empty = cplns is None
 
