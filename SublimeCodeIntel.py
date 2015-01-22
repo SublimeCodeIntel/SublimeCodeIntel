@@ -195,31 +195,30 @@ class TooltipOutputCommand(sublime_plugin.TextCommand):
         self.view.insert(edit, 0, output)
 
 
-def close_auto_complete():
-    view = sublime.active_window().active_view()
+def hide_auto_complete(view):
     view.run_command('hide_auto_complete')
 
 
-def tooltip_popup(view, snippets):
-    vid = view.id()
-
-    on_query_info = {}
-    on_query_info["params"] = ("tooltips", "none", "", None, None)
-    on_query_info["cplns"] = snippets
-
-    completions[vid] = on_query_info
-
-    def open_auto_complete():
+def show_auto_complete(view, on_query_info,
+                       disable_auto_insert=True, api_completions_only=True,
+                       next_completion_if_showing=False, auto_complete_commit_on_tab=True):
+    # Show autocompletions:
+    def _show_auto_complete():
         view.run_command('auto_complete', {
-            'disable_auto_insert': True,
-            'api_completions_only': True,
-            'next_completion_if_showing': False,
-            'auto_complete_commit_on_tab': True,
+            'disable_auto_insert': disable_auto_insert,
+            'api_completions_only': api_completions_only,
+            'next_completion_if_showing': next_completion_if_showing,
+            'auto_complete_commit_on_tab': auto_complete_commit_on_tab,
         })
+    completions[view.id()] = on_query_info
+    sublime.set_timeout(_show_auto_complete, 0)
 
-    # FIXME: tooltip_popup is already called from the main thread, no need for extra set_timeout()?
-    # [codeintel -> _codeintel -> set_timeout(_callback) -> _trigger -> tooltip -> tooltip_popup -> set_timeout(open_auto_complete)]
-    sublime.set_timeout(open_auto_complete, 0)
+
+def tooltip_popup(view, snippets):
+    show_auto_complete(view, {
+        'params': ("tooltips", "none", "", None, None),
+        'cplns': snippets,
+    })
 
 
 def tooltip(view, calltips, original_pos, lang):
@@ -478,8 +477,6 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
         next_char = text_in_current_line[-1] if len(text_in_current_line) == pos + 1 - lpos else None
 
         if not next_char or (next_char != '_' and not next_char.isalnum()):
-            vid = view.id()
-
             def _trigger(trigger, citdl_expr, calltips, cplns=None):
                 global cplns_were_empty, last_trigger_name, last_citdl_expr, cpln_stop_chars
 
@@ -500,18 +497,18 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                 # completions are available now, but were empty on last round,
                 # we have to close and reopen the completions tab to show them
                 if cplns_were_empty and cplns is not None:
-                    view.run_command('hide_auto_complete')
+                    hide_auto_complete(view)
 
                 # citdl_expr changed, so might the completions!
                 if citdl_expr != last_citdl_expr:
                     if not (not citdl_expr and not last_citdl_expr):
                         log.debug("hiding automplete-panel, b/c CITDL_EXPR CHANGED: FROM %r TO %r" % (last_citdl_expr, citdl_expr))
-                        view.run_command('hide_auto_complete')
+                        hide_auto_complete(view)
 
                 # the trigger changed, so will the completions!
                 if (trigger is None and last_trigger_name is not None) or last_trigger_name != (trigger.name if trigger else None):
                     log.debug("hiding automplete-panel, b/c trigger changed: FROM %r TO %r " % (last_trigger_name, (trigger.name if trigger else 'None')))
-                    view.run_command('hide_auto_complete')
+                    hide_auto_complete(view)
 
                 # cpln_stop_chars could be implemented here ?
 
@@ -535,24 +532,10 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                 last_citdl_expr = citdl_expr
 
                 # if cplns is not None:
-                on_query_info = {}
-                on_query_info["params"] = ("cplns", add_word_completions, text_in_current_line, lang, trigger)
-                on_query_info["cplns"] = cplns
-
-                completions[vid] = on_query_info
-
-                def show_autocomplete():
-                    # Show autocompletions:
-                    view.run_command('auto_complete', {
-                        'disable_auto_insert': True,
-                        'api_completions_only': api_completions_only,
-                        'next_completion_if_showing': False,
-                        'auto_complete_commit_on_tab': True,
-                    })
-
-                # FIXME: _trigger is already called from the main thread, no need for extra set_timeout()?
-                # [codeintel -> _codeintel -> set_timeout(_callback) -> _trigger -> set_timeout(show_autocomplete)]
-                sublime.set_timeout(show_autocomplete, 0)
+                show_auto_complete(view, {
+                    'params': ("cplns", add_word_completions, text_in_current_line, lang, trigger),
+                    'cplns': cplns,
+                }, api_completions_only=api_completions_only)
 
                 cplns_were_empty = cplns is None
 
@@ -1091,23 +1074,14 @@ def get_revision(path=None):
 
 
 def triggerWordCompletions(view, lang, codeintel_word_completions):
-    global last_trigger_name, last_citdl_expr
     # fast triggering
-    vid = view.id()
-
-    on_query_info = {}
-    on_query_info["params"] = ("cplns", codeintel_word_completions, "", None, None)
-    on_query_info["cplns"] = None
-
-    completions[vid] = on_query_info
+    global last_trigger_name, last_citdl_expr
     last_citdl_expr = None
     last_trigger_name = None
 
-    view.run_command('auto_complete', {
-        'disable_auto_insert': True,
-        'api_completions_only': True,
-        'next_completion_if_showing': False,
-        'auto_complete_commit_on_tab': True,
+    show_auto_complete(view, {
+        'params': ("cplns", codeintel_word_completions, "", None, None),
+        'cplns': None,
     })
 
 
@@ -1498,7 +1472,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         # hide completions if visible
         if not text.strip():
             # sublime.message_dialog("LAST CHAR IS EMPTY")
-            view.run_command('hide_auto_complete')
+            hide_auto_complete(view)
             return
 
         is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
@@ -1527,7 +1501,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             # will queue an autocomplete job
             autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, forms, is_fill_char, args=[path, pos, lang], kwargs={"caller": "on_modified"})
         else:
-            view.run_command('hide_auto_complete')
+            hide_auto_complete(view)
 
     def on_selection_modified(self, view):
         global despair, despaired, old_pos
