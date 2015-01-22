@@ -1468,12 +1468,13 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         pos = sel.end()
         text = view.substr(sublime.Region(pos - 1, pos))
 
-        # no autocomplete if last char is empty string
-        # hide completions if visible
-        if not text.strip():
-            # sublime.message_dialog("LAST CHAR IS EMPTY")
-            hide_auto_complete(view)
-            return
+        # FIXME: In using Python:  from x import<SPACE>  <- We'd want autocomplete here. Where shouldn't we want it?
+        # # no autocomplete if last char is empty string
+        # # hide completions if visible
+        # if not text.strip():
+        #     # sublime.message_dialog("LAST CHAR IS EMPTY")
+        #     hide_auto_complete(view)
+        #     return
 
         is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
 
