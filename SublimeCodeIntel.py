@@ -221,7 +221,7 @@ def tooltip_popup(view, snippets):
     })
 
 
-def tooltip(view, calltips, original_pos, lang):
+def tooltip(view, calltips, text_in_current_line, original_pos, lang):
     codeintel_snippets = settings_manager.get('codeintel_snippets', default=True, language=lang)
     codeintel_tooltips = settings_manager.get('codeintel_tooltips', default='popup', language=lang)
 
@@ -230,22 +230,40 @@ def tooltip(view, calltips, original_pos, lang):
         tip_info = calltip.split('\n')
         text = ' '.join(tip_info[1:])
         snippet = None
+        # TODO: This snippets are based and work for Python language.
+        # Other languages might need different treatment.
         # Insert parameters as snippet:
         m = re.search(r'([^\s]+)\(([^\[\(\)]*)', tip_info[0])
+        # Figure out how many arguments are there already:
+        text_in_current_line = text_in_current_line[:-1]  # Remove next char after cursor
+        arguments = text_in_current_line.rpartition('(')[2].replace(' ', '').strip() or 0
+        if arguments:
+            initial_separator = ''
+            if arguments[-1] == ',':
+                arguments = arguments[:-1]
+            else:
+                initial_separator += ','
+            if not text_in_current_line.endswith(' '):
+                initial_separator += ' '
+            arguments = arguments.count(',') + 1 if arguments else 0
         if m:
             params = [p.strip() for p in m.group(2).split(',')]
             if params:
+                n = 1
                 snippet = []
                 for i, p in enumerate(params):
-                    if p:
+                    if p and i >= arguments:
                         var, _, _ = p.partition('=')
                         var = var.strip()
                         if ' ' in var:
                             var = var.split(' ')[1]
                         if var[0] == '$':
                             var = var[1:]
-                        snippet.append('${%s:%s}' % (i + 1, var))
+                        snippet.append('${%s:%s}' % (n, var))
+                        n += 1
                 snippet = ', '.join(snippet)
+                if arguments and snippet:
+                    snippet = initial_separator + snippet
             text += ' - ' + tip_info[0]  # Add function to the end
         else:
             text = tip_info[0] + ' ' + text  # No function match, just add the first line
@@ -536,7 +554,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                 cplns_were_empty = cplns is None
 
                 if calltips:
-                    tooltip(view, calltips, original_pos, lang)
+                    tooltip(view, calltips, text_in_current_line, original_pos, lang)
 
             content = view.substr(sublime.Region(0, view.size()))
             codeintel(view, path, content, lang, pos, forms, _trigger, caller=caller)
