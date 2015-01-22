@@ -1594,7 +1594,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
             # will queue an autocomplete job
             autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600,
-                         forms, is_fill_char, args=[path, pos, lang], kwargs={"caller":"on_modified"})
+                         forms, is_fill_char, args=[path, pos, lang], kwargs={"caller": "on_modified"})
         else:
             view.run_command('hide_auto_complete')
 
