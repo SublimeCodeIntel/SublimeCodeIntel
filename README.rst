@@ -180,6 +180,13 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 What's New
 ----------
 
+v2.1.4 (2015-01-21):
+
++ Improved compatibility with ST2
+
++ PHP magic-methods tweaks ported from wizza-smile's fork
+
+
 v2.1.3 (2015-01-20):
 
 + Features and enhancements from wizza-smile's fork.
