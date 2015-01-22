@@ -1484,8 +1484,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                 ) or
                 view.command_history(-1)[0] in ('insert', 'paste') and (
                     view.command_history(0)[0] == 'commit_completion' or
-                    view.command_history(0)[0] == 'insert_snippet' and view.command_history(
-                        0)[1]['contents'] == '($0)'
+                    view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)'
                 )
         )):
             if view.command_history(0)[0] == 'commit_completion':
