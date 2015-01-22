@@ -1166,7 +1166,6 @@ class WordCompletionsFromBuffer():
 
 
 class SettingsManager():
-
     # name of the *.sublime-settings file
     SETTINGS_FILE_NAME = 'SublimeCodeIntel'
 
