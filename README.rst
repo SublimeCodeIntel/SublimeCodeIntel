@@ -180,11 +180,20 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 What's New
 ----------
 
+v2.1.5 (2015-01-22):
+
++ Cleanups.
+
++ Autocomplete also triggered after space (for import<space> autocompletions).
+
++ Tooltip and snippets for functions re-added.
+
+
 v2.1.4 (2015-01-21):
 
 + Improved compatibility with ST2
 
-+ PHP magic-methods tweaks ported from wizza-smile's fork
++ PHP magic-methods tweaks ported from wizza-smile's fork.
 
 
 v2.1.3 (2015-01-20):
