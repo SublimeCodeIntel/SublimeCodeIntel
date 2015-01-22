@@ -485,12 +485,6 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                 if cplns is not None or calltips is not None:
                     codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
 
-                if calltips and caller != "on_modified":
-                    if trigger:
-                        print("current triggername: %r" % trigger.name)
-                    tooltip(view, calltips, original_pos, lang)
-                    return
-
                 # under certain circumstances we have to close before reopening
                 # the currently open completions-panel
 
@@ -538,6 +532,9 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
                 }, api_completions_only=api_completions_only)
 
                 cplns_were_empty = cplns is None
+
+                if calltips:
+                    tooltip(view, calltips, original_pos, lang)
 
             content = view.substr(sublime.Region(0, view.size()))
             codeintel(view, path, content, lang, pos, forms, _trigger, caller=caller)
