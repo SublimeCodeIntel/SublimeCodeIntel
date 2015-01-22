@@ -1436,7 +1436,7 @@ class SettingsManager():
     def updateLanguageSpecificSettings(self):
         # store settings by language
         codeintel_language_settings = self._settings.get(
-            "codeintel_language_settings")
+            "codeintel_language_settings", [])
 
         for language in codeintel_language_settings:
             lang_settings = dict(list(
