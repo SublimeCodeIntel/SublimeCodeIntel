@@ -69,7 +69,7 @@
     /*
        Insert functions snippets.
     */
-    "codeintel_snippets": false,
+    "codeintel_snippets": true,
 
     /*
        Define global filters to exclude paths from scanning. Use the codeintel_config setting for language specific settings.

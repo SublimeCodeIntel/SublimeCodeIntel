@@ -262,6 +262,8 @@ def tooltip(view, calltips, original_pos, lang):
                     measured_tips.append(tip[i:i + max_line_length])
             else:
                 measured_tips.append(tip)
+
+        # Insert tooltip snippet
         snippets.extend((('  ' if i > 0 else '') + l, snippet or '${0}') for i, l in enumerate(measured_tips))
 
     if codeintel_tooltips == 'popup':
