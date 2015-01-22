@@ -1,0 +1,36 @@
+SublimeCodeIntel v2.1.4 Release Notes
+=====================================
+
+A full-featured code intelligence and smart autocomplete engine for Sublime Text.
+(Code intelligence plugin ported from Open Komodo Editor to Sublime Text)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! HELP WANTED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!    Maintaining this project is hard, I do it in my spare time, but I'm     !!
+!!    basically all alone. If anyone is interested in contributing, please    !!
+!!    contact me. I really need much more help maintaining SublimeCodeIntel   !!
+!!                                                                            !!
+!!                      Follow me on twitter @germbravo                       !!
+!!          You can find us at #sublimecodeintel on irc.freenode.net          !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+** Restart Sublime Text after reading this **
+
+In case of trouble, please read the Troubleshooting section in the README.
+
+If you like SublimeCodeIntel, please make a donation: http://sublimecodeintel.github.io/SublimeCodeIntel/donate.html
+
+
+For more information:
+---------------------
+Please take the time to read the documentation:
+
+* Online - http://sublimecodeintel.github.io/SublimeCodeIntel/
+
+
+CHANGES/FIXES
+-------------
+v2.1.4 (2015-01-21):
+
++ Improved compatibility with ST2
+
++ PHP magic-methods tweaks ported from wizza-smile's fork
