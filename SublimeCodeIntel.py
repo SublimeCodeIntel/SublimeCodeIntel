@@ -149,9 +149,11 @@ for logger in ('citadel', 'css', 'django', 'html', 'html5', 'javascript', 'mason
     logging.getLogger("codeintel." + logger).setLevel(logging.WARNING)  # WARNING
 
 cpln_fillup_chars = {
+    # These are characters that select the first item in an open autocomplete window when pressed.
+    # (autocompete_on_fillup should be a configuration and fillup chars take precedence over stop chars)
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ ",
-    'Python': "~`!@#$%^&()-=+{}[]|\\;:'\",.<>?/ ",
     'PHP': "~`%^&*()-+{}[]|;'\",.< ",
+    'Python': "~`!@#$%^&()-=+{}[]|\\;:'\",.<>?/ ",
     'Python3': "~`!@#$%^&()-=+{}[]|\\;:'\",.<>?/ ",
     'Perl': "~`!@#$%^&*(=+}[]|\\;'\",.<>?/ ",
     'CSS': " '\";},/",
@@ -159,9 +161,10 @@ cpln_fillup_chars = {
 }
 
 cpln_stop_chars = {
+    # These are characters that close the autocomplete window when pressed.
     'Ruby': "~`@#$%^&*(+}[]|\\;:,<>/ '\".",
-    'Python': "~`!@#$%^&*()-=+{}[]|\\;:'\",.<>?/ ",
     'PHP': "~`@%^&*()=+{}]|\\;:'\",.<>?/ ",
+    'Python': "~`!@#$%^&*()-=+{}[]|\\;:'\",.<>?/ ",
     'Python3': "~`!@#$%^&*()-=+{}[]|\\;:'\",.<>?/ ",
     'Perl': "-~`!@#$%^&*()=+{}[]|\\;:'\",.<>?/ ",
     'CSS': " ('\";{},.>/",
