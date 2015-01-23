@@ -585,6 +585,15 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
         # Else, let's try to work out some other options
         accessor = buf.accessor
         prev_style = accessor.style_at_pos(curr_pos - 1)
+
+        #Allow namespaces ala "common\component" to trigger class names via "functions"-trigger
+        ignore_styles = []
+        if prev_style == self.operator_style:
+            prev_char = accessor.char_at_pos(curr_pos - 1)
+            if prev_char == "\\":
+                prev_style = self.identifier_style
+                ignore_styles = [self.operator_style]
+
         if prev_style in (self.identifier_style, self.keyword_style):
             # We don't know what to trigger here... could be one of:
             # functions:
@@ -597,7 +606,7 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
             #   implements apache<$><|>_getenv()...
             ac = AccessorCache(accessor, curr_pos)
             pos_before_identifer, ch, prev_style = \
-                ac.getPrecedingPosCharStyle(prev_style)
+                ac.getPrecedingPosCharStyle(prev_style, ignore_styles=ignore_styles)
             if DEBUG:
                 print("\nphp preceding_trg_from_pos, first chance for identifer style")
                 print("  curr_pos: %d" % (curr_pos))
