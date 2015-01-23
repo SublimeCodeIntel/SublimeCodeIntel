@@ -219,7 +219,7 @@ def show_auto_complete(view, on_query_info,
 
 def tooltip_popup(view, snippets):
     show_auto_complete(view, {
-        'params': ("tooltips", "none", "", None, None),
+        'params': ("tooltips", "none", "", None, None, False),
         'cplns': snippets,
     })
 
@@ -485,11 +485,11 @@ def guess_lang(view=None, path=None, sublime_scope=None):
 # premptive is true for fillchars
 def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], kwargs={}):
     def _autocomplete_callback(view, path, original_pos, lang, caller=None):
-
         view_sel = view.sel()
         if not view_sel:
             return
 
+        # Figure out if we're still at the same position when the autocomplete was called, or abort
         sel = view_sel[0]
         pos = sel.end()
         if not pos or pos != original_pos:
@@ -497,71 +497,65 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
 
         lpos = view.line(sel).begin()
         text_in_current_line = view.substr(sublime.Region(lpos, pos + 1))
-        next_char = text_in_current_line[-1] if len(text_in_current_line) == pos + 1 - lpos else None
 
-        if not next_char or (next_char != '_' and not next_char.isalnum()):
-            def _trigger(trigger, citdl_expr, calltips, cplns=None):
-                global cplns_were_empty, last_trigger_name, last_citdl_expr, cpln_stop_chars
+        def _trigger(trigger, citdl_expr, calltips, cplns=None):
+            global cplns_were_empty, last_trigger_name, last_citdl_expr
 
-                add_word_completions = settings_manager.get("codeintel_word_completions", language=lang)
+            add_word_completions = settings_manager.get("codeintel_word_completions", language=lang)
 
-                if cplns is not None or calltips is not None:
-                    codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
+            if cplns is not None or calltips is not None:
+                codeintel_log.info("Autocomplete called (%s) [%s]", lang, ','.join(c for c in ['cplns' if cplns else None, 'calltips' if calltips else None] if c))
 
-                # under certain circumstances we have to close before reopening
-                # the currently open completions-panel
+            # under certain circumstances we have to close before reopening
+            # the currently open completions-panel
 
-                # completions are available now, but were empty on last round,
-                # we have to close and reopen the completions tab to show them
-                if cplns_were_empty and cplns is not None:
+            # completions are available now, but were empty on last round,
+            # we have to close and reopen the completions tab to show them
+            cplns_are_empty = cplns is None
+            if cplns_were_empty and not cplns_are_empty:
+                hide_auto_complete(view)
+            cplns_were_empty = cplns_are_empty
+
+            # citdl_expr changed, so might the completions!
+            if citdl_expr != last_citdl_expr:
+                if not (not citdl_expr and not last_citdl_expr):
+                    log.debug("hiding automplete-panel, b/c CITDL_EXPR CHANGED: FROM %r TO %r" % (last_citdl_expr, citdl_expr))
                     hide_auto_complete(view)
+            last_citdl_expr = citdl_expr
 
-                # citdl_expr changed, so might the completions!
-                if citdl_expr != last_citdl_expr:
-                    if not (not citdl_expr and not last_citdl_expr):
-                        log.debug("hiding automplete-panel, b/c CITDL_EXPR CHANGED: FROM %r TO %r" % (last_citdl_expr, citdl_expr))
-                        hide_auto_complete(view)
+            # the trigger changed, so will the completions!
+            current_trigger_name = trigger.name if trigger else None
+            if trigger is None and last_trigger_name is not None or last_trigger_name != current_trigger_name:
+                log.debug("hiding automplete-panel, b/c trigger changed: FROM %r TO %r " % (last_trigger_name, (trigger.name if trigger else 'None')))
+                hide_auto_complete(view)
+            last_trigger_name = current_trigger_name
 
-                # the trigger changed, so will the completions!
-                if (trigger is None and last_trigger_name is not None) or last_trigger_name != (trigger.name if trigger else None):
-                    log.debug("hiding automplete-panel, b/c trigger changed: FROM %r TO %r " % (last_trigger_name, (trigger.name if trigger else 'None')))
-                    hide_auto_complete(view)
+            api_completions_only = False
+            if trigger:
+                log.debug("current triggername: %r" % trigger.name)
+                print("current triggername: %r" % trigger.name)
+                api_cplns_only_trigger = [
+                    "php-complete-static-members",
+                    "php-complete-object-members",
+                    "python3-complete-module-members",
+                    "python3-complete-object-members",
+                    "python3-complete-available-imports",
+                    "javascript-complete-object-members"
+                ]
+                if cplns is not None and trigger.name in api_cplns_only_trigger:
+                    api_completions_only = True
+                    add_word_completions = "None"
 
-                # cpln_stop_chars could be implemented here ?
+            show_auto_complete(view, {
+                'params': ("cplns", add_word_completions, text_in_current_line, lang, trigger, False),
+                'cplns': cplns,
+            }, api_completions_only=api_completions_only)
 
-                api_completions_only = False
-                if trigger:
-                    log.debug("current triggername: %r" % trigger.name)
-                    print("current triggername: %r" % trigger.name)
-                    api_cplns_only_trigger = [
-                        "php-complete-static-members",
-                        "php-complete-object-members",
-                        "python3-complete-module-members",
-                        "python3-complete-object-members",
-                        "python3-complete-available-imports",
-                        "javascript-complete-object-members"
-                    ]
-                    if cplns is not None and trigger.name in api_cplns_only_trigger:
-                        api_completions_only = True
-                        add_word_completions = "None"
+            if calltips:
+                tooltip(view, calltips, text_in_current_line, original_pos, lang)
 
-                last_trigger_name = trigger.name if trigger else None
-                last_citdl_expr = citdl_expr
-
-                # if cplns is not None:
-                show_auto_complete(view, {
-                    'params': ("cplns", add_word_completions, text_in_current_line, lang, trigger),
-                    'cplns': cplns,
-                }, api_completions_only=api_completions_only)
-
-                cplns_were_empty = cplns is None
-
-                if calltips:
-                    tooltip(view, calltips, text_in_current_line, original_pos, lang)
-
-            content = view.substr(sublime.Region(0, view.size()))
-            codeintel(view, path, content, lang, pos, forms, _trigger, caller=caller)
-    # If it's a fill char, queue using lower values and preemptive behavior
+        content = view.substr(sublime.Region(0, view.size()))
+        codeintel(view, path, content, lang, pos, forms, _trigger, caller=caller)
     queue(view, _autocomplete_callback, timeout, busy_timeout, preemptive, args=args, kwargs=kwargs)
 
 
@@ -874,6 +868,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
 
         # this happens in any case:
         msgs = []
+        buf = None
         if env._valid:
             # is citadel language or other supported language
             if forms:
@@ -888,14 +883,11 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 codeintel_log.warning(msg)
                 msgs.append(('info', msg))
 
-            ###################
-            # CREATE THE BUFFER
-            buf = mgr.buf_from_content(content, lang, env, path or "<Unsaved>", 'utf-8')
-            buf.caller = caller
-            buf.orig_pos = pos
-            ###################
-
             if mgr.is_citadel_lang(lang):
+                buf = mgr.buf_from_content(content, lang, env, path or "<Unsaved>", 'utf-8')
+                buf.caller = caller
+                buf.orig_pos = pos
+
                 now = datetime.datetime.now()
                 if not _ci_next_scan_.get(vid) or now > _ci_next_scan_[vid]:
                     _ci_next_scan_[vid] = now + datetime.timedelta(seconds=10)
@@ -912,9 +904,6 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                         else:
                             mtime = os.stat(path)[stat.ST_MTIME]
                         buf.scan(mtime=mtime, skip_scan_time_check=is_dirty)
-        else:
-            # unsupported language
-            buf = None
         if callback:
             msg = "Doing CodeIntel for '%s' (hold on)..." % lang
             print(msg, file=condeintel_log_file)
@@ -925,7 +914,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
     threading.Thread(target=_codeintel_scan, name="scanning thread").start()
 
 
-def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000, caller=None):
+def codeintel(view, path, content, lang, pos, forms, callback, timeout=7000, caller=None):
     start = time.time()
 
     def _codeintel(buf, msgs):
@@ -937,55 +926,65 @@ def codeintel(view, path, content, lang, pos, forms, callback=None, timeout=7000
             logger(view, 'warning', "`%s' (%s) is not a language that uses CIX" % (path, lang))
             return [None] * len(forms)
 
-        try:
-            trg = getattr(buf, 'preceding_trg_from_pos', lambda p: None)(pos2bytes(content, pos), pos2bytes(content, pos))
-            defn_trg = getattr(buf, 'defn_trg_from_pos', lambda p: None)(pos2bytes(content, pos))
-        except (CodeIntelError):
-            codeintel_log.exception("Exception! %s:%s (%s)" % (path or '<Unsaved>', pos, lang))
-            logger(view, 'info', "Error indexing! Please send the log file: '%s" % condeintel_log_filename)
-            trg = None
-            defn_trg = None
-        except:
-            codeintel_log.exception("Exception! %s:%s (%s)" % (path or '<Unsaved>', pos, lang))
-            logger(view, 'info', "Error indexing! Please send the log file: '%s" % condeintel_log_filename)
-            raise
-        else:
-            eval_log_stream = StringIO()
-            _hdlrs = codeintel_log.handlers
-            hdlr = logging.StreamHandler(eval_log_stream)
-            hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
-            codeintel_log.handlers = list(_hdlrs) + [hdlr]
-            ctlr = LogEvalController(codeintel_log)
+        def get_trg(type, *args):
             try:
-                if 'cplns' in forms and trg and trg.form == TRG_FORM_CPLN:
+                trg = getattr(buf, type, lambda *a: None)(*args)
+            except CodeIntelError:
+                codeintel_log.exception("Exception! %s:%s (%s)" % (path or '<Unsaved>', pos, lang))
+                logger(view, 'info', "Error indexing! Please send the log file: '%s" % condeintel_log_filename)
+                trg = None
+            except:
+                codeintel_log.exception("Exception! %s:%s (%s)" % (path or '<Unsaved>', pos, lang))
+                logger(view, 'info', "Error indexing! Please send the log file: '%s" % condeintel_log_filename)
+                raise
+            return trg
+
+        bpos = pos2bytes(content, pos)
+        if caller == 'on_modified':
+            trg = get_trg('trg_from_pos', bpos)  # Use fast trg_from_pos
+        else:
+            trg = get_trg('preceding_trg_from_pos', bpos, bpos)  # Use more precise preceding_trg_from_pos
+        defn_trg = get_trg('defn_trg_from_pos', bpos) if 'defns' in forms else None
+
+        eval_log_stream = StringIO()
+        _hdlrs = codeintel_log.handlers
+        hdlr = logging.StreamHandler(eval_log_stream)
+        hdlr.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
+        codeintel_log.handlers = list(_hdlrs) + [hdlr]
+        ctlr = LogEvalController(codeintel_log)
+        try:
+            if 'cplns' in forms:
+                if trg and trg.form == TRG_FORM_CPLN:
                     cplns = buf.cplns_from_trg(trg, ctlr=ctlr, timeout=20)
-                if 'calltips' in forms and trg and trg.form == TRG_FORM_CALLTIP:
+            if 'calltips' in forms:
+                if trg and trg.form == TRG_FORM_CALLTIP:
                     calltips = buf.calltips_from_trg(trg, ctlr=ctlr, timeout=20)
-                if 'defns' in forms and defn_trg and defn_trg.form == TRG_FORM_DEFN:
+            if 'defns' in forms:
+                if defn_trg and defn_trg.form == TRG_FORM_DEFN:
                     defns = buf.defns_from_trg(defn_trg, ctlr=ctlr, timeout=20)
-            except EvalTimeout:
-                logger(view, 'info', "Timeout while resolving completions!")
-            finally:
-                codeintel_log.handlers = _hdlrs
-            logger(view, 'warning', "")
-            logger(view, 'event', "")
-            result = False
-            merge = ''
-            for msg in reversed(eval_log_stream.getvalue().strip().split('\n')):
-                msg = msg.strip()
-                if msg:
-                    try:
-                        name, levelname, msg = msg.split(':', 2)
-                        name = name.strip()
-                        levelname = levelname.strip().lower()
-                        msg = msg.strip()
-                    except:
-                        merge = (msg + ' ' + merge) if merge else msg
-                        continue
-                    merge = ''
-                    if not result and msg.startswith('evaluating '):
-                        set_status(view, 'warning', msg)
-                        result = True
+        except EvalTimeout:
+            logger(view, 'info', "Timeout while resolving completions!")
+        finally:
+            codeintel_log.handlers = _hdlrs
+        logger(view, 'warning', "")
+        logger(view, 'event', "")
+        result = False
+        merge = ''
+        for msg in reversed(eval_log_stream.getvalue().strip().split('\n')):
+            msg = msg.strip()
+            if msg:
+                try:
+                    name, levelname, msg = msg.split(':', 2)
+                    name = name.strip()
+                    levelname = levelname.strip().lower()
+                    msg = msg.strip()
+                except:
+                    merge = (msg + ' ' + merge) if merge else msg
+                    continue
+                merge = ''
+                if not result and msg.startswith('evaluating '):
+                    set_status(view, 'warning', msg)
+                    result = True
 
         # collect citdl_expr from this run
         citdl_expr = buf.last_citdl_expr
@@ -1100,9 +1099,9 @@ def triggerWordCompletions(view, lang, codeintel_word_completions):
     last_trigger_name = None
 
     show_auto_complete(view, {
-        'params': ("cplns", codeintel_word_completions, "", None, None),
+        'params': ("cplns", codeintel_word_completions, "", None, None, True),
         'cplns': None,
-    })
+    }, api_completions_only=False)
 
 
 # thanks to https://github.com/alienhard
@@ -1428,19 +1427,10 @@ class PythonCodeIntel(sublime_plugin.EventListener):
     # rescan a buffer on_pre_save, if it is dirty
     def on_pre_save(self, view):
         if view.is_dirty():
-            try:
-                env = _ci_envs_[view.id()]
-            except KeyError:
-                return
-
-            lang = guess_lang(view)
             path = view.file_name()
-            mtime = os.stat(path)[stat.ST_MTIME]
-
             content = view.substr(sublime.Region(0, view.size()))
-            mgr = codeintel_manager()
-            buf = mgr.buf_from_content(content, lang, env, path or "<Unsaved>", 'utf-8')
-            buf.scan(mtime=mtime, skip_scan_time_check=True)
+            lang = guess_lang(view)
+            codeintel_scan(view, path, content, lang)
 
     def on_close(self, view):
         vid = view.id()
@@ -1485,17 +1475,14 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
         sel = view_sel[0]
         pos = sel.end()
-        text = view.substr(sublime.Region(pos - 1, pos))
+        next_char = view.substr(sublime.Region(pos - 1, pos))
 
-        # FIXME: In using Python:  from x import<SPACE>  <- We'd want autocomplete here. Where shouldn't we want it?
-        # # no autocomplete if last char is empty string
-        # # hide completions if visible
-        # if not text.strip():
-        #     # sublime.message_dialog("LAST CHAR IS EMPTY")
-        #     hide_auto_complete(view)
-        #     return
+        is_fill_char = next_char and next_char in cpln_fillup_chars.get(lang, '')
+        is_stop_char = next_char and next_char in cpln_stop_chars.get(lang, '')
 
-        is_fill_char = (text and text[-1] in cpln_fillup_chars.get(lang, ''))
+        # Stop characters hide autocomplete window
+        if is_stop_char:
+            hide_auto_complete(view)
 
         # print('on_modified', view.command_history(1), view.command_history(0), view.command_history(-1))
         if (not hasattr(view, 'command_history') or view.command_history(1)[1] is None and (
@@ -1513,12 +1500,13 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                 forms = ('calltips', 'cplns')
 
             # fast trigger word completions from buffer
-            codeintel_word_completions = settings_manager.get("codeintel_word_completions", language=lang)
-            if codeintel_word_completions in ["buffer", "all"]:
-                triggerWordCompletions(view, lang, codeintel_word_completions)
+            if not is_fill_char:
+                codeintel_word_completions = settings_manager.get('codeintel_word_completions', language=lang)
+                if codeintel_word_completions in ['buffer', 'all']:
+                    triggerWordCompletions(view, lang, codeintel_word_completions)
 
             # will queue an autocomplete job
-            autocomplete(view, 0 if is_fill_char else 200, 50 if is_fill_char else 600, forms, is_fill_char, args=[path, pos, lang], kwargs={"caller": "on_modified"})
+            autocomplete(view, 0, 50, forms, True, args=[path, pos, lang], kwargs={'caller': 'on_modified'})
         else:
             hide_auto_complete(view)
 
@@ -1554,16 +1542,19 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         sublime_word_completions = False
         sublime_explicit_completions = False
 
-        word_completions = 0 if sublime_word_completions and len(prefix) != 0 else sublime.INHIBIT_WORD_COMPLETIONS
-        explicit_completions = 0 if sublime_explicit_completions else sublime.INHIBIT_EXPLICIT_COMPLETIONS
+        word_completions = 0
+        explicit_completions = 0
 
         _completions = []
         if vid in completions:
 
             on_query_info = completions[vid]
-            completion_type, add_word_completions, text_in_current_line, lang, trigger = on_query_info["params"]
+            completion_type, add_word_completions, text_in_current_line, lang, trigger, sublime_explicit_completions = on_query_info["params"]
             cplns = on_query_info["cplns"]
             del completions[vid]
+
+            word_completions = 0 if sublime_word_completions and len(prefix) != 0 else sublime.INHIBIT_WORD_COMPLETIONS
+            explicit_completions = 0 if sublime_explicit_completions else sublime.INHIBIT_EXPLICIT_COMPLETIONS
 
             if completion_type == "tooltips":
                 return (cplns, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
