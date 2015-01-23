@@ -331,7 +331,13 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                             print("Triggering use-namespace completion")
                         return Trigger(lang, TRG_FORM_CPLN, "use-namespace",
                                        pos, implicit)
-                    elif prev_text[1] != "namespace":
+                    elif prev_text[1] == "namespace": #namespace completions on "namespace" keyword!
+                        if DEBUG:
+                            print("Triggering namespace completion")
+                        return Trigger(
+                            lang, TRG_FORM_CPLN, "namespace-members-nmspc-only",
+                            pos, implicit)
+                    else:
                         if DEBUG:
                             print("Triggering namespace completion")
                         return Trigger(
@@ -586,14 +592,6 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
         accessor = buf.accessor
         prev_style = accessor.style_at_pos(curr_pos - 1)
 
-        #Allow namespaces ala "common\component" to trigger class names via "functions"-trigger
-        ignore_styles = []
-        if prev_style == self.operator_style:
-            prev_char = accessor.char_at_pos(curr_pos - 1)
-            if prev_char == "\\":
-                prev_style = self.identifier_style
-                ignore_styles = [self.operator_style]
-
         if prev_style in (self.identifier_style, self.keyword_style):
             # We don't know what to trigger here... could be one of:
             # functions:
@@ -606,7 +604,7 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
             #   implements apache<$><|>_getenv()...
             ac = AccessorCache(accessor, curr_pos)
             pos_before_identifer, ch, prev_style = \
-                ac.getPrecedingPosCharStyle(prev_style, ignore_styles=ignore_styles)
+                ac.getPrecedingPosCharStyle(prev_style)
             if DEBUG:
                 print("\nphp preceding_trg_from_pos, first chance for identifer style")
                 print("  curr_pos: %d" % (curr_pos))
@@ -776,7 +774,7 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                     print("i now: %d, ch: %r" % (i, ch))
 
                 if ch in WHITESPACE:
-                    if trg.type in ("use-namespace", "namespace-members"):
+                    if trg.type in ("use-namespace", "namespace-members", "namespace-members-nmspc-only"):
                         # Namespaces cannot be split over whitespace.
                         break
                     while ch in WHITESPACE:
@@ -935,8 +933,7 @@ class PHPLangIntel(CitadelLangIntel, ParenStyleCalltipIntelMixin,
                 i = trg.extra.get("bracket_pos")   # triggered on foo['
             elif trg.type == "use":
                 i = trg.pos + 1
-            elif trg.type == "namespace-members" or \
-                    trg.type == "use-namespace":
+            elif trg.type in ["namespace-members","use-namespace","namespace-members-nmspc-only"]:
                 i = trg.pos - 1
             else:
                 i = trg.pos - 2  # skip past the trigger char
