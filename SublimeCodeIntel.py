@@ -1182,7 +1182,7 @@ class WordCompletionsFromBuffer():
         return fixed_words
 
     def is_empty_match(self, match):
-        return match.empty()
+        return match is None or match.empty()
 
 
 class SettingsManager():
