@@ -180,6 +180,15 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 What's New
 ----------
 
+v2.1.6 (2015-01-23):
+
++ Optimizations.
+
++ Compatibility issues with ST2.
+
++ Stop characters fixed.
+
+
 v2.1.5 (2015-01-22):
 
 + Cleanups.
