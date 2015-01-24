@@ -236,6 +236,8 @@ class PHPTreeEvaluator(TreeEvaluator):
         elif trg.type == "classes":
             return self._classes_from_scope(None, start_scope) + \
                 self._imported_namespaces_from_scope(None, start_scope)
+        elif trg.type == "use-global-namespaces":
+            return self._namespaces_from_scope(None, start_scope)
         elif trg.type == "use":
             # When inside of a trait or a class - return trait completions, else
             # look for namespace completions.
