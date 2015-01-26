@@ -1373,7 +1373,6 @@ class SettingsManager():
         if self.needsUpdate():
             self.needs_update = False
             self._settings = self.load_relevant_settings()
-            self.updateSettingsOnViews()
             self.generateSettingsId()
             self.updateLanguageSpecificSettings()
 
@@ -1395,18 +1394,6 @@ class SettingsManager():
     def setChangeCallbackToSettingsFile(self):
         self.user_settings_file.clear_on_change(self.SETTINGS_FILE_NAME)
         self.user_settings_file.add_on_change(self.SETTINGS_FILE_NAME, self.settings_changed)
-
-    # DEPRECATED
-    def updateSettingsOnViews(self):
-        for window in sublime.windows():
-            for view in window.views():
-                view_settings = view.settings()
-                for setting_name in self.ALL_SETTINGS:
-                    if setting_name in self._settings:
-                        view_settings.set(setting_name, self._settings[setting_name])
-
-                if view_settings.get('codeintel') is None:
-                    view_settings.set('codeintel', True)
 
 settings_manager = SettingsManager()
 
