@@ -394,25 +394,26 @@ def getSublimeScope(view):
     return view.scope_name(pos)
 
 
+source_scopes = {
+    "json": "JSON",
+    "js": "JavaScript",
+    "python.3": "Python3",
+    "python": "Python",
+    "php": "PHP",
+    "perl": "Perl",
+    "ruby": "Ruby"
+}
+
+# order is important - longest keys first
+ordered_checks = OrderedDict(sorted(source_scopes.items(), key=lambda t: len(t[0]), reverse=True))
+
+
 def guess_lang(view=None, path=None, sublime_scope=None):
-    if not view or not codeintel_enabled(view):
+    if not view:
         return None
 
     #######################################
     # try to guess lang using sublime scope
-
-    source_scopes = {
-        "json": "JSON",
-        "js": "JavaScript",
-        "python.3": "Python3",
-        "python": "Python",
-        "php": "PHP",
-        "perl": "Perl",
-        "ruby": "Ruby"
-    }
-
-    # order is important - longest keys first
-    ordered_checks = OrderedDict(sorted(source_scopes.items(), key=lambda t: len(t[0]), reverse=True))
 
     scopes = sublime_scope if sublime_scope else getSublimeScope(view)
     if scopes:
@@ -421,6 +422,12 @@ def guess_lang(view=None, path=None, sublime_scope=None):
                 for check in ordered_checks:
                     if scope[7:].startswith(check):
                         return source_scopes[check]
+
+    if 'text.plain' in scopes:
+        return None
+
+    if not codeintel_enabled(view):
+        return None
 
     # check for html
     if "text.html" in scopes:
@@ -1442,15 +1449,19 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
     def on_modified(self, view):
         view_sel = view.sel()
-        settings_manager.update()
-
-        if not view_sel or settings_manager.sublime_auto_complete is None:
+        if not view_sel:
             return
 
         sublime_scope = getSublimeScope(view)
-
         path = view.file_name()
         lang = guess_lang(view, path, sublime_scope)
+        if not lang:
+            return
+
+        settings_manager.update()
+
+        if settings_manager.sublime_auto_complete is None:
+            return
 
         exclude_scopes = settings_manager.get("codeintel_exclude_scopes_from_complete_triggers", language=lang, default=[])
 
@@ -1465,8 +1476,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             # if live completion is disabled, we're wrong here!
             return
 
-        if not settings_manager.get('codeintel_live', default=True, language=lang):
-            # if live completion is disabled, we're wrong here!
+        if lang.lower() not in [l.lower() for l in settings_manager.get('codeintel_enabled_languages', [])]:
             return
 
         # disable sublime's auto_complete for now / this is for files with
