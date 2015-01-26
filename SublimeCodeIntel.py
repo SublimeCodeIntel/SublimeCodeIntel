@@ -816,60 +816,7 @@ def codeintel_scan(view, path, content, lang, callback=None, pos=None, forms=Non
                 raise KeyError
         except KeyError:
             # Generate new Environment
-            valid = True
-            if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
-                if lang in ('Console', 'Plain text'):
-                    msg = "Invalid language: %s. Available: %s" % (lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs())))
-                    log.debug(msg)
-                    codeintel_log.warning(msg)
-                valid = False
-
-            codeintel_selected_catalogs = config.get('codeintel_selected_catalogs')
-
-            avail_catalogs = mgr.db.get_catalogs_zone().avail_catalogs()
-
-            # Load configuration files:
-            all_catalogs = []
-            for catalog in avail_catalogs:
-                all_catalogs.append("%s (for %s: %s)" % (catalog['name'], catalog['lang'], catalog['description']))
-                if catalog['lang'] == lang:
-                    if catalog['name'] in codeintel_selected_catalogs:
-                        catalogs.append(catalog['name'])
-            msg = "Avaliable catalogs: %s" % ', '.join(all_catalogs) or None
-            log.debug(msg)
-            codeintel_log.debug(msg)
-
-            # scan_extra_dir
-            if config.get('codeintel_scan_files_in_project', True):
-                scan_extra_dir = list(folders)
-            else:
-                scan_extra_dir = []
-
-            scan_extra_dir.extend(config.get("codeintel_scan_extra_dir", []))
-            config["codeintel_scan_extra_dir"] = scan_extra_dir
-
-            for conf, p in config.items():
-                if isinstance(p, string_types) and p.startswith('~'):
-                    config[conf] = os.path.expanduser(p)
-
-            # Setup environment variables
-            # lang env settings
-            env = config.get('env', {})
-            # basis is os environment
-            _environ = dict(os.environ)
-            for k, v in env.items():
-                _old = None
-                while '$' in v and v != _old:
-                    _old = v
-                    v = os.path.expandvars(v)
-                _environ[k] = v
-            config['env'] = _environ
-
-            env = SimplePrefsEnvironment(**config)
-            env._valid = valid
-            env._mtime = settings_manager._settings_id
-            env._lang = lang
-            env._folders = folders
+            env = generateEnvironment(config, mgr, lang, folders)
             _ci_envs_[vid] = env
         # env._time = now + 5  # don't check again in less than five seconds
 
@@ -1028,6 +975,64 @@ def codeintel(view, path, content, lang, pos, forms, callback, timeout=7000, cal
             print(msg, file=condeintel_log_file)
             logger(view, 'info', msg, timeout=3000)
     codeintel_scan(view, path, content, lang, _codeintel, pos, forms, caller=caller)
+
+
+def generateEnvironment(config, mgr, lang, folders):
+    catalogs = []
+    valid = True
+    if not mgr.is_citadel_lang(lang) and not mgr.is_cpln_lang(lang):
+        if lang in ('Console', 'Plain text'):
+            msg = "Invalid language: %s. Available: %s" % (lang, ', '.join(set(mgr.get_citadel_langs() + mgr.get_cpln_langs())))
+            log.debug(msg)
+            codeintel_log.warning(msg)
+        valid = False
+
+    codeintel_selected_catalogs = config.get('codeintel_selected_catalogs')
+
+    avail_catalogs = mgr.db.get_catalogs_zone().avail_catalogs()
+
+    # Load configuration files:
+    all_catalogs = []
+    for catalog in avail_catalogs:
+        all_catalogs.append("%s (for %s: %s)" % (catalog['name'], catalog['lang'], catalog['description']))
+        if catalog['lang'] == lang:
+            if catalog['name'] in codeintel_selected_catalogs:
+                catalogs.append(catalog['name'])
+    msg = "Avaliable catalogs: %s" % ', '.join(all_catalogs) or None
+    log.debug(msg)
+    codeintel_log.debug(msg)
+
+    # scan_extra_dir
+    if config.get('codeintel_scan_files_in_project', True):
+        scan_extra_dir = list(folders)
+    else:
+        scan_extra_dir = []
+
+    scan_extra_dir.extend(config.get("codeintel_scan_extra_dir", []))
+    config["codeintel_scan_extra_dir"] = scan_extra_dir
+
+    for conf, p in config.items():
+        if isinstance(p, string_types) and p.startswith('~'):
+            config[conf] = os.path.expanduser(p)
+
+    # Setup environment variables
+    # lang env settings
+    env = config.get('env', {})
+    # basis is os environment
+    _environ = dict(os.environ)
+    for k, v in env.items():
+        _old = None
+        while '$' in v and v != _old:
+            _old = v
+            v = os.path.expandvars(v)
+        _environ[k] = v
+    config['env'] = _environ
+
+    env = SimplePrefsEnvironment(**config)
+    env._valid = valid
+    env._mtime = settings_manager._settings_id
+    env._lang = lang
+    env._folders = folders
 
 
 def find_back(start_at, look_for):
