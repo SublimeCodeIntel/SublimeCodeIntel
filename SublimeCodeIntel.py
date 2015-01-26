@@ -1428,7 +1428,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
         settings_manager.update()
 
-        if codeintel_enabled():
+        if not codeintel_enabled():
             return
 
         exclude_scopes = settings_manager.get("codeintel_exclude_scopes_from_complete_triggers", language=lang, default=[])
@@ -1571,7 +1571,7 @@ class CodeIntelAutoComplete(sublime_plugin.TextCommand):
 
         settings_manager.update()
 
-        if codeintel_enabled():
+        if not codeintel_enabled():
             return
 
         sel = view_sel[0]
