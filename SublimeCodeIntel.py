@@ -1211,6 +1211,7 @@ class SettingsManager():
         self.user_settings_file = None
         self.sublime_settings_file = None
         self.sublime_auto_complete = None
+        self.project_file_names = {}
 
     def loadSublimeSettings(self):
         self.sublime_settings_file = sublime.load_settings('Preferences.sublime-settings')
@@ -1235,6 +1236,33 @@ class SettingsManager():
         data = data.replace('\t', ' ')
         return json.loads(data, strict=False)
 
+    def _check_project_file_name(self, folders, session_filename):
+        try:
+            with open(session_filename) as fp:
+                data = json.load(fp, strict=False)
+        except IOError:
+            return
+        try:
+            projects = data['workspaces']['recent_workspaces']
+        except KeyError:
+            return
+
+        for project_file in projects:
+            try:
+                with open(project_file) as fp:
+                    project_json = json.load(fp, strict=False)
+            except IOError:
+                pass
+            else:
+                project_path = os.path.dirname(project_file)
+                try:
+                    project_folders = set(os.path.realpath(os.path.join(project_path, f['path'])) for f in project_json['folders'])
+                except KeyError:
+                    pass
+                else:
+                    if project_folders == folders:
+                        return project_file
+
     def project_file_name(self):
         """
         ST2/ST3-compatible wrapper for getting the project file for a window, made possible with
@@ -1242,50 +1270,30 @@ class SettingsManager():
         """
         window = sublime.active_window()
         if not window:
-            return None
+            return
         if hasattr(window, 'project_file_name'):
             return window.project_file_name()
-        if not window.folders():
-            return None
-        session_filename = os.path.normpath(os.path.join(sublime.packages_path(), '..', 'Settings', 'Session.sublime_session'))
+        wid = window.id()
         try:
-            data = file(session_filename, 'r').read()
-        except IOError:
-            projects = []
-        else:
-            data = data.decode('utf-8').replace('\t', ' ')
-            data = json.loads(data, strict=False)
-            projects = data['workspaces']['recent_workspaces']
-        autosave_filename = os.path.normpath(os.path.join(sublime.packages_path(), '..', 'Settings', 'Auto Save Session.sublime_session'))
-        try:
-            data = file(autosave_filename, 'r').read()
-        except IOError:
+            return self.project_file_names[wid]
+        except KeyError:
             pass
-        else:
-            data = data.decode('utf-8').replace('\t', ' ')
-            data = json.loads(data, strict=False)
-            if hasattr(data, 'workspaces') and hasattr(data['workspaces'], 'recent_workspaces') and data['workspaces']['recent_workspaces']:
-                projects += data['workspaces']['recent_workspaces']
-            projects = list(set(projects))
-        for project_file in projects:
-            project_file = re.sub(r'^/([^/])/', '\\1:/', project_file)
-            project_json = json.loads(file(project_file, 'r').read(), strict=False)
-            if 'folders' in project_json:
-                folders = project_json['folders']
-                found_all = True
-                for directory in window.folders():
-                    found = False
-                    for folder in folders:
-                        folder_path = re.sub(r'^/([^/])/', '\\1:/', folder['path'])
-                        if folder_path == directory.replace('\\', '/'):
-                            found = True
-                            break
-                    if not found:
-                        found_all = False
-                        break
-                if found_all:
-                    return project_file
-        return None
+        folders = window.folders()
+        if not folders:
+            return
+        settings_path = os.path.normpath(os.path.join(sublime.packages_path(), '..', 'Settings'))
+
+        folders = set(os.path.realpath(f) for f in folders)
+
+        session_filename = os.path.join(settings_path, 'Session.sublime_session')
+        project_file_name = self._check_project_file_name(folders, session_filename)
+
+        # if not project_file_name:
+        #     session_filename = os.path.join(settings_path, 'Auto Save Session.sublime_session')
+        #     project_file_name = self._check_project_file_name(folders, session_filename)
+
+        self.project_file_names[wid] = project_file_name
+        return project_file_name
 
     def get(self, config_key, default=None, language=None):
         if language is not None:
