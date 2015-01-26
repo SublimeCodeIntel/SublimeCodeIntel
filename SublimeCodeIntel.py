@@ -1510,7 +1510,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                 forms = ('calltips', 'cplns')
 
             # fast trigger word completions from buffer
-            if not is_fill_char:
+            if not is_fill_char and not is_stop_char:
                 codeintel_word_completions = settings_manager.get('codeintel_word_completions', language=lang)
                 if codeintel_word_completions in ['buffer', 'all']:
                     triggerWordCompletions(view, lang, codeintel_word_completions)
