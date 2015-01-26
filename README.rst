@@ -180,6 +180,16 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 What's New
 ----------
 
+v2.1.7 (2015-01-26):
+
++ Fixed triggering issues with autocompletion and stop chars.
+
++ ST2 improvements. Still might show "slow plugin"
+  (just ignore, project_file_name is being emulated from ST3, which is "slow")
+
++ Cleanups
+
+
 v2.1.6 (2015-01-23):
 
 + Optimizations.
