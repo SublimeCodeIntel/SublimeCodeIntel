@@ -505,7 +505,7 @@ def autocomplete(view, timeout, busy_timeout, forms, preemptive=False, args=[], 
         lpos = view.line(sel).begin()
         text_in_current_line = view.substr(sublime.Region(lpos, pos + 1))
 
-        def _trigger(trigger, citdl_expr, calltips, cplns=None):
+        def _trigger(trigger, citdl_expr, calltips=None, cplns=None):
             global cplns_were_empty, last_trigger_name, last_citdl_expr
 
             add_word_completions = settings_manager.get("codeintel_word_completions", language=lang)
