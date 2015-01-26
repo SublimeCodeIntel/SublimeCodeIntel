@@ -1523,21 +1523,21 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         if vid in completions:
 
             on_query_info = completions[vid]
-            completion_type, add_word_completions, text_in_current_line, lang, trigger, sublime_explicit_completions = on_query_info["params"]
-            cplns = on_query_info["cplns"]
+            completion_type, add_word_completions, text_in_current_line, lang, trigger, sublime_explicit_completions = on_query_info['params']
+            cplns = on_query_info['cplns']
             del completions[vid]
 
             word_completions = 0 if sublime_word_completions and len(prefix) != 0 else sublime.INHIBIT_WORD_COMPLETIONS
             explicit_completions = 0 if sublime_explicit_completions else sublime.INHIBIT_EXPLICIT_COMPLETIONS
 
-            if completion_type == "tooltips":
+            if completion_type == 'tooltips':
                 return (cplns, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
-            if completion_type == "cplns":
+            if completion_type == 'cplns':
                 if cplns is not None:
                     _completions = format_completions_by_language(cplns, lang, text_in_current_line, trigger)
 
-                if add_word_completions in ["buffer", "all"]:
+                if add_word_completions in ['buffer', 'all']:
                     wordsFromBufferMgr = WordCompletionsFromBuffer()
                     word_completions_from_buffer = wordsFromBufferMgr.getCompletions(view, prefix, locations, add_word_completions)
                     if cplns is not None:
@@ -1546,7 +1546,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
                         def extendForLanguages(n, lang):
                             for i in n:
                                 yield i[1]
-                                if lang == "PHP":
+                                if lang == 'PHP':
                                     yield "$" + i[1]
                         cplns_list = [i for i in extendForLanguages(cplns, lang)]
                         word_completions_from_buffer = [x for x in word_completions_from_buffer if x[0] not in cplns_list]
