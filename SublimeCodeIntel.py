@@ -1432,15 +1432,14 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         if not view_sel:
             return
 
+        settings_manager.update()
+        if not codeintel_enabled():
+            return
+
         sublime_scope = getSublimeScope(view)
         path = view.file_name()
         lang = guess_lang(view, path, sublime_scope)
         if not lang:
-            return
-
-        settings_manager.update()
-
-        if not codeintel_enabled():
             return
 
         exclude_scopes = settings_manager.get("codeintel_exclude_scopes_from_complete_triggers", language=lang, default=[])
@@ -1580,15 +1579,14 @@ class CodeIntelAutoComplete(sublime_plugin.TextCommand):
         if not view_sel:
             return
 
+        settings_manager.update()
+        if not codeintel_enabled():
+            return
+
         sublime_scope = getSublimeScope(view)
         path = view.file_name()
         lang = guess_lang(view, path, sublime_scope)
         if not lang:
-            return
-
-        settings_manager.update()
-
-        if not codeintel_enabled():
             return
 
         sel = view_sel[0]
