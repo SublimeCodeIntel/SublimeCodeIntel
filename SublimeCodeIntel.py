@@ -1638,6 +1638,45 @@ class BackToPythonDefinition(sublime_plugin.TextCommand):
                 window.open_file(previous_location, sublime.ENCODED_POSITION)
 
 
+class SublimecodeintelDumpImportDirs(sublime_plugin.WindowCommand):
+    def run(self):
+        settings_manager.update()
+        if not codeintel_enabled():
+            return
+
+        codeintel_database_dir = os.path.expanduser(settings_manager.get('codeintel_database_dir'))
+        db_dir = os.path.join(codeintel_database_dir, 'db')
+
+        stat_dir = os.path.join(codeintel_database_dir, 'import_dir_stats')
+        if not os.path.exists(stat_dir):
+            os.makedirs(stat_dir)
+
+        def get_immediate_subdirectories(a_dir):
+            for subdirname in os.listdir(a_dir):
+                dirname = os.path.join(a_dir, subdirname)
+                if os.path.isdir(dirname):
+                    yield (dirname, subdirname)
+
+        for lib_dir in [lib_dir for lib_dir in get_immediate_subdirectories(db_dir)]:
+            if lib_dir[1] != 'stdlibs':
+                lang = lib_dir[1]
+                import_dirs = []
+                hash_map = {}
+                for lib_dir_entry in get_immediate_subdirectories(lib_dir[0]):
+                    try:
+                        pathfile_path = os.path.join(lib_dir_entry[0], 'path')
+                        path_file = open(pathfile_path)
+                        import_dir = path_file.read()
+                        import_dirs.append(import_dir)
+                        hash_map[import_dir] = lib_dir_entry[1]
+                    except:
+                        pass
+
+                stat_file = open(os.path.join(stat_dir, lang), 'w')
+                for item in sorted(import_dirs, key=str.lower):
+                    stat_file.write("%s %s\n" % (hash_map[item], item))
+
+
 class CodeintelCommand(sublime_plugin.TextCommand):
     """command to interact with codeintel"""
 

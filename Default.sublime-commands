@@ -33,5 +33,9 @@
         "caption": "SublimeCodeIntel: Disable Live Autocompletion for Current Language",
         "command": "sublimecodeintel_disable_live_lang",
         "args": {"action": "lang-off"}
+    },
+    {
+        "caption": "SublimeCodeIntel: Dump Import Directories",
+        "command": "sublimecodeintel_dump_import_dirs"
     }
 ]
