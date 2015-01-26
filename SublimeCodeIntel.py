@@ -1375,12 +1375,9 @@ class SettingsManager():
 settings_manager = SettingsManager()
 
 
-def codeintel_enabled(view, default=None):
-    if view.settings().get('codeintel') is None:
-        # updates settings if necessary
-        if settings_manager.getSettings():
-            return True
-    return settings_manager.get('codeintel', default=default)
+# make sure all settings could be loaded and sublime is ready
+def codeintel_enabled(default=False):
+    return settings_manager.sublime_auto_complete is not None
 
 
 def format_completions_by_language(cplns, language, text_in_current_line, trigger):
@@ -1429,7 +1426,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
         settings_manager.update()
 
-        if settings_manager.sublime_auto_complete is None:
+        if codeintel_enabled():
             return
 
         exclude_scopes = settings_manager.get("codeintel_exclude_scopes_from_complete_triggers", language=lang, default=[])
@@ -1563,12 +1560,21 @@ class CodeIntelAutoComplete(sublime_plugin.TextCommand):
         view_sel = view.sel()
         if not view_sel:
             return
+
+        sublime_scope = getSublimeScope(view)
+        path = view.file_name()
+        lang = guess_lang(view, path, sublime_scope)
+        if not lang:
+            return
+
+        settings_manager.update()
+
+        if codeintel_enabled():
+            return
+
         sel = view_sel[0]
         pos = sel.end()
-        path = view.file_name()
-        lang = guess_lang(view, path)
-        if lang:
-            autocomplete(view, 0, 0, ('calltips', 'cplns'), True, args=[path, pos, lang])
+        autocomplete(view, 0, 0, ('calltips', 'cplns'), True, args=[path, pos, lang])
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
