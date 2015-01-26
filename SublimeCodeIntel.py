@@ -1224,17 +1224,19 @@ class SettingsManager():
         """
         window = sublime.active_window()
         if not window:
-            return None
+            return
         if hasattr(window, 'project_data'):
             return window.project_data()
         # get the project file, returning None if it doesn't exist, just like ST3's get_project_file()
-        projectFileName = self.project_file_name()
-        if projectFileName is None:
-            return None
+        project_file_name = self.project_file_name()
+        if not project_file_name:
+            return
         # read the project json file
-        data = file(projectFileName, 'r').read()
-        data = data.replace('\t', ' ')
-        return json.loads(data, strict=False)
+        try:
+            with open(project_file_name) as fp:
+                return json.load(fp, strict=False)
+        except IOError:
+            pass
 
     def _check_project_file_name(self, folders, session_filename):
         try:
@@ -1247,21 +1249,21 @@ class SettingsManager():
         except KeyError:
             return
 
-        for project_file in projects:
+        for project_file_name in projects:
             try:
-                with open(project_file) as fp:
+                with open(project_file_name) as fp:
                     project_json = json.load(fp, strict=False)
             except IOError:
                 pass
             else:
-                project_path = os.path.dirname(project_file)
+                project_path = os.path.dirname(project_file_name)
                 try:
                     project_folders = set(os.path.realpath(os.path.join(project_path, f['path'])) for f in project_json['folders'])
                 except KeyError:
                     pass
                 else:
                     if project_folders == folders:
-                        return project_file
+                        return project_file_name
 
     def project_file_name(self):
         """
@@ -1274,8 +1276,11 @@ class SettingsManager():
         if hasattr(window, 'project_file_name'):
             return window.project_file_name()
         wid = window.id()
+        now = time.time()
         try:
-            return self.project_file_names[wid]
+            project_file_name, before = self.project_file_names[wid]
+            if now > before + 10:  # Invalidate every 10 seconds
+                raise KeyError
         except KeyError:
             pass
         folders = window.folders()
@@ -1292,7 +1297,7 @@ class SettingsManager():
         #     session_filename = os.path.join(settings_path, 'Auto Save Session.sublime_session')
         #     project_file_name = self._check_project_file_name(folders, session_filename)
 
-        self.project_file_names[wid] = project_file_name
+        self.project_file_names[wid] = project_file_name, now
         return project_file_name
 
     def get(self, config_key, default=None, language=None):
@@ -1321,8 +1326,7 @@ class SettingsManager():
             if self.user_settings_file.get(setting_name) is not None:
                 settings[setting_name] = self.user_settings_file.get(setting_name)
 
-        # override basic plugin settings with settings from .sublime-project
-        # file
+        # override basic plugin settings with settings from .sublime-project file
         project_file_content = self.project_data()
         if project_file_content is not None and "codeintel_settings" in project_file_content:
             for setting_name in self.ALL_SETTINGS:
