@@ -1034,6 +1034,8 @@ def generateEnvironment(config, mgr, lang, folders):
     env._lang = lang
     env._folders = folders
 
+    return env
+
 
 def find_back(start_at, look_for):
     root = os.path.realpath('/')
