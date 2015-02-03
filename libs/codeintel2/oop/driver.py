@@ -23,7 +23,13 @@ import itertools
 import json
 import logging
 import os.path
-import Queue
+
+VERSION = sys.version_info[0]
+if VERSION == 3:
+    from queue import Queue
+else:
+    from Queue import Queue
+
 import shutil
 import sys
 import threading

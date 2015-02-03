@@ -86,7 +86,13 @@ import glob
 import time
 import stat
 import types
-from cStringIO import StringIO
+
+VERSION = sys.version_info[0]
+if VERSION == 3:
+    from io import StringIO
+else:
+    from cStringIO import StringIO
+
 from functools import partial
 
 # this particular ET is different from xml.etree and is expected

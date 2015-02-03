@@ -49,7 +49,13 @@ import re
 import logging
 import time
 import warnings
-from cStringIO import StringIO
+
+VERSION = sys.version_info[0]
+if VERSION == 3:
+    from io import StringIO
+else:
+    from cStringIO import StringIO
+
 import weakref
 from glob import glob
 

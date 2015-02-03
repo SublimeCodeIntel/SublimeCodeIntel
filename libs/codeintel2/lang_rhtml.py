@@ -41,7 +41,13 @@ import os
 from os.path import (isfile, isdir, exists, dirname, abspath, splitext,
                      join, basename)
 import sys
-from cStringIO import StringIO
+
+VERSION = sys.version_info[0]
+if VERSION == 3:
+    from io import StringIO
+else:
+    from cStringIO import StringIO
+
 import logging
 import re
 import traceback

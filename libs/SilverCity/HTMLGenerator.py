@@ -1,5 +1,6 @@
-import ScintillaConstants
-import Utils
+from __future__ import absolute_import
+from . import ScintillaConstants
+from . import Utils
 
 
 def replace(text, *replacements):

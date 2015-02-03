@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import re
 import os
 import types
@@ -134,16 +135,16 @@ def add_extension(name, ext):
 
 
 def do_registration():
-    import CPP
-    import CSS
-    import HyperText
-    import JavaScript
-    import NULL
-    import Perl
-    import Python
-    import PostScript
-    import Ruby
-    import SQL
-    import YAML
-    import XML
-    import XSLT
+    from . import CPP
+    from . import CSS
+    from . import HyperText
+    from . import JavaScript
+    from . import NULL
+    from . import Perl
+    from . import Python
+    from . import PostScript
+    from . import Ruby
+    from . import SQL
+    from . import YAML
+    from . import XML
+    from . import XSLT

@@ -6,8 +6,8 @@ PLATFORM = sys.platform
 ARCH = 'x%d' % (struct.calcsize('P') * 8)
 
 if VERSION >= (3, 3):
-    from iElementTree import *
-    from iElementTree import _patched_for_komodo_
+    from elementtree.ElementTree import *
+    from elementtree.ElementTree import _patched_for_komodo_
 elif VERSION >= (2, 6):
 	platform = None
 

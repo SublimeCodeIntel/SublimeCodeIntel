@@ -1,4 +1,5 @@
-import ScintillaConstants
+from __future__ import absolute_import
+from . import ScintillaConstants
 
 
 def list_states(state_prefix):

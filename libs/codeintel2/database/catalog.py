@@ -44,7 +44,6 @@ import os
 from os.path import (join, dirname, exists, expanduser, splitext, basename,
                      split, abspath, isabs, isdir, isfile, normpath,
                      normcase)
-import cPickle as pickle
 import threading
 import time
 from hashlib import md5
@@ -53,12 +52,20 @@ import fnmatch
 from glob import glob
 from pprint import pprint, pformat
 import logging
-from cStringIO import StringIO
+
+VERSION = sys.version_info[0]
+if VERSION == 3:
+    from io import StringIO
+    import pickle as pickle
+    from queue import Queue
+else:
+    from cStringIO import StringIO
+    import cPickle as pickle
+    from Queue import Queue
+
 import codecs
 import copy
 import weakref
-import Queue
-
 import ciElementTree as ET
 from codeintel2.common import *
 from codeintel2.buffer import Buffer
@@ -152,7 +159,7 @@ class CatalogsZone(object):
                 in self._selection_from_selector(selections).items():
             try:
                 res_ids += self._res_ids_from_selector_cache[selector]
-            except KeyError, ex:
+            except KeyError as ex:
                 missing_selections.append(selection)
         log.debug("_res_ids_from_selections: res_ids=%r", res_ids)
         return tuple(res_ids), missing_selections
@@ -327,7 +334,7 @@ class CatalogsZone(object):
                     elif elem.tag == "file":
                         lang = elem.get("lang")
                         break
-            except ET.XMLParserError, ex:
+            except ET.XMLParserError as ex:
                 log.warn("%s: error reading catalog, skipping it (%s)",
                          cix_path, ex)
                 continue
@@ -406,7 +413,7 @@ class CatalogsZone(object):
                 try:
                     todos.append(("remove", AreaResource(
                         res_area_path), res_name))
-                except ValueError, ex:
+                except ValueError as ex:
                     # Skip resources in unknown areas. This is primarily to
                     # allow debugging/testing (when the set of registered
                     # path_areas may not include the set when running in
@@ -468,7 +475,7 @@ class CatalogsZone(object):
                         #    more intelligently if possible.
                         self._remove_res(res)
                         self._add_res(res)
-                except DatabaseError, ex:
+                except DatabaseError as ex:
                     log.warn("%s (skipping)" % ex)
 
             if progress_cb:
@@ -530,7 +537,7 @@ class CatalogsZone(object):
                         log.debug("fs-write: remove catalog %s blob file '%s'",
                                   lang, basename(path))
                         os.remove(path)
-                except EnvironmentError, ex:
+                except EnvironmentError as ex:
                     # XXX If get lots of these, then try harder. Perhaps
                     #    creating a zombies area, or creating a list of
                     #    them: self.db.add_zombie(dbpath).
@@ -550,7 +557,7 @@ class CatalogsZone(object):
                             del bfrft[toplevelname][res_id]
                             if not bfrft[toplevelname]:
                                 del bfrft[toplevelname]
-                    except KeyError, ex:
+                    except KeyError as ex:
                         self.db.corruption("CatalogsZone._remove_res",
                                            "error removing top-level names of ilk '%s' for "
                                            "'%s' resource from toplevelname_index: %s"
@@ -564,7 +571,7 @@ class CatalogsZone(object):
                             del tfrfp[prefix][res_id]
                             if not tfrfp[prefix]:
                                 del tfrfp[prefix]
-                    except KeyError, ex:
+                    except KeyError as ex:
                         self.db.corruption("CatalogsZone._remove_res",
                                            "error removing top-level name of ilk '%s' for "
                                            "'%s' resource from toplevelprefix_index: %s"
@@ -577,7 +584,7 @@ class CatalogsZone(object):
         cix_path = res.path
         try:
             tree = tree_from_cix_path(cix_path)
-        except ET.XMLParserError, ex:
+        except ET.XMLParserError as ex:
             log.warn("could not load `%s' into catalog (skipping): %s",
                      cix_path, ex)
             return

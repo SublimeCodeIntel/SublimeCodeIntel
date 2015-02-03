@@ -55,7 +55,13 @@ import sys
 import threading
 import time
 import bisect
-import Queue
+
+VERSION = sys.version_info[0]
+if VERSION == 3:
+    import queue as Queue
+else:
+    import Queue
+
 from hashlib import md5
 import traceback
 

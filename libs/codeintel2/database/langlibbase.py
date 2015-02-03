@@ -103,7 +103,7 @@ class LangDirsLibBase(object):
                     try:
                         buf = self.mgr.buf_from_path(join(dir, base),
                                                      lang=self.lang)
-                    except (EnvironmentError, CodeIntelError), ex:
+                    except (EnvironmentError, CodeIntelError) as ex:
                         # This can occur if the path does not exist, such as a
                         # broken symlink, or we don't have permission to read
                         # the file, or the file does not contain text.

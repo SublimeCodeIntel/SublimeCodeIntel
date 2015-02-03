@@ -246,8 +246,19 @@ import sys
 import os
 from os.path import (join, dirname, exists, expanduser, expandvars, splitext, basename,
                      split, abspath, isabs, isdir, isfile)
-import cPickle as pickle
-from cPickle import UnpicklingError
+
+VERSION = sys.version_info[0]
+if VERSION == 3:
+    from queue import Queue
+    import pickle as pickle
+    from pickle import UnpicklingError
+    from io import StringIO
+else:
+    import cPickle as pickle
+    from cPickle import UnpicklingError
+    from cStringIO import StringIO
+    from Queue import Queue
+
 import threading
 import time
 from hashlib import md5
@@ -256,11 +267,9 @@ import fnmatch
 from glob import glob
 from pprint import pprint, pformat
 import logging
-from cStringIO import StringIO
 import codecs
 import copy
 import weakref
-import Queue
 
 import ciElementTree as ET
 from codeintel2.common import *
@@ -421,7 +430,7 @@ class Database(object):
         path = join(self.base_dir, "VERSION")
         try:
             fin = open(path, 'r')
-        except EnvironmentError, ex:
+        except EnvironmentError as ex:
             return None
         try:
             return fin.read().strip()
@@ -624,7 +633,7 @@ class Database(object):
         if self.event_reporter:
             try:
                 self.event_reporter(desc)
-            except Exception, ex:
+            except Exception as ex:
                 log.exception("error calling event reporter: %s", ex)
 
     def save(self):
@@ -984,7 +993,7 @@ class Database(object):
             cache_key = ext[1:]
             try:
                 blob.cache[cache_key] = self.load_pickle(blob_cache_file)
-            except (UnpicklingError, ImportError), ex:
+            except (UnpicklingError, ImportError) as ex:
                 log.warn("error unpickling `%s' (skipping): %s",
                          blob_cache_file, ex)
         return blob
@@ -1022,7 +1031,7 @@ class Database(object):
                       dirname(path)[len(self.base_dir)+1:])
             try:
                 os.makedirs(dirname(path))
-            except OSError, ex:
+            except OSError as ex:
                 log.warn("error creating `%s': %s", dirname(path), ex)
         log.debug("fs-write: '%s'", path[len(self.base_dir)+1:])
         fout = open(path, 'wb')

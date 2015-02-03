@@ -45,7 +45,11 @@ import logging
 from collections import defaultdict
 from glob import glob
 import threading
-from Queue import Queue
+VERSION = sys.version_info[0]
+if VERSION == 3:
+    from queue import Queue
+else:
+    from Queue import Queue
 import warnings
 import traceback
 import codecs
@@ -284,7 +288,7 @@ class Manager(threading.Thread, Queue):
             log.debug("register `%s' support module", module_path)
             try:
                 module.register(self)
-            except CodeIntelError, ex:
+            except CodeIntelError as ex:
                 log.warn("error registering `%s' support module: %s",
                          module_path, ex)
             except:
@@ -546,7 +550,7 @@ class Manager(threading.Thread, Queue):
         log.exception("error evaluating %s" % eval_sess)
         eval_sess.ctlr.done("unexpected eval error")
 
-    def _put(self, (eval_sess, is_reeval)):
+    def _put(self, eval_sess, is_reeval):
         # Only consider re-evaluation if we are still on the same eval
         # session.
         if is_reeval and self._curr_eval_sess is not eval_sess:
@@ -573,7 +577,7 @@ class Manager(threading.Thread, Queue):
         if not self.isAlive():
             self.start()
 
-        Queue._put(self, (eval_sess, is_reeval))
+        Queue._put(self, eval_sess, is_reeval)
         if replace:
             assert len(self.queue) == 1
 

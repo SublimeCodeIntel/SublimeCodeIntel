@@ -42,7 +42,13 @@ from os.path import isfile, isdir, exists, dirname, abspath, splitext, join
 import sys
 import stat
 import string
-from cStringIO import StringIO
+
+VERSION = sys.version_info[0]
+if VERSION == 3:
+    from io import StringIO
+else:
+    from cStringIO import StringIO
+
 import logging
 import traceback
 from pprint import pprint

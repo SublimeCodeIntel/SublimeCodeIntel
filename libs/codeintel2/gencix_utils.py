@@ -45,7 +45,13 @@ import os
 import sys
 import re
 import shutil
-from cStringIO import StringIO
+
+VERSION = sys.version_info[0]
+if VERSION == 3:
+    from io import StringIO
+else:
+    from cStringIO import StringIO
+
 import warnings
 
 from ciElementTree import Element, ElementTree, SubElement

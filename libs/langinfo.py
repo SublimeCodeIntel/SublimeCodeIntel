@@ -387,7 +387,7 @@ class Database(object):
             else:  # a struct format
                 try:
                     length = struct.calcsize(format)
-                except struct.error, ex:
+                except struct.error as ex:
                     warnings.warn("error in %s magic number struct format: %r"
                                   % (li, format),
                                   InvalidLangInfoWarning)
@@ -540,7 +540,7 @@ class Database(object):
         for path in glob(join(d, "langinfo_*.py")):
             try:
                 module = _module_from_path(path)
-            except Exception, ex:
+            except Exception as ex:
                 log.warn("could not import `%s': %s", path, ex)
                 # import traceback
                 # traceback.print_exc()
