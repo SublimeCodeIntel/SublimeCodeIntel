@@ -1761,7 +1761,7 @@ class CodeintelCommand(sublime_plugin.TextCommand):
 
 class SublimecodeintelWindowCommand(sublime_plugin.WindowCommand):
 
-    def is_enabled(self):
+    def is_enabled(self, active=False):
         view = self.window.active_view()
         return bool(view)
 
@@ -1772,7 +1772,7 @@ class SublimecodeintelWindowCommand(sublime_plugin.WindowCommand):
 class SublimecodeintelCommand(SublimecodeintelWindowCommand):
 
     def is_enabled(self, active=None):
-        enabled = super(SublimecodeintelCommand, self).is_enabled()
+        enabled = super(SublimecodeintelCommand, self).is_enabled(active)
 
         if active is not None:
             view = self.window.active_view()
@@ -1791,19 +1791,19 @@ class SublimecodeintelCommand(SublimecodeintelWindowCommand):
 
 class SublimecodeintelEnableCommand(SublimecodeintelCommand):
 
-    def is_enabled(self):
+    def is_enabled(self, active=False):
         return super(SublimecodeintelEnableCommand, self).is_enabled(False)
 
 
 class SublimecodeintelDisableCommand(SublimecodeintelCommand):
 
-    def is_enabled(self):
+    def is_enabled(self, active=False):
         return super(SublimecodeintelDisableCommand, self).is_enabled(True)
 
 
 class SublimecodeintelResetCommand(SublimecodeintelCommand):
 
-    def is_enabled(self):
+    def is_enabled(self, active=False):
         return super(SublimecodeintelResetCommand, self).is_enabled()
 
 
@@ -1830,23 +1830,23 @@ class SublimecodeintelLiveCommand(SublimecodeintelCommand):
 
 class SublimecodeintelEnableLiveCommand(SublimecodeintelLiveCommand):
 
-    def is_enabled(self):
+    def is_enabled(self, active=False):
         return super(SublimecodeintelEnableLiveCommand, self).is_enabled(False, False)
 
 
 class SublimecodeintelDisableLiveCommand(SublimecodeintelLiveCommand):
 
-    def is_enabled(self):
+    def is_enabled(self, active=False):
         return super(SublimecodeintelDisableLiveCommand, self).is_enabled(True, False)
 
 
 class SublimecodeintelEnableLiveLangCommand(SublimecodeintelLiveCommand):
 
-    def is_enabled(self):
+    def is_enabled(self, active=False):
         return super(SublimecodeintelEnableLiveLangCommand, self).is_enabled(False, True)
 
 
 class SublimecodeintelDisableLiveLangCommand(SublimecodeintelLiveCommand):
 
-    def is_enabled(self):
+    def is_enabled(self, active=False):
         return super(SublimecodeintelDisableLiveLangCommand, self).is_enabled(True, True)
