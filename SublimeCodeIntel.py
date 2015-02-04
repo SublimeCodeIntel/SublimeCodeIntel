@@ -1466,6 +1466,9 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         pos = sel.end()
         next_char = view.substr(sublime.Region(pos - 1, pos))
 
+        if next_char == '\n':
+            return
+
         is_fill_char = next_char and next_char in cpln_fillup_chars.get(lang, '')
         is_stop_char = next_char and next_char in cpln_stop_chars.get(lang, '')
 
