@@ -42,7 +42,10 @@ import socket
 import weakref
 import functools
 
-import six.moves.queue
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 
 # Priorities at which scanning requests can be scheduled.
 PRIORITY_CONTROL = 0        # Special sentinal priority to control scheduler
@@ -60,7 +63,7 @@ class CodeIntel(object):
         self.mgr = None
         self._mgr_lock = threading.Lock()
         self.buffers = {}
-        self._queue = six.moves.queue.Queue()
+        self._queue = queue.Queue()
         self._quit_application = False  # app is shutting down, don't try to respawn
         self._observers = weakref.WeakKeyDictionary()
 
@@ -124,7 +127,7 @@ class CodeIntel(object):
                         # will get queued by the manager for now, since we haven't
                         # actually started the manager.
                         self.mgr.send(**self._queue.get(False))
-                    except six.moves.queue.Empty:
+                    except queue.Empty:
                         break  # no more items
 
                 # new codeintel manager; update all the buffers to use this new one
@@ -275,7 +278,7 @@ class CodeIntelManager(threading.Thread):
         self._shutdown_callback = shutdown_callback
         self._state_condvar = threading.Condition()
         self.requests = {}  # keyed by request id; value is tuple (callback, request data, time sent) requests will time out at some point...
-        self.unsent_requests = six.moves.queue.Queue()
+        self.unsent_requests = queue.Queue()
         threading.Thread.__init__(self, name="Codeintel Manager %s" % (id(self)))
 
     @property
