@@ -180,6 +180,18 @@ More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/S
 What's New
 ----------
 
+v3.0.0 (unreleased, alpha):
+
++ Uses CodeIntel as an OOP command and package.
+
+
+v2.1.8 (2015-03-18):
+
++ Fixed issue with is_enabled()
+
++ Do not autocomplete on ENTER
+
+
 v2.1.7 (2015-01-26):
 
 + Fixed triggering issues with autocompletion and stop chars.
