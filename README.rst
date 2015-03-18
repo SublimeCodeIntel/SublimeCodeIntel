@@ -183,6 +183,7 @@ What's New
 v3.0.0 (unreleased, alpha):
 
 + Uses CodeIntel as an OOP command and package.
+  Needs to install CodeIntel with pip: `pip install codeintel`
 
 
 v2.1.8 (2015-03-18):
