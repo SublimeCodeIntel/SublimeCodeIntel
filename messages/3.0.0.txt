@@ -32,3 +32,4 @@ CHANGES/FIXES
 v3.0.0 (unreleased, alpha):
 
 + Uses CodeIntel as an OOP command and package.
+  Needs to install CodeIntel with pip: `pip install codeintel`
