@@ -111,6 +111,11 @@ class CodeIntelHandler(object):
 
         if msg is None:
             msg, ltype = ltype, 'info'
+        if isinstance(msg, tuple):
+            try:
+                msg = msg[0] % msg[1:]
+            except:
+                msg = repr(msg)
         msg = msg.strip()
 
         CodeIntelHandler.status_lock.acquire()
