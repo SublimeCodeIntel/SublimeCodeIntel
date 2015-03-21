@@ -52,7 +52,7 @@ import sublime_plugin
 
 from codeintel import CodeIntel, CodeIntelBuffer
 
-logger_name = 'SublimeCodeIntel'
+logger_name = 'CodeIntel'
 logger = logging.getLogger(logger_name)
 logger.setLevel(logging.INFO)  # INFO
 
