@@ -1390,7 +1390,7 @@ settings_manager = SettingsManager()
 
 
 # make sure all settings could be loaded and sublime is ready
-def codeintel_enabled(default=False):
+def codeintel_enabled(view=None, default=False):
     return settings_manager.sublime_auto_complete is not None
 
 
