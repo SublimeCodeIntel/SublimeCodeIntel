@@ -356,13 +356,13 @@ class CodeIntelManager(threading.Thread):
             log_file = os.path.join(db_base_dir, 'codeintel.log')
             args = [db_base_dir, connect, 'WARNING', log_file]
 
-            # python_exec = self.env.get('PYTHON', 'python')
-            # script = __file__.replace('.pyo', '.py').replace('.pyc', '.py')
-            # codeintel_exec = [python_exec, '-O', script] + args
-            codeintel_exec = ["/usr/local/bin/codeintel"] + args
+            codeintel_exec = "/usr/local/bin/codeintel"
+            if not os.path.exists(codeintel_exec):
+                codeintel_exec = "codeintel"
+            cmd = [codeintel_exec] + args
 
-            self.log.debug("Running OOP: [%s]", ", ".join('"' + c + '"' for c in codeintel_exec))
-            self.proc = process.ProcessOpen(codeintel_exec, cwd=None, env=None)
+            self.log.debug("Running OOP: [%s]", ", ".join('"' + c + '"' for c in cmd))
+            self.proc = process.ProcessOpen(cmd, cwd=None, env=None)
             assert self.proc.returncode is None, "Early process death!"
 
             self._watchdog_thread = threading.Thread(
