@@ -186,6 +186,11 @@ v3.0.0 (unreleased, alpha):
   Needs to install CodeIntel with pip: `pip install codeintel`
 
 
+v2.1.9 (2015-03-21):
+
++ Fixed issue with codeintel_enabled()
+
+
 v2.1.8 (2015-03-18):
 
 + Fixed issue with is_enabled()
