@@ -252,13 +252,11 @@ class CodeIntelHandler(object):
 
     def format_completions_by_language(self, cplns, language, text_in_current_line, type):
         function = None if 'import ' in text_in_current_line else 'function'
-        if language == 'PHP':
-            if type != 'php-complete-object-members':
-                return [('%s〔%s〕' % (('$' if t == 'variable' else '') + n, t), (('$' if t == 'variable' else '') + n).replace("$", "\\$") + ('($0)' if t == function else '')) for t, n in cplns]
-            else:
-                return [('%s〔%s〕' % (n, t), (n).replace("$", "\\$") + ('($0)' if t == function else '')) for t, n in cplns]
-        else:
-            return [('%s〔%s〕' % (n, t), (n).replace("$", "\\$") + ('($0)' if t == function else '')) for t, n in cplns]
+        get_name = lambda c: c[1]
+        get_type = lambda c: c[0].title()
+        if language == 'PHP' and type != 'php-complete-object-members':
+            get_name = lambda c: ('$' + c[1]) if c[0] == 'variable' else c[1]
+        return [('%s\t〔%s〕' % (get_name(c), get_type(c)), get_name(c).replace("$", "\\$") + ('($0)' if c[0] == function else '')) for c in cplns]
 
     # Handlers follow
 
