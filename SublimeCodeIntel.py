@@ -1476,17 +1476,26 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         if is_stop_char:
             hide_auto_complete(view)
 
-        # print('on_modified', view.command_history(1), view.command_history(0), view.command_history(-1))
-        if (not hasattr(view, 'command_history') or view.command_history(1)[1] is None and (
-                view.command_history(0)[0] == 'insert' and (
-                    view.command_history(0)[1]['characters'][-1] != '\n'
-                ) or
-                view.command_history(-1)[0] in ('insert', 'paste') and (
-                    view.command_history(0)[0] == 'commit_completion' or
-                    view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)'
-                )
-        )):
-            if view.command_history(0)[0] == 'commit_completion':
+        command_history = getattr(view, 'command_history', None)
+        if command_history:
+            redo_command = command_history(1)
+            previous_command = view.command_history(0)
+            before_previous_command = view.command_history(-1)
+        else:
+            redo_command = previous_command = before_previous_command = None
+
+        # print('on_modified', "'%s'" % current_char, redo_command, previous_command, before_previous_command)
+        if not command_history or redo_command[1] is None and (
+            previous_command[0] == 'paste' or
+            previous_command[0] == 'insert' and previous_command[1]['characters'][-1] not in ('\n', '\t') or
+            previous_command[0] == 'insert_snippet' and previous_command[1]['contents'] == '($0)' or
+            before_previous_command[0] in ('insert', 'paste') and (
+                previous_command[0] == 'commit_completion' or
+                previous_command[0] == 'insert_completion' or
+                previous_command[0] == 'insert_best_completion'
+            )
+        ):
+            if previous_command[0] == 'commit_completion':
                 forms = ('calltips',)
             else:
                 forms = ('calltips', 'cplns')
