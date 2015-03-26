@@ -473,7 +473,7 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
         pos = sel.end()
         current_char = view.substr(sublime.Region(pos - 1, pos))
 
-        if not current_char or current_char == '\n':
+        if not current_char or current_char in ('\n', '\t'):
             return
 
         command_history = getattr(view, 'command_history', None)
@@ -486,12 +486,14 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
 
         # print('on_modified', "'%s'" % current_char, redo_command, previous_command, before_previous_command)
         if not command_history or redo_command[1] is None and (
-                previous_command[0] in ('insert', 'paste') or
-                before_previous_command[0] in ('insert', 'paste') and (
-                    previous_command[0] == 'commit_completion' or
-                    previous_command[0] == 'insert_completion' or
-                    previous_command[0] == 'insert_snippet' and previous_command[1]['contents'] == '($0)'
-                )
+            previous_command[0] == 'paste' or
+            previous_command[0] == 'insert' and previous_command[1]['characters'][-1] not in ('\n', '\t') or
+            previous_command[0] == 'insert_snippet' and previous_command[1]['contents'] == '($0)' or
+            before_previous_command[0] in ('insert', 'paste') and (
+                previous_command[0] == 'commit_completion' or
+                previous_command[0] == 'insert_completion' or
+                previous_command[0] == 'insert_best_completion'
+            )
         ):
             buf = self.buf_from_view(view)
             if buf:
