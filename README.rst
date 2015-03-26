@@ -177,6 +177,23 @@ Building process is no longer distributed with this repository. You need to get 
 More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/SublimeCodeIntel/CodeIntelSources/src>`_.
 
 
+Notes
+-----
+
+For the next major version of SublimeCodeIntel (v3.0.0) you will have to ensure
+that CodeIntel package (https://pypi.python.org/pypi/CodeIntel) is installed on
+your system usually by using pip or easy_install. The Code intelligence will be
+handled by that package and the command ``codeintel`` it will install.
+
+
+Please start trying to install the CodeIntel package as soon as possible to make
+sure you are ready for the upcoming version of SublimeCodeIntel:
+
+1. Install Python 2 and pip (http://www.pip-installer.org/en/latest/installing.html).
+
+2. Install (or upgrade) ``CodeIntel`` by typing the following in a terminal: ``pip install -U codeintel``
+
+
 What's New
 ----------
 
@@ -184,6 +201,11 @@ v3.0.0 (unreleased, alpha):
 
 + Uses CodeIntel as an OOP command and package.
   Needs to install CodeIntel with pip: `pip install codeintel`
+
+
+v2.2.0 (2015-03-26):
+
++ Fixed issue with tabs and autocomplete
 
 
 v2.1.9 (2015-03-21):
