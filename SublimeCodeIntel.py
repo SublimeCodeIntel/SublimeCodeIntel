@@ -41,6 +41,10 @@ import sys
 __file__ = os.path.normpath(os.path.abspath(__file__))
 __path__ = os.path.dirname(__file__)
 
+python_sitelib_path = os.path.normpath(__path__)
+if python_sitelib_path not in sys.path:
+    sys.path.insert(0, python_sitelib_path)
+
 import re
 import logging
 import textwrap
