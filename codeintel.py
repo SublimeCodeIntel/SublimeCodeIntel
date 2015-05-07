@@ -22,6 +22,8 @@
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
 #
+# Mostly based in Komodo Editor's koCodeIntel.py
+#
 from __future__ import absolute_import, unicode_literals, print_function
 
 import os
@@ -55,9 +57,11 @@ class CodeIntel(object):
         self.mgr = None
         self._mgr_lock = threading.Lock()
         self.buffers = {}
+        self.languages = {}
         self._queue = queue.Queue()
         self._quit_application = False  # app is shutting down, don't try to respawn
         self._observers = weakref.WeakKeyDictionary()
+        self._enabled = False
 
     def add_observer(self, obj):
         if hasattr(obj, 'observer'):
@@ -102,6 +106,8 @@ class CodeIntel(object):
         if self._quit_application:
             return  # don't ever restart after quit-application
 
+        self._enabled = True
+
         # clean up dead managers
         with self._mgr_lock:
             if self.mgr and not self.mgr.is_alive():
@@ -132,11 +138,16 @@ class CodeIntel(object):
             # thread already started
             pass
 
+    @property
+    def enabled(self):
+        return self._enabled
+
     def deactivate(self):
         with self._mgr_lock:
             if self.mgr:
                 self.mgr.shutdown()
                 self.mgr = None
+        self._enabled = False
 
     def cancel(self):
         mgr = self.mgr
@@ -170,8 +181,9 @@ class CodeIntel(object):
             self.mgr.update_catalogs(update_callback=update_callback)
 
     def send(self, discardable=False, **kwargs):
-        assert self.mgr, \
-            "CodeIntelManager.send() shouldn't be called when not enabled"
+        if not self._enabled:
+            self.log.warn("send called when not enabled (ignoring command) %r", kwargs)
+            return
         if self.mgr:
             self.mgr.send(**kwargs)
         elif not discardable:
@@ -234,7 +246,6 @@ class CodeIntelManager(threading.Thread):
     citadel_langs = []
     xml_langs = []
     stdlib_langs = []  # languages which support standard libraries
-    languages = {}
     available_catalogs = []  # see get-available-catalogs command
     env = dict(os.environ)
     prefs = [
@@ -264,6 +275,7 @@ class CodeIntelManager(threading.Thread):
     def __init__(self, service, init_callback=None, shutdown_callback=None):
         self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
         self.service = service
+        self.languages = service.languages
         self._abort = set()
         self._next_id = 0
         self._init_callback = init_callback
@@ -426,6 +438,7 @@ class CodeIntelManager(threading.Thread):
                 update("Failed to get completion languages:", response)
                 return
             self.cpln_langs = sorted(response.get('languages'))
+            self.languages.clear()
             for lang in self.cpln_langs:
                 outstanding_cpln_langs.add(lang)
                 self._send(callback=get_lang_info, command='get-language-info', language=lang)
@@ -735,7 +748,7 @@ class CodeIntelBuffer(object):
 
     @property
     def env(self):
-        env = dict(self.service.mgr.env or {})
+        env = dict(self.service.mgr and self.service.mgr.env or {})
         env.update(self._env or {})
         return env
 
@@ -745,7 +758,7 @@ class CodeIntelBuffer(object):
 
     @property
     def prefs(self):
-        prefs = list(self.service.mgr.prefs or [])
+        prefs = list(self.service.mgr and self.service.mgr.prefs or [])
         for pref in self._prefs or []:
             if pref not in prefs:
                 prefs.append(pref)
@@ -757,11 +770,11 @@ class CodeIntelBuffer(object):
 
     @property
     def cpln_fillup_chars(self):
-        return self.service.mgr.languages[self.lang]['cpln_fillup_chars']
+        return self.service.languages[self.lang]['cpln_fillup_chars']
 
     @property
     def cpln_stop_chars(self):
-        return self.service.mgr.languages[self.lang]['cpln_stop_chars']
+        return self.service.languages[self.lang]['cpln_stop_chars']
 
     def scan_document(self, handler, lines_added, file_mtime=False):
         def callback(request, response):

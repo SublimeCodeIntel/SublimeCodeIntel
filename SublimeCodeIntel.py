@@ -178,7 +178,7 @@ class CodeIntelHandler(object):
         return lang
 
     def buf_from_view(self, view):
-        if not ci.mgr or not view:
+        if not view:
             return None
 
         view_sel = view.sel()
@@ -189,7 +189,7 @@ class CodeIntelHandler(object):
         path = file_name if file_name else "<Unsaved>"
 
         lang = self.guess_language(view, path)
-        if not lang or lang not in ci.mgr.languages:
+        if not lang or lang not in ci.languages:
             return None
 
         logger.debug("buf_from_view: %r, %r, %r", view, path, lang)
