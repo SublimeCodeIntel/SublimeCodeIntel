@@ -108,6 +108,11 @@
         "Perl": {
             "perl": ""
         },
+        "Go": {
+            "golangDefaultLocation": "",
+            "gocodeDefaultLocation": "",
+            "godefDefaultLocation": ""
+        },
         "HTML": {
             "defaultHTMLDecl": "-//W3C//DTD HTML 5//EN"
         },
