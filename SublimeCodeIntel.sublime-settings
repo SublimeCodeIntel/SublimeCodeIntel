@@ -15,7 +15,7 @@
     */
     "codeintel_syntax_map":
     {
-       "Python (Django)": "Python",
+       "Python Django": "Python",
        "HTML (Django)": "Django"
     },
 
