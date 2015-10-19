@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2015
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0"
+VERSION = "3.0.0-beta3"
 
 
 import os
@@ -551,15 +551,7 @@ def get_setting(lang, setting, default=None):
     return settings.get('codeintel_language_settings', {}).get(lang, settings).get(setting, settings.get(setting, default))
 
 
-def plugin_loaded():
-    """Restores user settings."""
-    global ci, settings
-
-    settings_name = 'SublimeCodeIntel'
-    settings = sublime.load_settings(settings_name + '.sublime-settings')
-    settings.clear_on_change(settings_name)
-    settings.add_on_change(settings_name, plugin_loaded)
-
+def settings_changed():
     excluded = settings.get('codeintel_scan_exclude_paths')
     if excluded:
         ex = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in excluded]
@@ -608,6 +600,17 @@ def plugin_loaded():
             env=env,
             prefs=prefs,
         )
+
+
+def plugin_loaded():
+    """Restores user settings."""
+    global ci, settings
+
+    settings_name = 'SublimeCodeIntel'
+    settings = sublime.load_settings(settings_name + '.sublime-settings')
+    settings.add_on_change(settings_name, settings_changed)
+
+    settings_changed()
 
 
 ci = CodeIntel()
