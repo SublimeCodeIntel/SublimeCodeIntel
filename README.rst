@@ -5,9 +5,11 @@ Code intelligence plugin ported from `Open Komodo Editor <http://www.openkomodo.
 
 Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2):
 
-    JavaScript, Mason, XBL, XUL, RHTML, SCSS, Python, HTML, Ruby, Python3, XML,
-    Sass, XSLT, Django, HTML5, Perl, CSS, Twig, Less, Smarty, Node.js, Tcl,
-    TemplateToolkit, PHP, Golang.
+  ActionScript, Django, Docker, EJS, epMojo, HTML, KomodoSnippet, LaravelBlade,
+  Mason, Mustache, MXML, PHP, R, reStructuredText, RHTML, Smarty, TracWiki,
+  TemplateToolkit, Twig, XBL, XML, XSLT, XUL,
+  Python, Python3, Ruby, Perl, Go, JavaScript, Node.js, CSS, SCSS, Sass, Less,
+  HTML5, Tcl.
 
 Provides the following features:
 
