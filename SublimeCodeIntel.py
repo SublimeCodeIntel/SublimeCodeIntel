@@ -28,22 +28,52 @@ Port by German M. Bravo (Kronuz). 2011-2015
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0"
-
-codeintel_syntax_map = {
-    "Python Django": "Python",
-}
-
-
 import os
 import sys
 
 __file__ = os.path.normpath(os.path.abspath(__file__))
 __path__ = os.path.dirname(__file__)
 
-python_sitelib_path = os.path.normpath(__path__)
+python_sitelib_path = os.path.join(os.path.normpath(__path__), 'libs')
 if python_sitelib_path not in sys.path:
     sys.path.insert(0, python_sitelib_path)
+
+
+VERSION = "3.0.0"
+
+DEFAULT_SETTINGS = {
+    'codeintel_live': True,
+    'codeintel_disabled_languages': [],
+    'codeintel_oop_command': '/usr/local/bin/codeintel',
+    'codeintel_log_levels': ['WARNING'],
+    'codeintel_prefs': {
+        'codeintel_max_recursive_dir_depth': 10,
+        'codeintel_scan_files_in_project': True,
+        'codeintel_selected_catalogs': [],
+        'defaultHTML5Decl': '-//W3C//DTD HTML 5//EN',
+        'defaultHTMLDecl': '-//W3C//DTD HTML 5//EN',
+        'javascriptExtraPaths': '',
+        'nodejsDefaultInterpreter': '',
+        'nodejsExtraPaths': '',
+        'perl': '',
+        'perlExtraPaths': '',
+        'php': '',
+        'phpConfigFile': '',
+        'phpExtraPaths': '',
+        'python': '',
+        'python3': '',
+        'python3ExtraPaths': '',
+        'pythonExtraPaths': '',
+        'ruby': '',
+        'rubyExtraPaths': '',
+    },
+    'codeintel_env': dict(os.environ),
+}
+
+codeintel_syntax_map = {
+    "Python Django": "Python",
+}
+
 
 import re
 import logging
@@ -56,13 +86,10 @@ import sublime_plugin
 
 from codeintel import CodeIntel, CodeIntelBuffer
 
+settings = None
 logger_name = 'CodeIntel'
 logger = logging.getLogger(logger_name)
-logger.setLevel(logging.INFO)  # INFO
-
-handler = logging.StreamHandler(sys.stderr)
-handler.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
-logger.handlers = [handler]
+logger.setLevel(logging.WARNING)  # WARNING
 
 
 class CodeIntelHandler(object):
@@ -175,6 +202,8 @@ class CodeIntelHandler(object):
     def guess_language(self, view, path):
         lang = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
         lang = codeintel_syntax_map.get(lang, lang)
+        if lang in settings.get('codeintel_disabled_languages'):
+            return None
         return lang
 
     def buf_from_view(self, view):
@@ -231,24 +260,12 @@ class CodeIntelHandler(object):
         rubyExtraPaths = extra_paths
 
         buf.prefs = {
-            'codeintel_max_recursive_dir_depth': 10,
-            'codeintel_scan_files_in_project': True,
-            'codeintel_selected_catalogs': [],
-            'defaultHTML5Decl': '-//W3C//DTD HTML 5//EN',
-            'defaultHTMLDecl': '-//W3C//DTD HTML 5//EN',
             'javascriptExtraPaths': javascriptExtraPaths,
-            'nodejsDefaultInterpreter': '',
             'nodejsExtraPaths': nodejsExtraPaths,
-            'perl': '',
             'perlExtraPaths': perlExtraPaths,
-            'php': '',
-            'phpConfigFile': '',
             'phpExtraPaths': phpExtraPaths,
-            'python': '',
-            'python3': '',
             'python3ExtraPaths': python3ExtraPaths,
             'pythonExtraPaths': pythonExtraPaths,
-            'ruby': '',
             'rubyExtraPaths': rubyExtraPaths,
         }
 
@@ -473,6 +490,9 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
         if not view_sel:
             return
 
+        if not settings.get('codeintel_live'):
+            return
+
         sel = view_sel[0]
         pos = sel.end()
         current_char = view.substr(sublime.Region(pos - 1, pos))
@@ -545,5 +565,48 @@ class BackToPythonDefinition(sublime_plugin.TextCommand):
                 window.open_file(previous_location, sublime.ENCODED_POSITION)
 
 
+def plugin_loaded():
+    """Restores user settings."""
+    global ci, settings
+
+    settings_name = 'SublimeCodeIntel'
+    settings = sublime.load_settings(settings_name + '.sublime-settings')
+    settings.clear_on_change(settings_name)
+    settings.add_on_change(settings_name, plugin_loaded)
+
+    for setting, default in DEFAULT_SETTINGS.items():
+        value = settings.get(setting)
+        if isinstance(default, dict):
+            new_value = default.copy()
+            if value and isinstance(value, dict):
+                new_value.update(value)
+        elif value is not None:
+            new_value = value
+        else:
+            new_value = default
+        if value != new_value:
+            settings.set(setting, new_value)
+
+    if ci.mgr and ci.mgr.is_alive():
+        ci.mgr.set_global_environment(
+            env=settings.get('codeintel_env'),
+            prefs=settings.get('codeintel_prefs'),
+        )
+    else:
+        ci.activate(
+            reset_db_as_necessary=False,
+            oop_command=settings.get('codeintel_oop_command'),
+            log_levels=settings.get('codeintel_log_levels'),
+            env=settings.get('codeintel_env'),
+            prefs=settings.get('codeintel_prefs'),
+        )
+
+
 ci = CodeIntel()
-ci.activate()
+
+# ST3 features a plugin_loaded hook which is called when ST's API is ready.
+#
+# We must therefore call our init callback manually on ST2. It must be the last
+# thing in this plugin (thanks, beloved contributors!).
+if not int(sublime.version()) > 3000:
+    plugin_loaded()

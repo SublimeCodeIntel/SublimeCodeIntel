@@ -1,0 +1,36 @@
+[
+    {
+        "caption": "Preferences",
+        "children": [
+            {
+                "caption": "Package Settings",
+                "children": [
+                    {
+                        "caption": "SublimeCodeIntel",
+                        "children": [
+                            {
+                                "args": {
+                                    "file": "${packages}/SublimeCodeIntel/SublimeCodeIntel.sublime-settings"
+                                },
+                                "caption": "Settings \u2013 Default",
+                                "command": "open_file"
+                            },
+                            {
+                                "args": {
+                                    "file": "${packages}/User/SublimeCodeIntel.sublime-settings"
+                                },
+                                "caption": "Settings \u2013 User",
+                                "command": "open_file"
+                            }
+                        ],
+                        "id": "sublimecodeintel"
+                    }
+                ],
+                "id": "package-settings",
+                "mnemonic": "P"
+            }
+        ],
+        "id": "preferences",
+        "mnemonic": "n"
+    }
+]

@@ -1,26 +1,26 @@
 from __future__ import absolute_import
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
+# 
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-#
+# 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
 # License for the specific language governing rights and limitations
 # under the License.
-#
+# 
 # The Original Code is Komodo code.
-#
+# 
 # The Initial Developer of the Original Code is ActiveState Software Inc.
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
-#
+# 
 # Contributor(s):
 #   ActiveState Software Inc
-#
+# 
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -32,7 +32,7 @@ from __future__ import absolute_import
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-#
+# 
 # ***** END LICENSE BLOCK *****
 
 import os
@@ -53,7 +53,7 @@ else:
 #-------- Globals -----------#
 
 log = logging.getLogger("process")
-# log.setLevel(logging.DEBUG)
+#log.setLevel(logging.DEBUG)
 
 try:
     from subprocess32 import Popen, PIPE
@@ -61,16 +61,14 @@ except ImportError:
     # Not available on Windows - fallback to using regular subprocess module.
     from subprocess import Popen, PIPE
     if sys.platform != "win32" and sys.version_info[0] != 3:
-        log.warn(
-            "Could not import subprocess32 module, falling back to subprocess module")
+        log.warn("Could not import subprocess32 module, falling back to subprocess module")
 
 
-CREATE_NEW_CONSOLE = 0x10  # same as win32process.CREATE_NEW_CONSOLE
-# same as win32process.CREATE_NEW_PROCESS_GROUP
-CREATE_NEW_PROCESS_GROUP = 0x200
-CREATE_NO_WINDOW = 0x8000000  # same as win32process.CREATE_NO_WINDOW
-CTRL_BREAK_EVENT = 1  # same as win32con.CTRL_BREAK_EVENT
-WAIT_TIMEOUT = 258  # same as win32event.WAIT_TIMEOUT
+CREATE_NEW_CONSOLE = 0x10 # same as win32process.CREATE_NEW_CONSOLE
+CREATE_NEW_PROCESS_GROUP = 0x200 # same as win32process.CREATE_NEW_PROCESS_GROUP
+CREATE_NO_WINDOW = 0x8000000 # same as win32process.CREATE_NO_WINDOW
+CTRL_BREAK_EVENT = 1 # same as win32con.CTRL_BREAK_EVENT
+WAIT_TIMEOUT = 258 # same as win32event.WAIT_TIMEOUT
 
 
 #-------- Classes -----------#
@@ -78,7 +76,6 @@ WAIT_TIMEOUT = 258  # same as win32event.WAIT_TIMEOUT
 # XXX - TODO: Work out what exceptions raised by SubProcess and turn into
 #       ProcessError?
 class ProcessError(Exception):
-
     def __init__(self, msg, errno=-1):
         Exception.__init__(self, msg)
         self.errno = errno
@@ -128,7 +125,7 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
 
             if not isinstance(args, string_types):
                 args = list2cmdline(args)
-
+    
             # Process startup details
             if startupinfo is None:
                 startupinfo = STARTUPINFO()
@@ -137,7 +134,7 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
                 startupinfo.hStdInput = p2cread
                 startupinfo.hStdOutput = c2pwrite
                 startupinfo.hStdError = errwrite
-
+    
             if shell:
                 startupinfo.dwFlags |= STARTF_USESHOWWINDOW
                 startupinfo.wShowWindow = SW_HIDE
@@ -158,9 +155,9 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
                     # stability of your system.  Cost is Ctrl+C wont
                     # kill children.
                     creationflags |= CREATE_NEW_CONSOLE
-
+    
                 # We create a new job for this process, so that we can kill
-                # the process and any sub-processes
+                # the process and any sub-processes 
                 self._job = winprocess.CreateJobObject()
                 creationflags |= winprocess.CREATE_SUSPENDED
                 # Vista will launch Komodo in a job object itself, so we need
@@ -168,17 +165,17 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
                 # job object, but instead specify that it will be using a
                 # separate breakaway job object, bug 83001.
                 creationflags |= winprocess.CREATE_BREAKAWAY_FROM_JOB
-
+    
             # Start the process
             try:
                 hp, ht, pid, tid = CreateProcess(executable, args,
-                                                 # no special security
-                                                 None, None,
-                                                 int(not close_fds),
-                                                 creationflags,
-                                                 env,
-                                                 cwd,
-                                                 startupinfo)
+                                         # no special security
+                                         None, None,
+                                         int(not close_fds),
+                                         creationflags,
+                                         env,
+                                         cwd,
+                                         startupinfo)
             except pywintypes.error as e:
                 # Translate pywintypes.error to WindowsError, which is
                 # a subclass of OSError.  FIXME: We should really
@@ -186,10 +183,9 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
                 # how can this be done from Python?
                 raise WindowsError(*e.args)
             except WindowsError:
-                log.error(
-                    "process.py: can't execute %r (%s)", executable, args)
+                log.error("process.py: can't execute %r (%s)", executable, args)
                 raise
-
+    
             # Retain the process handle, but close the thread handle
             self._child_created = True
             self._handle = hp
@@ -199,7 +195,7 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
                 winprocess.AssignProcessToJobObject(self._job, int(hp))
                 winprocess.ResumeThread(int(ht))
             ht.Close()
-
+    
             # Child is launched. Close the parent's copy of those pipe
             # handles that only the child should have open.  You need
             # to make sure that no handles to the write end of the
@@ -212,7 +208,7 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
                 c2pwrite.Close()
             if errwrite is not None:
                 errwrite.Close()
-
+    
         def terminate(self):
             """Terminates the process"""
             if self._job:
@@ -229,9 +225,7 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
     # Use our own killable process instead of the regular Popen.
     Popen = WindowsKillablePopen
 
-
 class ProcessOpen(Popen):
-
     def __init__(self, cmd, cwd=None, env=None, flags=None,
                  stdin=PIPE, stdout=PIPE, stderr=PIPE,
                  universal_newlines=True):
@@ -331,7 +325,7 @@ class ProcessOpen(Popen):
             # it by setting the handle to `subprocess.PIPE`, resulting in
             # a different and workable code path.
             if self._needToHackAroundStdHandles() \
-                    and not (flags & CREATE_NEW_CONSOLE):
+              and not (flags & CREATE_NEW_CONSOLE):
                 if not self._isFileObjInheritable(stdin, "stdin"):
                     stdin = PIPE
                     auto_piped_stdin = True
@@ -356,7 +350,7 @@ class ProcessOpen(Popen):
         self.__hasTerminated = threading.Condition()
 
         # Launch the process.
-        # print "Process: %r in %r" % (cmd, cwd)
+        #print "Process: %r in %r" % (cmd, cwd)
         Popen.__init__(self, cmd, cwd=cwd, env=env, shell=shell,
                        stdin=stdin, stdout=stdout, stderr=stderr,
                        preexec_fn=preexec_fn,
@@ -366,7 +360,6 @@ class ProcessOpen(Popen):
             self.stdin.close()
 
     __needToHackAroundStdHandles = None
-
     @classmethod
     def _needToHackAroundStdHandles(cls):
         if cls.__needToHackAroundStdHandles is None:
@@ -417,8 +410,7 @@ class ProcessOpen(Popen):
                     # we don't have to worry about things we create
                     return True
             elif fileobj == subprocess.PIPE:
-                # We're creating a new pipe; newly created things are
-                # inheritable
+                # We're creating a new pipe; newly created things are inheritable
                 return True
             elif fileobj not in valid_list:
                 # We are trying to use a custom fd; don't do anything fancy here,
@@ -442,7 +434,6 @@ class ProcessOpen(Popen):
     # we can notify any listeners when the process has finished.
     def _getReturncode(self):
         return self.__returncode
-
     def _setReturncode(self, value):
         self.__returncode = value
         if value is not None:
@@ -454,15 +445,14 @@ class ProcessOpen(Popen):
 
     # Setup the retval handler. This is a readonly wrapper around returncode.
     def _getRetval(self):
-        # Ensure the returncode is set by subprocess if the process is
-        # finished.
+        # Ensure the returncode is set by subprocess if the process is finished.
         self.poll()
         return self.returncode
     retval = property(fget=_getRetval)
 
     def wait(self, timeout=None):
         """Wait for the started process to complete.
-
+        
         "timeout" is a floating point number of seconds after
             which to timeout.  Default is None, which is to never timeout.
 
@@ -477,7 +467,7 @@ class ProcessOpen(Popen):
             except OSError as ex:
                 # If the process has already ended, that is fine. This is
                 # possible when wait is called from a different thread.
-                if ex.errno != 10:  # No child process
+                if ex.errno != 10: # No child process
                     raise
                 return self.returncode
 
@@ -518,7 +508,7 @@ class ProcessOpen(Popen):
     # For backward compatibility with older process.py
     def kill(self, exitCode=-1, gracePeriod=None, sig=None):
         """Kill process.
-
+        
         "exitCode" this sets what the process return value will be.
         "gracePeriod" [deprecated, not supported]
         "sig" (Unix only) is the signal to use to kill the process. Defaults
@@ -555,8 +545,8 @@ class ProcessOpen(Popen):
             self.returncode = exitCode
 
 
-class AbortableProcessHelper(object):
 
+class AbortableProcessHelper(object):
     """A helper class that is able to run a process and have the process be
     killed/aborted (possibly by another thread) if it is still running.
     """
@@ -601,15 +591,13 @@ class AbortableProcessHelper(object):
             self._process_status_lock.release()
 
 
+
 ## Deprecated process classes ##
 
 class Process(ProcessOpen):
-
     def __init__(self, *args, **kwargs):
-        warnings.warn("'process.%s' is now deprecated. Please use 'process.ProcessOpen'." % (
-            self.__class__.__name__))
+        warnings.warn("'process.%s' is now deprecated. Please use 'process.ProcessOpen'." % (self.__class__.__name__))
         ProcessOpen.__init__(self, *args, **kwargs)
-
 
 class ProcessProxy(Process):
     pass

@@ -1,0 +1,31 @@
+/*
+    SublimeCodeIntel default settings
+*/
+{
+    "codeintel_live": true,
+    "codeintel_disabled_languages": [],
+    "codeintel_oop_command": "/usr/local/bin/codeintel",
+    "codeintel_log_levels" : ["WARNING"],
+    "codeintel_prefs" : {
+            "codeintel_max_recursive_dir_depth": 10,
+            "codeintel_scan_files_in_project": true,
+            "codeintel_selected_catalogs": [],
+            "defaultHTML5Decl": "-//W3C//DTD HTML 5//EN",
+            "defaultHTMLDecl": "-//W3C//DTD HTML 5//EN",
+            "javascriptExtraPaths": "",
+            "nodejsDefaultInterpreter": "",
+            "nodejsExtraPaths": "",
+            "perl": "",
+            "perlExtraPaths": "",
+            "php": "",
+            "phpConfigFile": "",
+            "phpExtraPaths": "",
+            "python": "",
+            "python3": "",
+            "python3ExtraPaths": "",
+            "pythonExtraPaths": "",
+            "ruby": "",
+            "rubyExtraPaths": "",
+    },
+    "codeintel_env": {}
+}

@@ -100,7 +100,7 @@ class CodeIntel(object):
             if self.mgr is mgr:
                 self.mgr = None
 
-    def activate(self, reset_db_as_necessary=False):
+    def activate(self, reset_db_as_necessary=False, oop_command=None, log_levels=None, env=None, prefs=None):
         self.log.debug("activating codeintel service: %r", reset_db_as_necessary)
 
         if self._quit_application:
@@ -118,6 +118,10 @@ class CodeIntel(object):
                     self,
                     init_callback=self._on_mgr_init,
                     shutdown_callback=self._on_mgr_shutdown,
+                    oop_command=oop_command,
+                    log_levels=log_levels,
+                    env=env,
+                    prefs=prefs,
                 )
                 while True:
                     try:
@@ -236,11 +240,14 @@ class CodeIntelManager(threading.Thread):
     STATE_QUITTING = ("quitting",)  # shutting down
     STATE_DESTROYED = ("destroyed",)  # connection shut down, child process dead
 
+    _oop_command = '/usr/local/bin/codeintel'
+    _log_levels = ['WARNING']
     _state = STATE_UNINITIALIZED
     _send_request_thread = None  # background thread to send unsent requests
     _reset_db_as_necessary = False  # whether to reset the db if it's broken
     _watchdog_thread = None  # background thread to watch for process termination
     proc = None
+    pipe = None
 
     cpln_langs = []
     citadel_langs = []
@@ -272,7 +279,7 @@ class CodeIntelManager(threading.Thread):
         },
     ]
 
-    def __init__(self, service, init_callback=None, shutdown_callback=None):
+    def __init__(self, service, init_callback=None, shutdown_callback=None, oop_command=None, log_levels=None, env=None, prefs=None):
         self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
         self.service = service
         self.languages = service.languages
@@ -280,6 +287,14 @@ class CodeIntelManager(threading.Thread):
         self._next_id = 0
         self._init_callback = init_callback
         self._shutdown_callback = shutdown_callback
+        if oop_command is not None:
+            self._oop_command = oop_command
+        if log_levels is not None:
+            self._log_levels = log_levels
+        if prefs is not None:
+            self.prefs = [prefs] if isinstance(prefs, dict) else prefs
+        if env is not None:
+            self.env = env
         self._state_condvar = threading.Condition()
         self.requests = {}  # keyed by request id; value is tuple (callback, request data, time sent) requests will time out at some point...
         self.unsent_requests = queue.Queue()
@@ -351,19 +366,19 @@ class CodeIntelManager(threading.Thread):
         self.log.debug("initializing child process")
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(("127.0.0.1", 0))
+            sock.bind(('127.0.0.1', 0))
             sock.listen(0)
-
-            db_base_dir = os.path.expanduser('~/.codeintel')
             connect = "%s:%s" % sock.getsockname()
 
+            db_base_dir = os.path.expanduser('~/.codeintel')
             log_file = os.path.join(db_base_dir, 'codeintel.log')
-            args = [db_base_dir, connect, 'WARNING', log_file]
+            log_levels = ','.join(self._log_levels)
+            args = [db_base_dir, connect, log_levels, log_file]
 
-            codeintel_exec = "/usr/local/bin/codeintel"
-            if not os.path.exists(codeintel_exec):
-                codeintel_exec = "codeintel"
-            cmd = [codeintel_exec] + args
+            _oop_command = self._oop_command
+            if not os.path.exists(_oop_command):
+                _oop_command = os.path.basename(_oop_command)
+            cmd = [_oop_command] + args
 
             self.log.debug("Running OOP: [%s]", ", ".join('"' + c + '"' for c in cmd))
             self.proc = process.ProcessOpen(cmd, cwd=None, env=None)
@@ -548,7 +563,7 @@ class CodeIntelManager(threading.Thread):
 
     def set_global_environment(self, env, prefs):
         self.env = env
-        self.prefs = prefs
+        self.prefs = [prefs] if isinstance(prefs, dict) else prefs
         self._send(
             command='set-environment',
             env=self.env,
@@ -614,7 +629,8 @@ class CodeIntelManager(threading.Thread):
         length = "%i" % len(text)
         length = length.encode('utf-8')
         buf = length + text
-        self.pipe.write(buf)
+        if self.pipe:
+            self.pipe.write(buf)
 
     def run(self):
         """Event loop for the codeintel manager background thread"""

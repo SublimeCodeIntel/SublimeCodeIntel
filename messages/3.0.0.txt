@@ -17,7 +17,8 @@ A full-featured code intelligence and smart autocomplete engine for Sublime Text
 
 In case of trouble, please read the Troubleshooting section in the README.
 
-If you like SublimeCodeIntel, please make a donation: http://sublimecodeintel.github.io/SublimeCodeIntel/donate.html
+If you like SublimeCodeIntel, please make a donation:
+http://sublimecodeintel.github.io/SublimeCodeIntel/donate.html
 
 
 For more information:
