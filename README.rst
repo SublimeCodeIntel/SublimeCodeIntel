@@ -143,14 +143,6 @@ If the problems persists after trying the above solutions, open a new issue in h
 When opening new issues, please check no other issues exist which report the same problem and provide all the messages from the Sublime Text console (the console is accessed via the ``ctrl+``` shortcut or the ``View > Show Console`` menu) and the ``~/.codeintel/codeintel.log`` file (``%userprofile%\.codeintel\codeintel.log`` in Windows) as well as mentioning the Sublime Text version, the platform you are using and the languages you are using the code intelligence on.
 
 
-Building
---------
-
-Building process is no longer distributed with this repository. You need to get SublimeCodeIntel/`CodeIntelSources <https://github.com/SublimeCodeIntel/CodeIntelSources/>`_ to run ``build.sh``.
-
-More information in SublimeCodeIntel/CodeIntelSources/`src <https://github.com/SublimeCodeIntel/CodeIntelSources/tree/master/src>`_.
-
-
 Notes
 -----
 
