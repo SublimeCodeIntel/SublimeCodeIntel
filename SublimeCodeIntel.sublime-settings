@@ -2,30 +2,125 @@
     SublimeCodeIntel default settings
 */
 {
+    /*
+        codeintel_live - Enbles/disables live codeintel autocomplete.
+    */
     "codeintel_live": true,
-    "codeintel_disabled_languages": [],
-    "codeintel_oop_command": "/usr/local/bin/codeintel",
-    "codeintel_log_levels" : ["WARNING"],
-    "codeintel_prefs" : {
-            "codeintel_max_recursive_dir_depth": 10,
-            "codeintel_scan_files_in_project": true,
-            "codeintel_selected_catalogs": [],
-            "defaultHTML5Decl": "-//W3C//DTD HTML 5//EN",
-            "defaultHTMLDecl": "-//W3C//DTD HTML 5//EN",
-            "javascriptExtraPaths": "",
-            "nodejsDefaultInterpreter": "",
-            "nodejsExtraPaths": "",
-            "perl": "",
-            "perlExtraPaths": "",
-            "php": "",
-            "phpConfigFile": "",
-            "phpExtraPaths": "",
-            "python": "",
-            "python3": "",
-            "python3ExtraPaths": "",
-            "pythonExtraPaths": "",
-            "ruby": "",
-            "rubyExtraPaths": "",
+
+    /*
+       Maps syntax names to languages. This allows variations on a syntax
+       (for example "Python (Django)") to be used. The key is
+       the base filename of the .tmLanguage syntax files, and the value
+       is the syntax it maps to.
+    */
+    "codeintel_syntax_map":
+    {
+       "Python Django": "Python"
     },
-    "codeintel_env": {}
+
+    /*
+        codeintel_disabled_languages - List of codeintel disabled languages.
+    */
+    "codeintel_disabled_languages": [],
+
+    /*
+        codeintel_oop_command - Executable for OOP codeintel command.
+    */
+    "codeintel_oop_command": "/usr/local/bin/codeintel",
+
+    /*
+        codeintel_log_levels - Set the logging levels for the OOP loggers
+        This can be DEBUG, INFO, WARNING or ERROR; WARNGING is recommended,
+        other settings might have an impact in the perfocmance.
+    */
+
+    "codeintel_log_levels" : ["WARNING"],
+
+    /*
+        codeintel_selected_catalogs - API Catalogs.
+        SublimeCodeIntel uses API catalogs to provide autocomplete and calltips
+        for 3rd-party libraries.
+
+        NOTE: Add only the libraries that you use in your code. Adding all API
+            catalogs for a particular language can lead to confusing results.
+
+        Avaliable catalogs:
+            PyWin32 (Python3) (for Python3: Python Extensions for Windows)
+            PyWin32 (for Python: Python Extensions for Windows)
+            Rails (for Ruby: Rails version 1.1.6)
+            jQuery (for JavaScript: jQuery JavaScript library - version 1.9.1)
+            Prototype (for JavaScript: JavaScript framework for web development)
+            dojo (for JavaScript: Dojo Toolkit API - version 1.5.0)
+            Ext_30 (for JavaScript: Ext JavaScript framework - version 3.0)
+            HTML5 (for JavaScript: HTML5 (Canvas, Web Messaging, Microdata))
+            MochiKit (for JavaScript: A lightweight JavaScript library - v1.4.2)
+            Mozilla Toolkit (for JavaScript: Mozilla Toolkit API - version 1.8)
+            XBL (for JavaScript: XBL JavaScript support - version 1.0)
+            YUI (for JavaScript: Yahoo! User Interface Library - v2.8.1)
+            Drupal (for PHP: A full-featured PHP content management/discussion engine -- v5.1)
+            PECL (for PHP: A collection of PHP Extensions)
+    */
+    "codeintel_selected_catalogs": ["jQuery", "HTML5"],
+
+    /*
+        codeintel_scan_files_in_project - Include all files and directories from
+        the project base directory and in the Sublime Text project.
+    */
+    "codeintel_scan_files_in_project": true,
+
+    /*
+        codeintel_max_recursive_dir_depth - Maximum recursion to use, when applicable.
+    */
+    "codeintel_max_recursive_dir_depth": 10,
+
+    /*
+        codeintel_scan_extra_paths - Extra directories to include during the scan,
+        additional to the ones configured by default.
+    */
+    "codeintel_scan_extra_paths": [],
+
+    /*
+        codeintel_scan_exclude_paths - Directories to exclude from the scan.
+    */
+    "codeintel_scan_exclude_paths": ["/build/", "/min/"],
+
+    /*
+        codeintel_env - Additional environment variables to use.
+    */
+    "codeintel_env": {
+    },
+
+    /*
+        Defines a configuration for each language. Each language can include any
+        of the available settings listed above, plus any others passed to CodeIntel.
+    */
+    "codeintel_language_settings": {
+        "Python": {
+            "python": ""
+        },
+        "Python3": {
+            "python3": ""
+        },
+        "Ruby": {
+            "ruby": ""
+        },
+        "Perl": {
+            "perl": ""
+        },
+        "HTML": {
+            "defaultHTMLDecl": "-//W3C//DTD HTML 5//EN"
+        },
+        "HTML5": {
+            "defaultHTML5Decl": "-//W3C//DTD HTML 5//EN"
+        },
+        "JavaScript": {
+        },
+        "Node.js": {
+            "nodejsDefaultInterpreter": ""
+        },
+        "PHP": {
+            "php": "",
+            "phpConfigFile": ""
+        }
+    }
 }

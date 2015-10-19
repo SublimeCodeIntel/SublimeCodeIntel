@@ -28,6 +28,9 @@ Port by German M. Bravo (Kronuz). 2011-2015
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
+VERSION = "3.0.0"
+
+
 import os
 import sys
 
@@ -37,43 +40,6 @@ __path__ = os.path.dirname(__file__)
 python_sitelib_path = os.path.join(os.path.normpath(__path__), 'libs')
 if python_sitelib_path not in sys.path:
     sys.path.insert(0, python_sitelib_path)
-
-
-VERSION = "3.0.0"
-
-DEFAULT_SETTINGS = {
-    'codeintel_live': True,
-    'codeintel_disabled_languages': [],
-    'codeintel_oop_command': '/usr/local/bin/codeintel',
-    'codeintel_log_levels': ['WARNING'],
-    'codeintel_prefs': {
-        'codeintel_max_recursive_dir_depth': 10,
-        'codeintel_scan_files_in_project': True,
-        'codeintel_selected_catalogs': [],
-        'defaultHTML5Decl': '-//W3C//DTD HTML 5//EN',
-        'defaultHTMLDecl': '-//W3C//DTD HTML 5//EN',
-        'javascriptExtraPaths': '',
-        'nodejsDefaultInterpreter': '',
-        'nodejsExtraPaths': '',
-        'perl': '',
-        'perlExtraPaths': '',
-        'php': '',
-        'phpConfigFile': '',
-        'phpExtraPaths': '',
-        'python': '',
-        'python3': '',
-        'python3ExtraPaths': '',
-        'pythonExtraPaths': '',
-        'ruby': '',
-        'rubyExtraPaths': '',
-    },
-    'codeintel_env': dict(os.environ),
-}
-
-codeintel_syntax_map = {
-    "Python Django": "Python",
-}
-
 
 import re
 import logging
@@ -90,6 +56,19 @@ settings = None
 logger_name = 'CodeIntel'
 logger = logging.getLogger(logger_name)
 logger.setLevel(logging.WARNING)  # WARNING
+if logger.root.handlers:
+    logger.root.handlers[0].setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
+
+
+EXTRA_PATHS_MAP = {
+    'JavaScript': 'javascriptExtraPaths',
+    'Node.js': 'nodejsExtraPaths',
+    'Perl': 'perlExtraPaths',
+    'PHP': 'phpExtraPaths',
+    'Python3': 'python3ExtraPaths',
+    'Python': 'pythonExtraPaths',
+    'Ruby': 'rubyExtraPaths',
+}
 
 
 class CodeIntelHandler(object):
@@ -201,7 +180,7 @@ class CodeIntelHandler(object):
 
     def guess_language(self, view, path):
         lang = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
-        lang = codeintel_syntax_map.get(lang, lang)
+        lang = settings.get('codeintel_syntax_map').get(lang, lang)
         if lang in settings.get('codeintel_disabled_languages'):
             return None
         return lang
@@ -220,6 +199,9 @@ class CodeIntelHandler(object):
         lang = self.guess_language(view, path)
         if not lang or lang not in ci.languages:
             return None
+
+        if not get_setting(lang, 'codeintel_live'):
+            return
 
         logger.debug("buf_from_view: %r, %r, %r", view, path, lang)
 
@@ -248,26 +230,26 @@ class CodeIntelHandler(object):
         buf.text_in_current_line = text_in_current_line
         buf.original_pos = original_pos
 
-        window = sublime.active_window()
-        extra_paths = os.pathsep.join(window.folders())
+        prefs = {}
 
-        javascriptExtraPaths = extra_paths
-        nodejsExtraPaths = extra_paths
-        perlExtraPaths = extra_paths
-        phpExtraPaths = extra_paths
-        python3ExtraPaths = extra_paths
-        pythonExtraPaths = extra_paths
-        rubyExtraPaths = extra_paths
+        language_settings = settings.get('codeintel_language_settings')
+        for k, v in language_settings.get(lang, {}).items():
+            prefs[k] = v
 
-        buf.prefs = {
-            'javascriptExtraPaths': javascriptExtraPaths,
-            'nodejsExtraPaths': nodejsExtraPaths,
-            'perlExtraPaths': perlExtraPaths,
-            'phpExtraPaths': phpExtraPaths,
-            'python3ExtraPaths': python3ExtraPaths,
-            'pythonExtraPaths': pythonExtraPaths,
-            'rubyExtraPaths': rubyExtraPaths,
-        }
+        if get_setting(lang, 'codeintel_scan_files_in_project'):
+            window = sublime.active_window()
+            extra_path_name = EXTRA_PATHS_MAP.get(lang)
+            if extra_path_name:
+                excluded = get_setting(lang, 'codeintel_scan_exclude_paths', [])
+                extra_path = []
+                for f in window.folders():
+                    f = os.path.normcase(os.path.normpath(f)).rstrip(os.sep)
+                    if f not in excluded:
+                        extra_path.append(f)
+                if extra_path:
+                    prefs[extra_path_name] = os.pathsep.join(extra_path)
+
+        buf.prefs = prefs
 
         return buf
 
@@ -565,6 +547,10 @@ class BackToPythonDefinition(sublime_plugin.TextCommand):
                 window.open_file(previous_location, sublime.ENCODED_POSITION)
 
 
+def get_setting(lang, setting, default=None):
+    return settings.get('codeintel_language_settings', {}).get(lang, settings).get(setting, settings.get(setting, default))
+
+
 def plugin_loaded():
     """Restores user settings."""
     global ci, settings
@@ -574,31 +560,53 @@ def plugin_loaded():
     settings.clear_on_change(settings_name)
     settings.add_on_change(settings_name, plugin_loaded)
 
-    for setting, default in DEFAULT_SETTINGS.items():
-        value = settings.get(setting)
-        if isinstance(default, dict):
-            new_value = default.copy()
-            if value and isinstance(value, dict):
-                new_value.update(value)
-        elif value is not None:
-            new_value = value
-        else:
-            new_value = default
-        if value != new_value:
-            settings.set(setting, new_value)
+    excluded = settings.get('codeintel_scan_exclude_paths')
+    if excluded:
+        ex = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in excluded]
+        settings.set('codeintel_scan_exclude_paths', ex)
+
+    oop_command = settings.get('codeintel_oop_command')
+    log_levels = settings.get('codeintel_log_levels')
+    env = dict(os.environ)
+    env.update(settings.get('codeintel_env'))
+
+    prefs = {
+        'codeintel_max_recursive_dir_depth': settings.get('codeintel_max_recursive_dir_depth'),
+        'codeintel_scan_files_in_project': settings.get('codeintel_max_recursive_dir_depth'),
+        'codeintel_selected_catalogs': settings.get('codeintel_selected_catalogs'),
+    }
+
+    extra_paths = settings.get('codeintel_scan_extra_paths')
+
+    language_settings = settings.get('codeintel_language_settings')
+    for l, s in language_settings.items():
+        excluded = language_settings.get('codeintel_scan_exclude_paths')
+        if excluded:
+            ex = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in excluded]
+            excluded.clear()
+            excluded.extend(ex)
+        language_extra_paths = s.pop('codeintel_scan_extra_paths', None)
+        if language_extra_paths is None:
+            language_extra_paths = extra_paths
+        for k, v in s.items():
+            if settings.get(k) is None and not k.startswith('codeintel_'):
+                prefs[k] = v
+        extra_path_name = EXTRA_PATHS_MAP.get(l)
+        if extra_path_name:
+            prefs[extra_path_name] = os.pathsep.join(language_extra_paths)
 
     if ci.mgr and ci.mgr.is_alive():
         ci.mgr.set_global_environment(
-            env=settings.get('codeintel_env'),
-            prefs=settings.get('codeintel_prefs'),
+            env=env,
+            prefs=prefs,
         )
     else:
         ci.activate(
             reset_db_as_necessary=False,
-            oop_command=settings.get('codeintel_oop_command'),
-            log_levels=settings.get('codeintel_log_levels'),
-            env=settings.get('codeintel_env'),
-            prefs=settings.get('codeintel_prefs'),
+            oop_command=oop_command,
+            log_levels=log_levels,
+            env=env,
+            prefs=prefs,
         )
 
 

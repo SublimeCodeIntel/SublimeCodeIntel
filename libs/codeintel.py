@@ -101,7 +101,7 @@ class CodeIntel(object):
                 self.mgr = None
 
     def activate(self, reset_db_as_necessary=False, oop_command=None, log_levels=None, env=None, prefs=None):
-        self.log.debug("activating codeintel service: %r", reset_db_as_necessary)
+        self.log.debug("activating codeintel service")
 
         if self._quit_application:
             return  # don't ever restart after quit-application
@@ -298,7 +298,7 @@ class CodeIntelManager(threading.Thread):
         self._state_condvar = threading.Condition()
         self.requests = {}  # keyed by request id; value is tuple (callback, request data, time sent) requests will time out at some point...
         self.unsent_requests = queue.Queue()
-        threading.Thread.__init__(self, name="Codeintel Manager %s" % (id(self)))
+        threading.Thread.__init__(self, name="CodeIntel Manager Thread")
 
     @property
     def state(self):
@@ -380,13 +380,13 @@ class CodeIntelManager(threading.Thread):
                 _oop_command = os.path.basename(_oop_command)
             cmd = [_oop_command] + args
 
-            self.log.debug("Running OOP: [%s]", ", ".join('"' + c + '"' for c in cmd))
+            self.log.debug("Running OOP: %s", " ".join(cmd))
             self.proc = process.ProcessOpen(cmd, cwd=None, env=None)
             assert self.proc.returncode is None, "Early process death!"
 
             self._watchdog_thread = threading.Thread(
                 target=self._watchdog_thread,
-                name="CodeIntel Subprocess Watchdog",
+                name="CodeIntel Subprocess Watchdog Thread",
                 args=(self.proc,),
             )
             self._watchdog_thread.start()
@@ -396,21 +396,20 @@ class CodeIntelManager(threading.Thread):
             self.pipe = self.conn[0].makefile('rwb', 0)
             self.state = CodeIntelManager.STATE_CONNECTED
         except Exception as e:
-            message = "Error initing child: %s", e
-            self.log.debug(message)
-            self.pipe = None
             self.kill()
+            message = "Error initing child: %s" % e
+            self.log.debug(message)
             self._init_callback(self, message)
         else:
             self._send_init_requests()
 
     def _watchdog_thread(self, proc):
-        self.log.debug("Waiting for process to die...")
+        self.log.debug("Watchdog witing for OOP codeintel process to die...")
         if hasattr(proc, 'wait'):
             proc.wait()
         elif hasattr(proc, 'join'):
             proc.join()
-        self.log.debug("Child process died!")
+        self.log.debug("Child OOP codeintel process died!")
         try:
             self.kill()
         except:
@@ -544,7 +543,7 @@ class CodeIntelManager(threading.Thread):
             self.log.debug("internal initial requests completed")
             self._send_request_thread = threading.Thread(
                 target=self._send_queued_requests,
-                name="Codeintel Manager Request Sending Thread")
+                name="CodeIntel Manager Request Sending Thread")
             self._send_request_thread.daemon = True
             self._send_request_thread.start()
             update("Codeintel ready.", state=CodeIntelManager.STATE_READY)
@@ -613,7 +612,7 @@ class CodeIntelManager(threading.Thread):
         calling thread until the data has been written (though possibly not yet
         received on the other end).
         """
-        if self.state is CodeIntelManager.STATE_QUITTING:
+        if not self.pipe or self.state is CodeIntelManager.STATE_QUITTING:
             return  # Nope, eating all commands during quit
         req_id = hex(self._next_id)
         kwargs['req_id'] = req_id
@@ -629,8 +628,7 @@ class CodeIntelManager(threading.Thread):
         length = "%i" % len(text)
         length = length.encode('utf-8')
         buf = length + text
-        if self.pipe:
-            self.pipe.write(buf)
+        self.pipe.write(buf)
 
     def run(self):
         """Event loop for the codeintel manager background thread"""
