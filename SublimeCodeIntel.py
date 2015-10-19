@@ -180,10 +180,11 @@ class CodeIntelHandler(object):
 
     def guess_language(self, view, path):
         lang = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
-        lang = settings.get('codeintel_syntax_map').get(lang, lang)
-        if lang in settings.get('codeintel_disabled_languages'):
+        language = settings.get('codeintel_syntax_map').get(lang, lang)
+        logger.info("Language guessed: %s (for %s)", language, lang)
+        if language in settings.get('codeintel_disabled_languages'):
             return None
-        return lang
+        return language
 
     def buf_from_view(self, view):
         if not view:
@@ -560,7 +561,9 @@ def settings_changed():
     oop_command = settings.get('codeintel_oop_command')
     log_levels = settings.get('codeintel_log_levels')
     env = dict(os.environ)
-    env.update(settings.get('codeintel_env'))
+    codeintel_env = settings.get('codeintel_env')
+    if codeintel_env:
+        env.update(codeintel_env)
 
     prefs = {
         'codeintel_max_recursive_dir_depth': settings.get('codeintel_max_recursive_dir_depth'),
