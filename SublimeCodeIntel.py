@@ -258,7 +258,7 @@ class CodeIntelHandler(object):
         function = None if 'import ' in text_in_current_line else 'function'
         get_name = lambda c: c[1]
         get_type = lambda c: c[0].title()
-        if language == 'PHP' and type != 'object-members':
+        if language == 'PHP' and type != 'object-members' and type != 'static-members':
             get_name = lambda c: ('$' + c[1]) if c[0] == 'variable' else c[1]
         return [('%s\t〔%s〕' % (get_name(c), get_type(c)), get_name(c).replace("$", "\\$") + ('($0)' if c[0] == function else '')) for c in cplns]
 
