@@ -1,12 +1,9 @@
-SublimeCodeIntel
-================
-
  ____        _     _ _                 ____          _      ___       _       _
 / ___| _   _| |__ | (_)_ __ ___   ___ / ___|___   __| | ___|_ _|_ __ | |_ ___| |
 \___ \| | | | '_ \| | | '_ ` _ \ / _ \ |   / _ \ / _` |/ _ \| || '_ \| __/ _ \ |
  ___) | |_| | |_) | | | | | | | |  __/ |__| (_) | (_| |  __/| || | | | ||  __/ |
 |____/ \__,_|_.__/|_|_|_| |_| |_|\___|\____\___/ \__,_|\___|___|_| |_|\__\___|_|
-A full-featured code intelligence and smart autocomplete engine for Sublime Text.
+A full-featured code intelligence and smart autocomplete engine for Sublime Text
    (Code intelligence plugin ported from Open Komodo Editor to Sublime Text)
 
 
@@ -23,12 +20,20 @@ A full-featured code intelligence and smart autocomplete engine for Sublime Text
 +------------------------------------------------------------------------------+
 
 
-Features
---------
+
+SublimeCodeIntel
+================
+
+A full-featured code intelligence and smart autocomplete engine for Sublime Text.
+(Code intelligence plugin ported from Open Komodo Editor to Sublime Text)
 
 Supports all the languages Komodo Editor supports for Code Intelligence (CIX, CodeIntel2):
 
-JavaScript, Mason, XBL, XUL, RHTML, SCSS, Python, HTML, Ruby, Python3, XML, Sass, XSLT, Django, HTML5, Perl, CSS, Twig, Less, Smarty, Node.js, Tcl, TemplateToolkit, PHP.
+ActionScript, Django, Docker, EJS, epMojo, HTML, KomodoSnippet, LaravelBlade,
+Mason, Mustache, MXML, PHP, R, reStructuredText, RHTML, Smarty, TracWiki,
+TemplateToolkit, Twig, XBL, XML, XSLT, XUL,
+Python, Python3, Ruby, Perl, Go, JavaScript, Node.js, CSS, SCSS, Sass, Less,
+HTML5, Tcl.
 
 
 Provides the following features:
@@ -60,27 +65,14 @@ Provides the following features:
 
 
 
-Notes
------
+Release Notes
+-------------
 
-** Restart Sublime Text after reading this **
-
-
-More information
-----------------
 Please take the time to read the documentation:
-
-In case of trouble, please read the Troubleshooting section in the README.
 
 * Online - http://sublimecodeintel.github.io/SublimeCodeIntel/
 * Git - https://github.com/SublimeCodeIntel/SublimeCodeIntel
 
+In case of trouble, please read the Troubleshooting section in the README.
 
-IMPORTANT
----------
-
-Do NOT edit the default SublimeCodeIntel settings. Your changes will be lost
-when SublimeCodeIntel is updated. ALWAYS edit the user SublimeCodeIntel settings
-by selecting "Preferences->Package Settings->SublimeCodeIntel->Settings - User".
-Note that individual settings you include in your user settings will **completely**
-replace the corresponding default setting, so you must provide that setting in its entirety.
+** Restart Sublime Text after reading all this **
