@@ -1,6 +1,6 @@
 /*
    SublimeCodeIntel default settings
-   All settings can be overridden in *.sublime-project file
+   All settings can be overridden in the *.sublime-project file
 */
 {
     /*
@@ -15,7 +15,7 @@
     "codeintel_database_dir": "~/.codeintel",
 
     /*
-       An array of language names which are enabled.
+       An array of enabled language names.
     */
     "codeintel_enabled_languages":
     [
@@ -27,7 +27,7 @@
     /*
        Maps syntax names to languages. This allows variations on a syntax
        (for example "Python (Django)") to be used. The key is
-       the base filename of the .tmLanguage syntax files, and the value
+       the base filename of the .tmLanguage syntax files and the value
        is the syntax it maps to.
     */
     "codeintel_syntax_map":
@@ -87,9 +87,11 @@
     "codeintel_scan_files_in_project": true,
 
     /* API Catalogs: SublimeCodeIntel uses API catalogs to provide autocomplete and calltips for 3rd-party libraries.
-      Add te libraries that you use in your code. Note: Adding all API catalogs for a particular language can lead to confusing results.
+      Add the libraries that you use in your code.
+      
+      Note: Adding all API catalogs for a particular language can lead to confusing results!
 
-      Avaliable catalogs:
+      Available catalogs:
            PyWin32 (Python3) (for Python3: Python Extensions for Windows)
            PyWin32 (for Python: Python Extensions for Windows)
            Rails (for Ruby: Rails version 1.1.6)
