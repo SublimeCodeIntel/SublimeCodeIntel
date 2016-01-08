@@ -257,7 +257,7 @@ class CodeintelHandler(object):
             exclude_paths_name = EXCLUDE_PATHS_MAP.get(lang)
             exclude_paths = prefs.get(exclude_paths_name, '').split(os.pathsep)
             for f in window.folders():
-                f = os.path.normcase(os.path.normpath(f)).rstrip(os.sep)
+                f = os.path.normcase(os.path.normpath(os.path.expanduser(f))).rstrip(os.sep)
                 if f not in exclude_paths and f not in extra_paths:
                     extra_paths.append(f)
             if extra_paths:
@@ -757,11 +757,11 @@ class CodeintelSettings(Settings):
 
         scan_extra_paths = set(self.settings.get('scan_extra_paths', []))
         if scan_extra_paths:
-            scan_extra_paths = set(os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_extra_paths)
+            scan_extra_paths = set(os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in scan_extra_paths)
 
         scan_exclude_paths = set(self.settings.get('scan_exclude_paths', []))
         if scan_exclude_paths:
-            scan_exclude_paths = set(os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_exclude_paths)
+            scan_exclude_paths = set(os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in scan_exclude_paths)
 
         language_settings = self.settings.get('language_settings', {})
         for l, s in language_settings.items():
@@ -778,14 +778,14 @@ class CodeintelSettings(Settings):
             extra_paths_name = EXTRA_PATHS_MAP.get(l)
             language_scan_extra_paths = set(s.get('scan_extra_paths', [])) | set(s.get(extra_paths_name, []))
             if language_scan_extra_paths:
-                language_scan_extra_paths = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_extra_paths | language_scan_extra_paths]
+                language_scan_extra_paths = [os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in scan_extra_paths | language_scan_extra_paths]
             if extra_paths_name:
                 prefs[extra_paths_name] = os.pathsep.join(language_scan_extra_paths)
 
             exclude_paths_name = EXCLUDE_PATHS_MAP.get(l)
             language_scan_exclude_paths = set(s.get('scan_exclude_paths', [])) | set(s.get(exclude_paths_name, []))
             if language_scan_exclude_paths:
-                language_scan_exclude_paths = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_exclude_paths | language_scan_exclude_paths]
+                language_scan_exclude_paths = [os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in scan_exclude_paths | language_scan_exclude_paths]
             if exclude_paths_name:
                 prefs[exclude_paths_name] = os.pathsep.join(language_scan_exclude_paths)
 
