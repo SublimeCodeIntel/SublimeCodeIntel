@@ -48,7 +48,7 @@ stuff in the codeintel system.
 """
 
 import os
-from os.path import (isfile, isdir, exists, dirname, abspath, join, basename)
+from os.path import (isabs, isfile, isdir, exists, dirname, abspath, join, basename)
 import sys
 import logging
 import time
@@ -57,6 +57,7 @@ import traceback
 import threading
 from pprint import pprint
 
+import sublime
 import ciElementTree as ET
 import codeintel2
 from codeintel2.buffer import Buffer
@@ -89,7 +90,18 @@ class CitadelLangIntel(LangIntel):
         for pref in env.get_pref("codeintel_scan_extra_dir"):
             if not pref:
                 continue
-            extra_dirs.update(d.strip() for d in pref.split(os.pathsep) if exists(d.strip()))
+            for path in pref.split(os.pathsep):
+                path = path.strip()
+                if isabs(path):
+                    if exists(path):
+                        extra_dirs.add(path)
+                else:
+                    # Support home-relative and project-relative paths
+                    window = sublime.active_window()
+                    for base_path in window.folders():
+                        path = join(base_path, os.path.expanduser(path))
+                        if exists(path):
+                            extra_dirs.add(path)
 
         if extra_dirs:
             extra_dirs = tuple(
