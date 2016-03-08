@@ -77,7 +77,7 @@
             NOTE: Add only the libraries that you use in your code. Adding all API
                 catalogs for a particular language can lead to confusing results.
 
-            Avaliable catalogs:
+            Available catalogs:
                 PyWin32 (Python3) (for Python3: Python Extensions for Windows)
                 PyWin32 (for Python: Python Extensions for Windows)
                 Rails (for Ruby: Rails version 1.1.6)
