@@ -565,6 +565,8 @@
         </scope>
         <scope doc="Tells the browser that you wish to perform an animation and&#xA;requests that the browser call a specified function to update&#xA;an animation before the next repaint." ilk="function" name="requestAnimationFrame" returns="Number" signature="requestAnimationFrame(func) =&gt; requestID" />
         <scope doc="Cancels an animation frame request previously scheduled&#xA;through a call to window.requestAnimationFrame()" ilk="function" name="cancelAnimationFrame" signature="cancelAnimationFrame(requestID)" />
+        <variable citdl="Storage" name="localStorage" />
+        <variable citdl="Storage" name="sessionStorage" />
       </scope>
       <scope classrefs="CharacterData" doc="This interface inherits from CharacterData and represents&#xA;the content of a comment, i.e., all the characters between&#xA;the starting &apos; &lt;!-- &apos; and ending &apos; --&gt; &apos;. Note that this is&#xA;the definition of a comment in XML, and, in practice, HTML,&#xA;although some HTML tools may implement the full SGML comment&#xA;structure." ilk="class" name="Comment" />
       <scope doc="The Event interface is used to provide contextual&#xA;information about an event to the handler processing the&#xA;event. An object which implements the Event interface is&#xA;generally passed as the first parameter to an event handler." ilk="class" name="Event">
@@ -1995,6 +1997,14 @@
         <scope doc="Returns a Promise that immediately resolves with the given value." ilk="function" name="resolve" returns="Promise" signature="resolve(value) -&gt; Promise" />
       </scope>
       <scope doc="This returns a promise that resolves to the Response object&#xA;representing the response to your request." ilk="function" name="fetch" returns="Promise" signature="fetch(input[, options]) -&gt; Promise" />
+      <scope doc="The Storage interface of the Web Storage API provides access&#xA;to the session storage or local storage for a particular&#xA;domain, allowing you to for example add, modify or delete&#xA;stored data items." ilk="class" name="Storage">
+        <variable citdl="Number" doc="Returns an integer representing the number of&#xA;data items stored in the Storage object." name="length" />
+        <scope doc="When invoked, will empty all keys out of the storage." ilk="function" name="clear" signature="clear()" />
+        <scope doc="When passed a key name, will remove that key from the storage." ilk="function" name="removeItem" signature="removeItem(keyName)" />
+        <scope doc="When passed a number n, this method will return the name&#xA;of the nth key in the storage." ilk="function" name="key" returns="DOMString" signature="key(index)" />
+        <scope doc="When passed a key name, will return that key's value." ilk="function" name="getItem" returns="String" signature="getItem(key)" />
+        <scope doc="When passed a key name and value, will add that key to&#xA;the storage, or update that key's value if it already exists." ilk="function" name="setItem" signature="setItem(key, value)" />
+      </scope>
     </scope>
   </file>
 </codeintel>
