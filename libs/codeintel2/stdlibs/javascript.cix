@@ -1986,6 +1986,15 @@
           <variable citdl="DOMString" ilk="argument" name="arg" />
         </scope>
       </scope>
+      <scope doc="Represents an operation that hasn't completed yet, but is&#xA;expected in the future." ilk="class" name="Promise">
+        <scope doc="Returns a Promise and deals with rejected cases only." ilk="function" name="catch" returns="Promise" signature="catch(func) -&gt; Promise" />
+        <scope doc="Returns a Promise and deals with resolved and rejected cases." ilk="function" name="then" returns="Promise" signature="then(successFunc[, rejectFunc]) -&gt; Promise" />
+        <scope doc="Returns a promise that resolves when all of the promises in&#xA;the iterable argument have resolved, or rejects with the&#xA;reason of the first passed promise that rejects." ilk="function" name="all" returns="Promise" signature="all(iterable) -&gt; Promise" />
+        <scope doc="Returns a promise that resolves or rejects as soon as one of&#xA;the promises in the iterable resolves or rejects, with&#xA;the value or reason from that promise." ilk="function" name="race" returns="Promise" signature="race(iterable) -&gt; Promise" />
+        <scope doc="Returns a Promise that immediately rejects with the given reason." ilk="function" name="reject" returns="Promise" signature="reject(reason) -&gt; Promise" />
+        <scope doc="Returns a Promise that immediately resolves with the given value." ilk="function" name="resolve" returns="Promise" signature="resolve(value) -&gt; Promise" />
+      </scope>
+      <scope doc="This returns a promise that resolves to the Response object&#xA;representing the response to your request." ilk="function" name="fetch" returns="Promise" signature="fetch(input[, options]) -&gt; Promise" />
     </scope>
   </file>
 </codeintel>
