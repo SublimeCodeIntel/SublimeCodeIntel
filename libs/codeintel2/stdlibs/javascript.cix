@@ -1,25 +1,25 @@
 <!-- ***** BEGIN LICENSE BLOCK *****
  Version: MPL 1.1/GPL 2.0/LGPL 2.1
- 
+
  The contents of this file are subject to the Mozilla Public License
  Version 1.1 (the "License"); you may not use this file except in
  compliance with the License. You may obtain a copy of the License at
  http://www.mozilla.org/MPL/
- 
+
  Software distributed under the License is distributed on an "AS IS"
  basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
  License for the specific language governing rights and limitations
  under the License.
- 
+
  The Original Code is Komodo code.
- 
+
  The Initial Developer of the Original Code is ActiveState Software Inc.
  Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
  ActiveState Software Inc. All Rights Reserved.
- 
+
  Contributor(s):
    ActiveState Software Inc
- 
+
  Alternatively, the contents of this file may be used under the terms of
  either the GNU General Public License Version 2 or later (the "GPL"), or
  the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -31,7 +31,7 @@
  and other provisions required by the GPL or the LGPL. If you do not delete
  the provisions above, a recipient may use your version of this file under
  the terms of any one of the MPL, the GPL or the LGPL.
- 
+
  ***** END LICENSE BLOCK ***** -->
 
 <codeintel version="2.0">
@@ -1619,6 +1619,12 @@
         <scope doc="Returns the Element whose ID is given by elementId. If no&#xA;such element exists, returns null." ilk="function" name="getElementById" returns="Element" signature="getElementById(elementId)">
           <variable citdl="DOMString" ilk="argument" name="elementId" />
         </scope>
+        <scope doc="Returns the first Element within the document that matches&#xA;the specified group of selectors. If no such element&#xA;exists, returns null." ilk="function" name="querySelector" returns="Element" signature="querySelector(selectors)">
+          <variable citdl="DOMString" ilk="argument" name="selectors" />
+        </scope>
+        <scope doc="Returns a list of all Elements within the document that&#xA;match the specified group of selectors." ilk="function" name="querySelectorAll" returns="NodeList" signature="querySelectorAll(selectors)">
+          <variable citdl="DOMString" ilk="argument" name="selectors" />
+        </scope>
       </scope>
       <scope doc="The StyleSheetList interface provides the abstraction of an&#xA;ordered collection of style sheets. The items in the&#xA;StyleSheetList are accessible via an integral index,&#xA;starting from 0." ilk="class" name="StyleSheetList">
         <variable citdl="Number" doc="The number of StyleSheets in the list. The range of valid&#xA;child stylesheet indices is 0 to length-1 inclusive." name="length" />
@@ -1836,6 +1842,12 @@
         <scope doc="Returns true when an attribute with a given local name and&#xA;namespace URI is specified on this element or has a default&#xA;value, false otherwise. HTML-only DOM implementations do not&#xA;need to implement this method." ilk="function" name="hasAttributeNS" returns="Boolean" signature="hasAttributeNS(namespaceURI, localName)">
           <variable citdl="DOMString" ilk="argument" name="namespaceURI" />
           <variable citdl="DOMString" ilk="argument" name="localName" />
+        </scope>
+        <scope doc="Returns the first Element that is a descendant of the&#xA;element on which it is invoked that matches the specified group&#xA;of selectors. If no such element exists, returns null." ilk="function" name="querySelector" returns="Element" signature="querySelector(selectors)">
+          <variable citdl="DOMString" ilk="argument" name="selectors" />
+        </scope>
+        <scope doc="Returns a list of all Elements descended from the element&#xA;on which it is invoked that match the specified group of&#xA;selectors." ilk="function" name="querySelectorAll" returns="NodeList" signature="querySelectorAll(selectors)">
+          <variable citdl="DOMString" ilk="argument" name="selectors" />
         </scope>
       </scope>
       <scope classrefs="CSSRule" doc="The CSSPageRule interface represents a @page rule within a&#xA;CSS style sheet. The @page rule is used to specify the&#xA;dimensions, orientation, margins, etc." ilk="class" name="CSSPageRule">
