@@ -1,25 +1,25 @@
 <!-- ***** BEGIN LICENSE BLOCK *****
  Version: MPL 1.1/GPL 2.0/LGPL 2.1
- 
+
  The contents of this file are subject to the Mozilla Public License
  Version 1.1 (the "License"); you may not use this file except in
  compliance with the License. You may obtain a copy of the License at
  http://www.mozilla.org/MPL/
- 
+
  Software distributed under the License is distributed on an "AS IS"
  basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
  License for the specific language governing rights and limitations
  under the License.
- 
+
  The Original Code is Komodo code.
- 
+
  The Initial Developer of the Original Code is ActiveState Software Inc.
  Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
  ActiveState Software Inc. All Rights Reserved.
- 
+
  Contributor(s):
    ActiveState Software Inc
- 
+
  Alternatively, the contents of this file may be used under the terms of
  either the GNU General Public License Version 2 or later (the "GPL"), or
  the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
@@ -31,7 +31,7 @@
  and other provisions required by the GPL or the LGPL. If you do not delete
  the provisions above, a recipient may use your version of this file under
  the terms of any one of the MPL, the GPL or the LGPL.
- 
+
  ***** END LICENSE BLOCK ***** -->
 
 <codeintel version="2.0">
@@ -40,6 +40,7 @@
       <variable name="Infinity" />
       <variable name="NaN" />
       <variable name="undefined" />
+      <variable name="arguments" />
       <scope doc="Import the given CommonJS module." ilk="function" name="require" signature="require(str)">
         <variable citdl="String" ilk="argument" name="str" />
       </scope>
@@ -74,6 +75,7 @@
         <scope doc="For most objects, the same as toString() unless explicitly overridden." ilk="function" name="toLocaleString" returns="String" signature="toLocaleString() -&gt; String" />
         <scope doc="Returns a string representation of the object." ilk="function" name="toString" returns="String" signature="toString() -&gt; String" />
         <scope doc="Returns the internal this value of the object." ilk="function" name="valueOf" returns="String" signature="valueOf() -&gt; String" />
+        <scope doc="Returns an array of a given object's own enumerable properties" ilk="function" name="keys" returns="String" signature="keys() -&gt; Array" />
       </scope>
       <scope classrefs="Object" ilk="class" name="Array">
         <variable name="length" />
@@ -108,6 +110,15 @@
           <variable citdl="Object" ilk="argument" name="newItem1" />
           <variable citdl="Object" ilk="argument" name="newItem2" />
         </scope>
+        <scope doc="Tests whether all elements in the array pass the test&#xA;implemented by the provided function" ilk="function" name="every" returns="Boolean" signature="every(callback[, thisArg]) -&gt; Boolean" />
+        <scope doc="Creates a new array with all elements that pass the test&#xA;implemented by the provided function" ilk="function" name="filter" returns="Array" signature="filter(callback[, thisArg]) -&gt; Array" />
+        <scope doc="Returns a value in the array, if an element in the array&#xA;satisfies the provided testing function, otherwise undefined is returned" ilk="function" name="find" returns="any" signature="find(callback[, thisArg]) -&gt; any" />
+        <scope doc="Returns an index in the array, if an element in the array&#xA;satisfies the provided testing function, otherwise&#xA;-1 is returned." ilk="function" name="findIndex" returns="Number" signature="findIndex(callback[, thisArg]) -&gt; Number" />
+        <scope doc="Executes a provided function once per array element" ilk="function" name="forEach" signature="forEach(callback[, thisArg])" />
+        <scope doc="Determines whether an array includes a certain element,&#xA;returning true or false as appropriate" ilk="function" name="includes" returns="Boolean" signature="includes(searchElement[, fromIndex]) -&gt; Boolean" />
+        <scope doc="Creates a new array with the results of calling a provided&#xA;function on every element in this array" ilk="function" name="map" returns="Array" signature="map(callback[, thisArg]) -&gt; Array" />
+        <scope doc="Applies a function against an accumulator and each value&#xA;of the array (from left-to-right) to reduce it to a&#xA;single value" ilk="function" name="reduce" returns="any" signature="reduce(callback[, initialValue]) -&gt; any" />
+        <scope doc="Applies a function against an accumulator and each value&#xA;of the array (from right-to-left) has to reduce it to&#xA;a single value" ilk="function" name="reduceRight" returns="any" signature="reduceRight(callback[, initialValue]) -&gt; any" />
       </scope>
       <scope classrefs="Object" ilk="class" name="Boolean" />
       <scope classrefs="Object" ilk="class" name="Date">
@@ -563,6 +574,31 @@
         <scope doc="Updates the state of commands of the current chrome window&#xA;(UI). whether we are in bold right now)." ilk="function" name="updateCommands" signature="updateCommands(&quot;sCommandName&quot;)">
           <variable ilk="argument" name="sCommandName" />
         </scope>
+        <scope doc="Tells the browser that you wish to perform an animation and&#xA;requests that the browser call a specified function to update&#xA;an animation before the next repaint." ilk="function" name="requestAnimationFrame" returns="Number" signature="requestAnimationFrame(func) =&gt; requestID" />
+        <scope doc="Cancels an animation frame request previously scheduled&#xA;through a call to window.requestAnimationFrame()" ilk="function" name="cancelAnimationFrame" signature="cancelAnimationFrame(requestID)" />
+        <variable citdl="Storage" name="localStorage" />
+        <variable citdl="Storage" name="sessionStorage" />
+        <scope doc="Represents an operation that hasn't completed yet, but is&#xA;expected in the future." ilk="class" name="Promise">
+          <scope doc="Returns a Promise and deals with rejected cases only." ilk="function" name="catch" returns="Promise" signature="catch(func) -&gt; Promise" />
+          <scope doc="Returns a Promise and deals with resolved and rejected cases." ilk="function" name="then" returns="Promise" signature="then(successFunc[, rejectFunc]) -&gt; Promise" />
+          <scope doc="Returns a promise that resolves when all of the promises in&#xA;the iterable argument have resolved, or rejects with the&#xA;reason of the first passed promise that rejects." ilk="function" name="all" returns="Promise" signature="all(iterable) -&gt; Promise" />
+          <scope doc="Returns a promise that resolves or rejects as soon as one of&#xA;the promises in the iterable resolves or rejects, with&#xA;the value or reason from that promise." ilk="function" name="race" returns="Promise" signature="race(iterable) -&gt; Promise" />
+          <scope doc="Returns a Promise that immediately rejects with the given reason." ilk="function" name="reject" returns="Promise" signature="reject(reason) -&gt; Promise" />
+          <scope doc="Returns a Promise that immediately resolves with the given value." ilk="function" name="resolve" returns="Promise" signature="resolve(value) -&gt; Promise" />
+        </scope>
+        <scope doc="An interface for fetching resources" ilk="function" name="fetch" returns="Promise" signature="fetch(input[, options]) -&gt; Promise" />
+        <scope doc="A key/value store allowing you to add, modify or&#xA;delete data items." ilk="class" name="Storage">
+          <variable citdl="Number" doc="Returns an integer representing the number of&#xA;data items stored in the Storage object." name="length" />
+          <scope doc="When invoked, will empty all keys out of the storage." ilk="function" name="clear" signature="clear()" />
+          <scope doc="When passed a key name, will remove that key from the storage." ilk="function" name="removeItem" signature="removeItem(keyName)" />
+          <scope doc="When passed a number n, this method will return the name&#xA;of the nth key in the storage." ilk="function" name="key" returns="String" signature="key(index)" />
+          <scope doc="When passed a key name, will return that key's value." ilk="function" name="getItem" returns="String" signature="getItem(key)" />
+          <scope doc="When passed a key name and value, will add that key to&#xA;the storage, or update that key's value if it already exists." ilk="function" name="setItem" signature="setItem(key, value)" />
+        </scope>
+        <scope doc="Decodes a string previously created by encodeURI or by a&#xA;similar routine" ilk="function" name="decodeURI" returns="String" signature="decodeURI(str) -&gt; String" />
+        <scope doc="Decodes a string previously created by encodeURIComponent or&#xA;by a similar routine" ilk="function" name="decodeURIComponent" returns="String" signature="decodeURIComponent(str) -&gt; String" />
+        <scope doc="Encodes a string by replacing each instance of certain&#xA;characters by escape sequences representing the UTF-8 encoding&#xA;of the character" ilk="function" name="encodeURI" returns="String" signature="encodeURI(str) -&gt; String" />
+        <scope doc="Encodes a string by replacing each instance of certain&#xA;characters by escape sequences representing the UTF-8 encoding&#xA;of the character" ilk="function" name="encodeURIComponent" returns="String" signature="encodeURIComponent(str) -&gt; String" />
       </scope>
       <scope classrefs="CharacterData" doc="This interface inherits from CharacterData and represents&#xA;the content of a comment, i.e., all the characters between&#xA;the starting &apos; &lt;!-- &apos; and ending &apos; --&gt; &apos;. Note that this is&#xA;the definition of a comment in XML, and, in practice, HTML,&#xA;although some HTML tools may implement the full SGML comment&#xA;structure." ilk="class" name="Comment" />
       <scope doc="The Event interface is used to provide contextual&#xA;information about an event to the handler processing the&#xA;event. An object which implements the Event interface is&#xA;generally passed as the first parameter to an event handler." ilk="class" name="Event">
@@ -1619,6 +1655,12 @@
         <scope doc="Returns the Element whose ID is given by elementId. If no&#xA;such element exists, returns null." ilk="function" name="getElementById" returns="Element" signature="getElementById(elementId)">
           <variable citdl="DOMString" ilk="argument" name="elementId" />
         </scope>
+        <scope doc="Returns the first Element within the document that matches&#xA;the specified group of selectors. If no such element&#xA;exists, returns null." ilk="function" name="querySelector" returns="Element" signature="querySelector(selectors)">
+          <variable citdl="DOMString" ilk="argument" name="selectors" />
+        </scope>
+        <scope doc="Returns a list of all Elements within the document that&#xA;match the specified group of selectors." ilk="function" name="querySelectorAll" returns="NodeList" signature="querySelectorAll(selectors)">
+          <variable citdl="DOMString" ilk="argument" name="selectors" />
+        </scope>
       </scope>
       <scope doc="The StyleSheetList interface provides the abstraction of an&#xA;ordered collection of style sheets. The items in the&#xA;StyleSheetList are accessible via an integral index,&#xA;starting from 0." ilk="class" name="StyleSheetList">
         <variable citdl="Number" doc="The number of StyleSheets in the list. The range of valid&#xA;child stylesheet indices is 0 to length-1 inclusive." name="length" />
@@ -1836,6 +1878,12 @@
         <scope doc="Returns true when an attribute with a given local name and&#xA;namespace URI is specified on this element or has a default&#xA;value, false otherwise. HTML-only DOM implementations do not&#xA;need to implement this method." ilk="function" name="hasAttributeNS" returns="Boolean" signature="hasAttributeNS(namespaceURI, localName)">
           <variable citdl="DOMString" ilk="argument" name="namespaceURI" />
           <variable citdl="DOMString" ilk="argument" name="localName" />
+        </scope>
+        <scope doc="Returns the first Element that is a descendant of the&#xA;element on which it is invoked that matches the specified group&#xA;of selectors. If no such element exists, returns null." ilk="function" name="querySelector" returns="Element" signature="querySelector(selectors)">
+          <variable citdl="DOMString" ilk="argument" name="selectors" />
+        </scope>
+        <scope doc="Returns a list of all Elements descended from the element&#xA;on which it is invoked that match the specified group of&#xA;selectors." ilk="function" name="querySelectorAll" returns="NodeList" signature="querySelectorAll(selectors)">
+          <variable citdl="DOMString" ilk="argument" name="selectors" />
         </scope>
       </scope>
       <scope classrefs="CSSRule" doc="The CSSPageRule interface represents a @page rule within a&#xA;CSS style sheet. The @page rule is used to specify the&#xA;dimensions, orientation, margins, etc." ilk="class" name="CSSPageRule">
