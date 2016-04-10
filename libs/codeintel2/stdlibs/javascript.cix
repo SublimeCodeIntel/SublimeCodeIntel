@@ -578,6 +578,23 @@
         <scope doc="Cancels an animation frame request previously scheduled&#xA;through a call to window.requestAnimationFrame()" ilk="function" name="cancelAnimationFrame" signature="cancelAnimationFrame(requestID)" />
         <variable citdl="Storage" name="localStorage" />
         <variable citdl="Storage" name="sessionStorage" />
+        <scope doc="Represents an operation that hasn't completed yet, but is&#xA;expected in the future." ilk="class" name="Promise">
+          <scope doc="Returns a Promise and deals with rejected cases only." ilk="function" name="catch" returns="Promise" signature="catch(func) -&gt; Promise" />
+          <scope doc="Returns a Promise and deals with resolved and rejected cases." ilk="function" name="then" returns="Promise" signature="then(successFunc[, rejectFunc]) -&gt; Promise" />
+          <scope doc="Returns a promise that resolves when all of the promises in&#xA;the iterable argument have resolved, or rejects with the&#xA;reason of the first passed promise that rejects." ilk="function" name="all" returns="Promise" signature="all(iterable) -&gt; Promise" />
+          <scope doc="Returns a promise that resolves or rejects as soon as one of&#xA;the promises in the iterable resolves or rejects, with&#xA;the value or reason from that promise." ilk="function" name="race" returns="Promise" signature="race(iterable) -&gt; Promise" />
+          <scope doc="Returns a Promise that immediately rejects with the given reason." ilk="function" name="reject" returns="Promise" signature="reject(reason) -&gt; Promise" />
+          <scope doc="Returns a Promise that immediately resolves with the given value." ilk="function" name="resolve" returns="Promise" signature="resolve(value) -&gt; Promise" />
+        </scope>
+        <scope doc="An interface for fetching resources" ilk="function" name="fetch" returns="Promise" signature="fetch(input[, options]) -&gt; Promise" />
+        <scope doc="A key/value store allowing you to add, modify or&#xA;delete data items." ilk="class" name="Storage">
+          <variable citdl="Number" doc="Returns an integer representing the number of&#xA;data items stored in the Storage object." name="length" />
+          <scope doc="When invoked, will empty all keys out of the storage." ilk="function" name="clear" signature="clear()" />
+          <scope doc="When passed a key name, will remove that key from the storage." ilk="function" name="removeItem" signature="removeItem(keyName)" />
+          <scope doc="When passed a number n, this method will return the name&#xA;of the nth key in the storage." ilk="function" name="key" returns="String" signature="key(index)" />
+          <scope doc="When passed a key name, will return that key's value." ilk="function" name="getItem" returns="String" signature="getItem(key)" />
+          <scope doc="When passed a key name and value, will add that key to&#xA;the storage, or update that key's value if it already exists." ilk="function" name="setItem" signature="setItem(key, value)" />
+        </scope>
         <scope doc="Decodes a string previously created by encodeURI or by a&#xA;similar routine" ilk="function" name="decodeURI" returns="String" signature="decodeURI(str) -&gt; String" />
         <scope doc="Decodes a string previously created by encodeURIComponent or&#xA;by a similar routine" ilk="function" name="decodeURIComponent" returns="String" signature="decodeURIComponent(str) -&gt; String" />
         <scope doc="Encodes a string by replacing each instance of certain&#xA;characters by escape sequences representing the UTF-8 encoding&#xA;of the character" ilk="function" name="encodeURI" returns="String" signature="encodeURI(str) -&gt; String" />
@@ -2002,23 +2019,6 @@
           <variable citdl="Number" ilk="argument" name="count" />
           <variable citdl="DOMString" ilk="argument" name="arg" />
         </scope>
-      </scope>
-      <scope doc="Represents an operation that hasn't completed yet, but is&#xA;expected in the future." ilk="class" name="Promise">
-        <scope doc="Returns a Promise and deals with rejected cases only." ilk="function" name="catch" returns="Promise" signature="catch(func) -&gt; Promise" />
-        <scope doc="Returns a Promise and deals with resolved and rejected cases." ilk="function" name="then" returns="Promise" signature="then(successFunc[, rejectFunc]) -&gt; Promise" />
-        <scope doc="Returns a promise that resolves when all of the promises in&#xA;the iterable argument have resolved, or rejects with the&#xA;reason of the first passed promise that rejects." ilk="function" name="all" returns="Promise" signature="all(iterable) -&gt; Promise" />
-        <scope doc="Returns a promise that resolves or rejects as soon as one of&#xA;the promises in the iterable resolves or rejects, with&#xA;the value or reason from that promise." ilk="function" name="race" returns="Promise" signature="race(iterable) -&gt; Promise" />
-        <scope doc="Returns a Promise that immediately rejects with the given reason." ilk="function" name="reject" returns="Promise" signature="reject(reason) -&gt; Promise" />
-        <scope doc="Returns a Promise that immediately resolves with the given value." ilk="function" name="resolve" returns="Promise" signature="resolve(value) -&gt; Promise" />
-      </scope>
-      <scope doc="This returns a promise that resolves to the Response object&#xA;representing the response to your request." ilk="function" name="fetch" returns="Promise" signature="fetch(input[, options]) -&gt; Promise" />
-      <scope doc="The Storage interface of the Web Storage API provides access&#xA;to the session storage or local storage for a particular&#xA;domain, allowing you to for example add, modify or delete&#xA;stored data items." ilk="class" name="Storage">
-        <variable citdl="Number" doc="Returns an integer representing the number of&#xA;data items stored in the Storage object." name="length" />
-        <scope doc="When invoked, will empty all keys out of the storage." ilk="function" name="clear" signature="clear()" />
-        <scope doc="When passed a key name, will remove that key from the storage." ilk="function" name="removeItem" signature="removeItem(keyName)" />
-        <scope doc="When passed a number n, this method will return the name&#xA;of the nth key in the storage." ilk="function" name="key" returns="DOMString" signature="key(index)" />
-        <scope doc="When passed a key name, will return that key's value." ilk="function" name="getItem" returns="String" signature="getItem(key)" />
-        <scope doc="When passed a key name and value, will add that key to&#xA;the storage, or update that key's value if it already exists." ilk="function" name="setItem" signature="setItem(key, value)" />
       </scope>
     </scope>
   </file>
