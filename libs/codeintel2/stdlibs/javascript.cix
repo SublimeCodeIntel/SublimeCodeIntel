@@ -74,6 +74,7 @@
         <scope doc="For most objects, the same as toString() unless explicitly overridden." ilk="function" name="toLocaleString" returns="String" signature="toLocaleString() -&gt; String" />
         <scope doc="Returns a string representation of the object." ilk="function" name="toString" returns="String" signature="toString() -&gt; String" />
         <scope doc="Returns the internal this value of the object." ilk="function" name="valueOf" returns="String" signature="valueOf() -&gt; String" />
+        <scope doc="Returns an array of a given object's own enumerable properties" ilk="function" name="keys" returns="String" signature="keys() -&gt; Array" />
       </scope>
       <scope classrefs="Object" ilk="class" name="Array">
         <variable name="length" />
@@ -108,6 +109,15 @@
           <variable citdl="Object" ilk="argument" name="newItem1" />
           <variable citdl="Object" ilk="argument" name="newItem2" />
         </scope>
+        <scope doc="Tests whether all elements in the array pass the test&#xA;implemented by the provided function" ilk="function" name="every" returns="Boolean" signature="every(callback[, thisArg]) -&gt; Boolean" />
+        <scope doc="Creates a new array with all elements that pass the test&#xA;implemented by the provided function" ilk="function" name="filter" returns="Array" signature="filter(callback[, thisArg]) -&gt; Array" />
+        <scope doc="Returns a value in the array, if an element in the array&#xA;satisfies the provided testing function, otherwise undefined is returned" ilk="function" name="find" returns="any" signature="find(callback[, thisArg]) -&gt; any" />
+        <scope doc="Returns an index in the array, if an element in the array&#xA;satisfies the provided testing function, otherwise&#xA;-1 is returned." ilk="function" name="findIndex" returns="Number" signature="findIndex(callback[, thisArg]) -&gt; Number" />
+        <scope doc="Executes a provided function once per array element" ilk="function" name="forEach" signature="forEach(callback[, thisArg])" />
+        <scope doc="Determines whether an array includes a certain element,&#xA;returning true or false as appropriate" ilk="function" name="includes" returns="Boolean" signature="includes(searchElement[, fromIndex]) -&gt; Boolean" />
+        <scope doc="Creates a new array with the results of calling a provided&#xA;function on every element in this array" ilk="function" name="map" returns="Array" signature="map(callback[, thisArg]) -&gt; Array" />
+        <scope doc="Applies a function against an accumulator and each value&#xA;of the array (from left-to-right) to reduce it to a&#xA;single value" ilk="function" name="reduce" returns="any" signature="reduce(callback[, initialValue]) -&gt; any" />
+        <scope doc="Applies a function against an accumulator and each value&#xA;of the array (from right-to-left) has to reduce it to&#xA;a single value" ilk="function" name="reduceRight" returns="any" signature="reduceRight(callback[, initialValue]) -&gt; any" />
       </scope>
       <scope classrefs="Object" ilk="class" name="Boolean" />
       <scope classrefs="Object" ilk="class" name="Date">
