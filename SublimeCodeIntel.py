@@ -535,6 +535,18 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
         return cplns
 
 
+class CodeIntelAutoComplete(CodeIntelHandler, sublime_plugin.TextCommand):
+    def run(self, edit, block=False):
+        view = self.view
+
+        buf = self.buf_from_view(view)
+
+        if not buf:
+            return
+        buf.scan_document(self, True)
+        buf.trg_from_pos(self, True)
+
+
 class GotoPythonDefinition(CodeIntelHandler, sublime_plugin.TextCommand):
     def run(self, edit, block=False):
         view = self.view
