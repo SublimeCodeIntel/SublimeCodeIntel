@@ -180,7 +180,7 @@ class CodeIntelHandler(object):
 
     def guess_language(self, view, path):
         lang = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
-        language = settings.get('codeintel_syntax_map').get(lang, lang)
+        language = settings.get('codeintel_syntax_map', {}).get(lang, lang)
         logger.info("Language guessed: %s (for %s)", language, lang)
         if language in settings.get('codeintel_disabled_languages'):
             return None
@@ -596,7 +596,7 @@ def settings_changed():
 
     extra_paths = settings.get('codeintel_scan_extra_paths')
 
-    language_settings = settings.get('codeintel_language_settings')
+    language_settings = settings.get('codeintel_language_settings', {})
     for l, s in language_settings.items():
         excluded = language_settings.get('codeintel_scan_exclude_paths')
         if excluded:
