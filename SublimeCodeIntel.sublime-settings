@@ -66,7 +66,7 @@
             Drupal (for PHP: A full-featured PHP content management/discussion engine -- v5.1)
             PECL (for PHP: A collection of PHP Extensions)
     */
-    "codeintel_selected_catalogs": ["jQuery", "HTML5"],
+    "codeintel_selected_catalogs": [],
 
     /*
         codeintel_scan_files_in_project - Include all files and directories from
