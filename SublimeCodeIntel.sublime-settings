@@ -20,7 +20,8 @@
        "Objective-C": "C++",
        "Objective-C++": "C++",
        "Python Django": "Python",
-       "HTML (Django)": "Django"
+       "HTML (Django)": "Django",
+       "JavaScript (Babel)": "Node.js"
     },
 
     /*
