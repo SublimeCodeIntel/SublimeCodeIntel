@@ -7,3 +7,7 @@
 *.pyc
 *.pyo
 *.o
+
+*.egg-info
+build
+dist
