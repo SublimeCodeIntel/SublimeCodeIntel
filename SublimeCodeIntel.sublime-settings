@@ -15,6 +15,10 @@
     */
     "codeintel_syntax_map":
     {
+       "C": "C++",
+       "C++11": "C++",
+       "Objective-C": "C++",
+       "Objective-C++": "C++",
        "Python Django": "Python",
        "HTML (Django)": "Django"
     },
@@ -127,6 +131,9 @@
         "PHP": {
             "php": "",
             "phpConfigFile": ""
+        },
+        "C++": {
+            "cppFlags": ["-I/usr/local/include", "-L/usr/local/lib"]
         }
     }
 }
