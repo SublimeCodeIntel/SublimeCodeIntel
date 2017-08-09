@@ -39,7 +39,6 @@ import os
 import sys
 import time
 import types
-import six
 if sys.platform != "win32":
     import signal  # used by kill() method on Linux/Mac
 import logging
@@ -49,7 +48,7 @@ import warnings
 if sys.version_info[0] == 3:
     string_types = str
 else:
-    string_types = six.string_types
+    string_types = basestring
 
 #-------- Globals -----------#
 
