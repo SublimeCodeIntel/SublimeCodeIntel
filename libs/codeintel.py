@@ -52,6 +52,8 @@ PRIORITY_BACKGROUND = 4     # info may be needed sometime
 
 logger_name = 'CodeIntel.codeintel'
 
+logging.getLogger(logger_name).setLevel(logging.INFO)
+
 
 class CodeIntel(object):
     def __init__(self):
@@ -75,31 +77,29 @@ class CodeIntel(object):
             for obj in self._observers.keys():
                 obj.observer(topic, data)
 
-    def _on_mgr_progress(self, mgr, message, progress=None, state=None):
-        self.log.debug("Progress: [%s] %s%% @%s=%s", message, progress, state, mgr.state if mgr else "<None>")
-        summary = None
-        if progress == "(ABORTED)":
-            # abort
-            self.log.debug("Got abort message")
-            summary = "Code Intelligence Initialization Aborted"
-        elif state in (None, CodeIntelManager.STATE_DESTROYED):
+    def _on_mgr_progress(self, mgr, message, state=None, response=None):
+        topic = 'status_message'
+        self.log.debug("Progress: %s", message)
+        if state is CodeIntelManager.STATE_DESTROYED:
             self.log.debug("startup failed: %s", message)
-            summary = "Startup failed: %s", message
+            topic = 'error_message'
+            message = "Startup failed: %s" % message
         elif state is CodeIntelManager.STATE_BROKEN:
             self.log.debug("db is broken, needs manual intervention")
-            summary = "There is an error with your code intelligence database; it must be reset before it can be used."
+            topic = 'error_message'
+            message = "There is an error with your code intelligence database; it must be reset before it can be used."
+        elif state is CodeIntelManager.STATE_ABORTED:
+            self.log.debug("Got abort message")
+            topic = 'error_message'
+            message = "Code Intelligence Initialization Aborted"
+        elif state is CodeIntelManager.STATE_WAITING:
+            self.log.debug("Waiting for CodeIntel")
         elif state is CodeIntelManager.STATE_READY:
             self.log.debug("db is ready")
-        elif message is None and progress is None:
-            self.log.debug("nothing to report")
+        if message:
+            self.notify_observers(topic, dict(response or {}, message=message))
         else:
-            self.log.debug("progress update, not finished yet")
-            if isinstance(progress, (int, float)):
-                self.notify_observers('progress', dict(message=message, progress=progress))
-        if summary:
-            self.notify_observers('error_message', dict(message=summary))
-        elif message:
-            self.notify_observers('status_message', dict(message=message))
+            self.log.debug("nothing to report")
 
     def _on_mgr_shutdown(self, mgr):
         # The codeintel manager is going away, drop the reference to it
@@ -107,7 +107,7 @@ class CodeIntel(object):
             if self.mgr is mgr:
                 self.mgr = None
 
-    def activate(self, reset_db_as_necessary=False, oop_command=None, oop_mode=None, log_levels=None, env=None, prefs=None):
+    def activate(self, reset_db_as_necessary=False, codeintel_command=None, oop_mode=None, log_levels=None, env=None, prefs=None):
         self.log.debug("activating codeintel service")
 
         if self._quit_application:
@@ -115,20 +115,15 @@ class CodeIntel(object):
 
         # clean up dead managers
         with self._mgr_lock:
-            # Ensure only one activate call can happen at a time - issue 171.
-            if self._enabled:
-                return
-            self._enabled = True
-
             if self.mgr and not self.mgr.is_alive():
                 self.mgr = None
             # create a new manager as necessary
             if not self.mgr:
                 self.mgr = CodeIntelManager(
                     self,
-                    init_callback=self._on_mgr_progress,
+                    progress_callback=self._on_mgr_progress,
                     shutdown_callback=self._on_mgr_shutdown,
-                    oop_command=oop_command,
+                    codeintel_command=codeintel_command,
                     oop_mode=oop_mode,
                     log_levels=log_levels,
                     env=env,
@@ -146,6 +141,7 @@ class CodeIntel(object):
                 # new codeintel manager; update all the buffers to use this new one
                 for buf in list(self.buffers.values()):
                     buf.mgr = self.mgr
+            self._enabled = True
         try:
             # run the new manager
             self.mgr.start(reset_db_as_necessary)
@@ -256,21 +252,67 @@ class _Connection(object):
 
 class _TCPConnection(_Connection):
     """A connection using TCP sockets"""
+
+    _read = None
+    _write = None
+
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(('127.0.0.1', 0))
         self.sock.listen(0)
 
     def get_commandline_args(self):
-        return ["--connect", "%s:%s" % self.sock.getsockname()]
+        return ['--tcp', '%s:%s' % self.sock.getsockname()]
 
     def get_stream(self):
         conn = self.sock.accept()
-        return conn[0].makefile('r+b', 0)
+        self._read = conn[0].makefile('rb', 0)
+        self._write = conn[0].makefile('wb', 0)
+        return self
+
+    def read(self, count):
+        return self._read.read(count)
+
+    def write(self, data):
+        return self._write.write(data)
 
     def cleanup(self):
         if self.sock:
             self.sock.close()
+
+
+class _ServerConnection(_Connection):
+    """A connection using TCP sockets"""
+
+    sock = None
+    _read = None
+    _write = None
+
+    def __init__(self, host='127.0.0.1', port=9999):
+        self.host = host
+        self.port = port
+
+    def get_commandline_args(self):
+        return ['--server', '%s:%s' % (self.host, self.port)]
+
+    def get_stream(self):
+        conn = socket.create_connection((self.host, self.port))
+        self._read = conn.makefile('rb', 0)
+        self._write = conn.makefile('wb', 0)
+        self.sock = conn
+        return self
+
+    def read(self, count):
+        return self._read.read(count)
+
+    def write(self, data):
+        return self._write.write(data)
+
+    def cleanup(self):
+        if self.sock:
+            self.sock.close()
+
 
 if sys.platform.startswith("win"):
     from win32_named_pipe import Win32Pipe
@@ -281,7 +323,7 @@ if sys.platform.startswith("win"):
         pipe_prefix = "codeintel-"
 
         def get_commandline_args(self):
-            return ['--connect', 'pipe:%s' % (self.name,)]
+            return ['--pipe', self.name]
 
         def get_stream(self):
             self._ensure_stream()
@@ -302,7 +344,7 @@ else:
             self._dir = tempfile.mkdtemp(prefix='codeintel-', suffix='-oop-pipes')
             os.mkfifo(os.path.join(self._dir, 'in'), 0o600)
             os.mkfifo(os.path.join(self._dir, 'out'), 0o600)
-            return ['--connect', 'pipe:%s' % (self._dir,)]
+            return ['--pipe', self._dir]
 
         def get_stream(self):
             # Open the write end first, so that the child doesn't hang
@@ -328,6 +370,10 @@ else:
                 pass
 
         def close(self):
+            try:
+                self.cleanup()
+            except Exception as e:
+                pass
             self._read.close()
             self._write.close()
 
@@ -336,11 +382,13 @@ class CodeIntelManager(threading.Thread):
     STATE_UNINITIALIZED = ("uninitialized",)  # not initialized
     STATE_CONNECTED = ("connected",)  # child process spawned, connection up; not ready
     STATE_BROKEN = ("broken",)  # database is broken and needs to be reset
+    STATE_WAITING = ("waiting",)  # waiting for CodeIntel
     STATE_READY = ("ready",)  # ready for use
     STATE_QUITTING = ("quitting",)  # shutting down
     STATE_DESTROYED = ("destroyed",)  # connection shut down, child process dead
+    STATE_ABORTED = ("aborted",)
 
-    _oop_command = '/usr/local/bin/codeintel'
+    _codeintel_command = '/usr/local/bin/codeintel'
     _oop_mode = 'pipe'
     _log_levels = ['WARNING']
     _state = STATE_UNINITIALIZED
@@ -348,6 +396,7 @@ class CodeIntelManager(threading.Thread):
     _reset_db_as_necessary = False  # whether to reset the db if it's broken
     _watchdog_thread = None  # background thread to watch for process termination
     _memory_error_restart_count = 0
+    _cmd_messge = True
     proc = None
     pipe = None
 
@@ -381,16 +430,16 @@ class CodeIntelManager(threading.Thread):
         },
     ]
 
-    def __init__(self, service, init_callback=None, shutdown_callback=None, oop_command=None, oop_mode=None, log_levels=None, env=None, prefs=None):
+    def __init__(self, service, progress_callback=None, shutdown_callback=None, codeintel_command=None, oop_mode=None, log_levels=None, env=None, prefs=None):
         self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
         self.service = service
         self.languages = service.languages
         self._abort = set()
         self._next_id = 0
-        self._init_callback = init_callback
+        self._progress_callback = progress_callback
         self._shutdown_callback = shutdown_callback
-        if oop_command is not None:
-            self._oop_command = oop_command
+        if codeintel_command is not None:
+            self._codeintel_command = codeintel_command
         if oop_mode is not None:
             self._oop_mode = oop_mode
         if log_levels is not None:
@@ -440,6 +489,13 @@ class CodeIntelManager(threading.Thread):
                 callback=lambda request, response: None,
             )
 
+    def close(self):
+        try:
+            self.pipe.close()
+        except Exception as e:
+            pass  # The other end is dead, this is kinda pointless
+        self.pipe = None
+
     def kill(self):
         """
         Kill the subprocess. This may be safely called when the process has
@@ -453,18 +509,14 @@ class CodeIntelManager(threading.Thread):
             self.state = CodeIntelManager.STATE_DESTROYED
         try:
             self.proc.kill()
-        except:
+        except Exception as e:
             pass
-        try:
-            self.pipe.close()
-        except:
-            pass  # The other end is dead, this is kinda pointless
+        self.close()
         try:
             # Shut down the request sending thread (self._send_request_thread)
             self.unsent_requests.put((None, None))
-        except:
+        except Exception as e:
             pass  # umm... no idea?
-        self.pipe = None
         if self._shutdown_callback:
             self._shutdown_callback(self)
 
@@ -475,51 +527,65 @@ class CodeIntelManager(threading.Thread):
         self.log.debug("initializing child process")
         conn = None
         try:
-            _oop_command = self._oop_command
-            if not os.path.exists(_oop_command):
-                _oop_command = os.path.basename(_oop_command)
-            cmd = [_oop_command]
+            _codeintel_command = self._codeintel_command
+            if not os.path.exists(_codeintel_command):
+                _codeintel_command = os.path.basename(_codeintel_command)
+            cmd = [_codeintel_command]
 
             database_dir = os.path.expanduser('~/.codeintel')
-            cmd += ['--database-dir', database_dir]
             cmd += ['--log-file', os.path.join(database_dir, 'codeintel.log')]
             for log_level in self._log_levels:
                 cmd += ['--log-level', log_level]
 
+            cmd += ['oop']
+
+            cmd += ['--database-dir', database_dir]
             _oop_mode = self._oop_mode
             if _oop_mode == 'pipe':
                 conn = _PipeConnection()
             elif _oop_mode == 'tcp':
                 conn = _TCPConnection()
+            elif _oop_mode == 'server':
+                conn = _ServerConnection()
             else:
                 self.log.warn("Unknown codeintel oop mode %s, falling back to pipes", _oop_mode)
                 conn = _PipeConnection()
             cmd += conn.get_commandline_args()
 
-            self.log.debug("Running OOP: %s", " ".join(cmd))
-            self.proc = process.ProcessOpen(cmd, cwd=None, env=None)
-            assert self.proc.returncode is None, "Early process death!"
+            if _oop_mode == 'server':
+                if self._cmd_messge:
+                    self._cmd_messge = False
+                    self.log.warn("Please start OOP server with command: %s", " ".join(cmd))
+                self.proc = True
+            else:
+                self.log.debug("Running OOP: %s", " ".join(cmd))
+                self.proc = process.ProcessOpen(cmd, cwd=None, env=None)
+                assert self.proc.returncode is None, "Early process death!"
 
-            self._watchdog_thread = threading.Thread(
-                target=self._run_watchdog_thread,
-                name="CodeIntel Subprocess Watchdog Thread",
-                args=(self.proc,),
-            )
-            self._watchdog_thread.start()
+                self._watchdog_thread = threading.Thread(
+                    target=self._run_watchdog_thread,
+                    name="CodeIntel Subprocess Watchdog Thread",
+                    args=(self.proc,),
+                )
+                self._watchdog_thread.start()
 
-            self.pipe = conn.get_stream()
+            try:
+                self.pipe = conn.get_stream()
+                self._cmd_messge = True
+                self.log.info("Successfully connected with OOP CodeIntel!")
+            except Exception:
+                self.pipe = None
+
+            conn.cleanup()  # This will remove the filesystem files (it keeps the fds open)
+
             self.state = CodeIntelManager.STATE_CONNECTED
         except Exception as e:
             self.kill()
             message = "Error initing child: %s" % e
-            self.log.debug(message, exc_info=True)
-            self._init_callback(self, message)
+            self.log.error(message)
+            self._progress_callback(self, message)
         else:
             self._send_init_requests()
-            try:
-                conn.cleanup()
-            except:
-                pass
 
     def _run_watchdog_thread(self, proc):
         self.log.debug("Watchdog witing for OOP codeintel process to die...")
@@ -527,11 +593,9 @@ class CodeIntelManager(threading.Thread):
             proc.wait()
         elif hasattr(proc, 'join'):
             proc.join()
-        self.log.debug("Child OOP codeintel process died!")
-        try:
-            self.kill()
-        except:
-            pass  # At app shutdown this can die uncleanly
+        self.log.info("Child OOP CodeIntel process died!")
+        self.state = CodeIntelManager.STATE_WAITING
+        self.close()
 
     def _send_init_requests(self):
         assert threading.current_thread().name != "MainThread", \
@@ -540,38 +604,42 @@ class CodeIntelManager(threading.Thread):
 
         outstanding_cpln_langs = set()
 
-        def update(message, response=None, state=CodeIntelManager.STATE_DESTROYED, progress=None):
+        def update(message=None, state=None, response=None):
             if state in (CodeIntelManager.STATE_DESTROYED, CodeIntelManager.STATE_BROKEN):
                 self.kill()
             if state is not None:
                 self.state = state
             if response is not None:
-                message += "\n" + response.get("message", "(No further information available)")
-            if any(x is not None for x in (message, progress, state)):
+                if message:
+                    message += "\n"
+                else:
+                    message = ""
+                message += response.get('message', "(No further information available)")
+            if any(x is not None for x in (message, state)):
                 # don't do anything if everything we have is just none
-                self._init_callback(self, message, progress, state)
+                self._progress_callback(self, message, state, response)
 
         def get_citadel_langs(request, response):
             if not response.get('success', False):
-                update("Failed to get citadel languages:", response)
+                update("Failed to get citadel languages:", state=CodeIntelManager.STATE_DESTROYED, response=response)
                 return
             self.citadel_langs = sorted(response.get('languages'))
 
         def get_xml_langs(request, response):
             if not response.get('success', False):
-                update("Failed to get XML languages:", response)
+                update("Failed to get XML languages:", state=CodeIntelManager.STATE_DESTROYED, response=response)
                 return
             self.xml_langs = sorted(response.get('languages'))
 
         def get_stdlib_langs(request, response):
             if not response.get('success', False):
-                update("Failed to get languages which support standard libraries:", response)
+                update("Failed to get languages which support standard libraries:", state=CodeIntelManager.STATE_DESTROYED, response=response)
                 return
             self.stdlib_langs = sorted(response.get('languages'))
 
         def get_cpln_langs(request, response):
             if not response.get('success', False):
-                update("Failed to get completion languages:", response)
+                update("Failed to get completion languages:", state=CodeIntelManager.STATE_DESTROYED, response=response)
                 return
             self.cpln_langs = sorted(response.get('languages'))
             self.languages.clear()
@@ -582,7 +650,7 @@ class CodeIntelManager(threading.Thread):
         def get_lang_info(request, response):
             lang = request['language']
             if not response.get('success', False):
-                update("Failed to get information for %s:" % (lang,), response)
+                update("Failed to get information for %s:" % (lang,), state=CodeIntelManager.STATE_DESTROYED, response=response)
                 return
             self.languages[lang] = dict(
                 cpln_fillup_chars=response['completion-fillup-chars'],
@@ -600,10 +668,10 @@ class CodeIntelManager(threading.Thread):
 
             if req_id in self._abort:
                 self.log.debug("Aborting startup")
-                update("Codeintel startup aborted", progress="(ABORTED)")
+                update("Codeintel startup aborted", state=CodeIntelManager.STATE_ABORTED)
                 return
 
-            update(response.get('message'), state=self.state, progress=response.get('progress'))
+            update(response=response)
 
             if 'success' not in response:
                 # status update
@@ -639,7 +707,7 @@ class CodeIntelManager(threading.Thread):
                     print("Language %s needs version resolving!" % lang)
                     # Get the version for the language here ([0-9]+.[0-9]+)
                     langs[lang] = ver
-                self._send(callback=fixup_db, command="database-preload", languages=langs)
+                self._send(callback=fixup_db, command='database-preload', languages=langs)
                 return
 
             if state == 'upgrade-needed':
@@ -663,12 +731,13 @@ class CodeIntelManager(threading.Thread):
 
         def initialization_completed():
             self.log.debug("internal initial requests completed")
-            self._send_request_thread = threading.Thread(
-                target=self._send_queued_requests,
-                name="CodeIntel Manager Request Sending Thread")
-            self._send_request_thread.daemon = True
-            self._send_request_thread.start()
-            update("Codeintel ready.", state=CodeIntelManager.STATE_READY)
+            if not self._send_request_thread:
+                self._send_request_thread = threading.Thread(
+                    target=self._send_queued_requests,
+                    name="CodeIntel Manager Request Sending Thread")
+                self._send_request_thread.daemon = True
+                self._send_request_thread.start()
+            update("CodeIntel ready.", state=CodeIntelManager.STATE_READY)
 
         self._send(callback=get_cpln_langs, command='get-languages', type='cpln')
         self._send(callback=get_citadel_langs, command='get-languages', type='citadel')
@@ -679,8 +748,10 @@ class CodeIntelManager(threading.Thread):
 
         def update_callback(response):
             if not response.get("success", False):
-                update("Failed to get available catalogs:", response)
+                update("Failed to get available catalogs:", state=CodeIntelManager.STATE_DESTROYED, response=response)
         self.update_catalogs(update_callback=update_callback)
+
+        self.send(command="set-xml-catalogs")
 
     def set_global_environment(self, env, prefs):
         self.env = env
@@ -695,9 +766,8 @@ class CodeIntelManager(threading.Thread):
         def get_available_catalogs(request, response):
             if response.get("success", False):
                 self.available_catalogs = response.get('catalogs', [])
-            update_callback(response)
-        if not update_callback:
-            update_callback = lambda *args, **kwargs: None
+            if update_callback:
+                update_callback(response)
         self._send(callback=get_available_catalogs, command='get-available-catalogs')
 
     def send(self, callback=None, **kwargs):
@@ -752,67 +822,84 @@ class CodeIntelManager(threading.Thread):
         buf = length + text
         try:
             self.pipe.write(buf)
-        except Exception as ex:
-            self.log.error("Failed to write to pipe (%s): (%i) %s", ex, len(text), text)
-            raise
+        except Exception as e:
+            message = "Error writing data to OOP CodeIntel: %s" % e
+            self.log.error(message)
+            self._progress_callback(self, message)
+            self.close()
 
     def run(self):
         """Event loop for the codeintel manager background thread"""
         assert threading.current_thread().name != "MainThread", \
             "CodeIntelManager.run should run on background thread!"
 
-        self.init_child()
-        if not self.proc:
-            return  # init child failed
+        self.log.debug("CodeIntelManager thread started...")
 
-        first_buf = True
-        discard_time = 0.0
-        try:
-            buf = b''
-            while self.proc and self.pipe:
-                # Loop to read from the pipe
-                ch = self.pipe.read(1)
-                if ch == b'{':
-                    length = int(buf)
-                    buf = ch
-                    while len(buf) < length:
-                        last_size = len(buf)
-                        buf += self.pipe.read(length - len(buf))
-                        if len(buf) == last_size:
-                            # nothing read, EOF
-                            raise IOError("Failed to read frame from socket")
-                    self.log.debug("Got codeintel response: %r" % buf)
-                    if first_buf and buf == b'{}':
-                        first_buf = False
+        while True:
+            self.init_child()
+            if not self.proc:
+                break  # init child failed
+
+            first_buf = True
+            discard_time = 0.0
+            try:
+                buf = b''
+                while self.proc and self.pipe:
+                    # Loop to read from the pipe
+                    ch = self.pipe.read(1)
+                    if not ch:
+                        # nothing read, EOF
+                        raise IOError("Failed to read from socket")
+                    if ch == b'{':
+                        length = int(buf)
+                        buf = ch
+                        while len(buf) < length:
+                            data = self.pipe.read(length - len(buf))
+                            if not data:
+                                # nothing read, EOF
+                                raise IOError("Failed to read from socket")
+                            buf += data
+                        self.log.debug("Got codeintel response: %r" % buf)
+                        if first_buf and buf == b'{}':
+                            first_buf = False
+                            buf = b''
+                            continue
+                        response = json.loads(buf.decode('utf-8'))
+                        self.handle(response)  # handle runs asynchronously and shouldn't raise exceptions
                         buf = b''
-                        continue
-                    response = json.loads(buf.decode('utf-8'))
-                    self.handle(response)  # handle runs asynchronously and shouldn't raise exceptions
-                    buf = b''
-                else:
-                    if ch not in b'0123456789':
-                        raise ValueError("Invalid frame length character: %r" % ch)
-                    buf += ch
+                    else:
+                        if ch not in b'0123456789':
+                            raise ValueError("Invalid frame length character: %r" % ch)
+                        buf += ch
 
-                now = time.time()
-                if now - discard_time > 60:  # discard some stale results
-                    for req_id, (callback, request, sent_time) in list(self.requests.items()):
-                        if sent_time < now - 5 * 60:
-                            # sent 5 minutes ago - it's irrelevant now
-                            try:
-                                if callback:
-                                    callback(request, {})
-                            except:
-                                self.log.exception("Failed timing out request")
-                            else:
-                                self.log.debug("Discarding request %r", request)
-                            del self.requests[req_id]
-        except Exception as ex:
-            if isinstance(ex, IOError) and self.state in (CodeIntelManager.STATE_QUITTING, CodeIntelManager.STATE_DESTROYED):
-                self.log.debug("IOError in codeintel during shutdown; ignoring")
-                return  # this is intentional
-            self.log.exception("Error reading data from codeintel")
-            self.kill()
+                    now = time.time()
+                    if now - discard_time > 60:  # discard some stale results
+                        for req_id, (callback, request, sent_time) in list(self.requests.items()):
+                            if sent_time < now - 5 * 60:
+                                # sent 5 minutes ago - it's irrelevant now
+                                try:
+                                    if callback:
+                                        callback(request, {})
+                                except Exception as e:
+                                    self.log.error("Failed timing out request")
+                                else:
+                                    self.log.debug("Discarding request %r", request)
+                                del self.requests[req_id]
+
+            except Exception as e:
+                if self.state in (CodeIntelManager.STATE_QUITTING, CodeIntelManager.STATE_DESTROYED):
+                    self.log.debug("IOError in codeintel during shutdown; ignoring")
+                    break  # this is intentional
+                message = "Error reading data from OOP CodeIntel: %s" % e
+                self.log.error(message)
+                self._progress_callback(self, message)
+                self.state = CodeIntelManager.STATE_WAITING
+                self.close()
+
+            if self.proc is True:
+                time.sleep(3)
+
+        self.log.debug("CodeIntelManager thread ended!")
 
     def handle(self, response):
         """Handle a response from the codeintel process"""
@@ -832,14 +919,14 @@ class CodeIntelManager(threading.Thread):
                     self.log.error("Unknown command %r, response %r", response_command, response)
                     raise ValueError("Unknown unsolicited response \"%s\"" % response_command)
                 meth(response)
-            except:
-                self.log.exception("Error handling unsolicited response")
+            except Exception as e:
+                self.log.error("Error handling unsolicited response")
             return
         if not request:
             self.log.error("Discard response for unknown request %s (command %s): have %s",
                       req_id, response_command or '%r' % response, sorted(self.requests.keys()))
             return
-        self.log.info("Request %s (command %s) took %0.2f seconds", req_id, request_command or '<unknown>', time.time() - sent_time)
+        self.log.debug("Request %s (command %s) took %0.2f seconds", req_id, request_command or '<unknown>', time.time() - sent_time)
         if 'success' in response:
             # remove completed request
             self.log.debug("Removing completed request %s", req_id)
@@ -942,14 +1029,14 @@ class CodeIntelBuffer(object):
                     msg = "scan_document: Can't scan document"
                 try:
                     handler.set_status_message(self, msg)
-                except:
-                    self.log.exception("Error reporting scan_document error: %s", response.get('message', "<error not available>"))
+                except Exception as e:
+                    self.log.error("Error reporting scan_document error: %s", response.get('message', e))
                     pass
                 return
             try:
                 handler.on_document_scanned(self)
-            except:
-                self.log.exception("Error calling scan_document callback")
+            except Exception as e:
+                self.log.error("Error calling scan_document callback: %s", e)
                 pass
             if callback is not None:
                 callback(request, response)
@@ -980,8 +1067,8 @@ class CodeIntelBuffer(object):
                 msg = "%s: Can't get a trigger for position %s" % (context, request.get("pos", "<unknown position>"))
             try:
                 handler.set_status_message(self, msg)
-            except:
-                self.log.exception("Error reporting scan_document error: %s", response.get('message', "<error not available>"))
+            except Exception as e:
+                self.log.error("Error reporting scan_document error: %s", response.get('message', e))
                 pass
             return
         else:
@@ -989,8 +1076,8 @@ class CodeIntelBuffer(object):
         try:
             if trg:
                 handler.on_trg_from_pos(self, context, trg)
-        except:
-            self.log.exception("Error calling %s callback", context)
+        except Exception as e:
+            self.log.error("Error calling %s callback: %s", context, e)
             pass
 
     def trg_from_pos(self, handler, implicit, pos=None):
@@ -1047,8 +1134,8 @@ class CodeIntelBuffer(object):
                 if not response.get('success'):
                     try:
                         handler.set_status_message(self, response.get('message', ""), response.get('highlight', False))
-                    except:
-                        self.log.exception("Error reporting async_eval_at_trg error: %s", response.get("message", "<error not available>"))
+                    except Exception as e:
+                        self.log.error("Error reporting async_eval_at_trg error: %s", response.get("message", e))
                         pass
                     return
 
@@ -1060,14 +1147,14 @@ class CodeIntelBuffer(object):
                     cplns = response['cplns']
                     try:
                         handler.set_auto_complete_info(self, cplns, trg)
-                    except:
-                        self.log.exception("Error calling set_auto_complete_info")
+                    except Exception as e:
+                        self.log.error("Error calling set_auto_complete_info: %s", e)
                         pass
                 elif 'calltip' in response:
                     try:
                         handler.set_call_tip_info(self, response['calltip'], request.get('explicit', False), trg)
-                    except Exception:
-                        self.log.exception("Error calling set_call_tip_info")
+                    except Exception as e:
+                        self.log.error("Error calling set_call_tip_info: e", e)
                         pass
                 elif 'defns' in response:
                     handler.set_definitions_info(self, response['defns'], trg)
@@ -1091,8 +1178,8 @@ class CodeIntelBuffer(object):
                 else:
                     RESULT_ERROR = False
                     callback(RESULT_ERROR, None)
-            except:
-                self.log.exception("Error calling to_html callback")
+            except Exception as e:
+                self.log.error("Error calling to_html callback: %s", e)
 
         flag_dict = {
             'include_styling': True,
@@ -1125,16 +1212,16 @@ class CodeIntelBuffer(object):
                     msg = "get_calltip_arg_range: Can't get a calltip at position %d" % curr_pos
                 try:
                     handler.set_status_message(self, msg)
-                except:
-                    self.log.exception("Error reporting get_calltip_arg_range error: %s", response.get('message', "<error not available>"))
+                except Exception as e:
+                    self.log.error("Error reporting get_calltip_arg_range error: %s", response.get('message', e))
                     pass
                 return
             start = response.get('start', -1)
             end = response.get('end', -1)
             try:
                 handler.on_get_calltip_range(self, start, end)
-            except:
-                self.log.exception("Error calling get_calltip_arg_range callback")
+            except Exception as e:
+                self.log.error("Error calling get_calltip_arg_range callback: %s", e)
                 pass
 
         self.service.send(

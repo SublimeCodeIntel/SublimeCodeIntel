@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2015
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta6"
+VERSION = "3.0.0-beta.14"
 
 
 import os
@@ -52,6 +52,8 @@ import sublime_plugin
 
 from codeintel import CodeIntel, CodeIntelBuffer
 
+settings_name = 'SublimeCodeIntel'
+
 settings = None
 logger_name = 'CodeIntel'
 logger = logging.getLogger(logger_name)
@@ -61,6 +63,7 @@ if logger.root.handlers:
 
 
 EXTRA_PATHS_MAP = {
+    'ECMAScript': 'ecmascriptExtraPaths',
     'JavaScript': 'javascriptExtraPaths',
     'Node.js': 'nodejsExtraPaths',
     'Perl': 'perlExtraPaths',
@@ -68,6 +71,7 @@ EXTRA_PATHS_MAP = {
     'Python3': 'python3ExtraPaths',
     'Python': 'pythonExtraPaths',
     'Ruby': 'rubyExtraPaths',
+    'C++': 'cppExtraPaths',
 }
 
 
@@ -256,11 +260,49 @@ class CodeIntelHandler(object):
 
     def format_completions_by_language(self, cplns, language, text_in_current_line, type):
         function = None if 'import ' in text_in_current_line else 'function'
-        get_name = lambda c: c[1]
-        get_type = lambda c: c[0].title()
+
+        def get_desc(c):
+            return c[2] if len(c) > 2 else c[1]
+
+        def get_name(c):
+            name = c[1]
+            name = name.replace("$", "\\$")
+            if c[0] == function:
+                name += "($0)"
+            return name
+
+        def get_type(c):
+            return c[0].title()
+
         if language == 'PHP' and type != 'object-members':
-            get_name = lambda c: ('$' + c[1]) if c[0] == 'variable' else c[1]
-        return [('%s\t〔%s〕' % (get_name(c), get_type(c)), get_name(c).replace("$", "\\$") + ('($0)' if c[0] == function else '')) for c in cplns]
+            def get_name(c):
+                name = c[1]
+                if c[0] == 'variable':
+                    name = "$" + name
+                name = name.replace("$", "\\$")
+                if c[0] == function:
+                    name += "($0)"
+                return name
+
+        if language == 'ECMAScript':
+            def get_name(c):
+                name = c[1]
+                name = name.replace("$", "\\$")
+                if c[0] == 'attribute':
+                    name += "=$0 "
+                elif c[0] == function:
+                    name += "($0)"
+                return name
+
+        def sorter(c):
+            return {
+                'import': '_',
+                'attribute': '__',
+                'variable': '__',
+                'function': '___',
+            }.get(c[0].lower(), c[0]), c[1]
+
+        return [('%s\t〔%s〕' % (get_desc(c), get_type(c)), get_name(c)) for c in sorted(cplns, key=sorter)]
 
     # Handlers follow
 
@@ -449,24 +491,29 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
             return message
 
         def _observer():
-            if topic == 'progress':
-                message = _get_and_log_message(data)
-                progress = data.get('progress')
-                if message:
-                    message = "%s - %s%% / %s%%" % (message, progress, 100)
-                else:
-                    message = "%s%% / %s%%" % (progress, 100)
-                self.set_status('info', message, lid='SublimeCodeIntel Notification')
-            elif topic == 'status_message':
-                message = _get_and_log_message(data)
-                if message:
-                    self.set_status('info', message, lid='SublimeCodeIntel Notification')
+            if topic == 'status_message':
+                ltype = 'info'
             elif topic == 'error_message':
-                message = _get_and_log_message(data)
-                if message:
-                    self.set_status('error', message, lid='SublimeCodeIntel Notification')
+                ltype = 'error'
             elif 'codeintel_buffer_scanned':
-                pass
+                return
+            else:
+                return
+            progress = data.get('progress')
+            if progress is not None:
+                total = data.get('total', 100)
+                if total == 100:
+                    progress = "%s%%" % progress
+                else:
+                    progress = "%s/%s" % (progress, total)
+            message = _get_and_log_message(data)
+            if progress and message:
+                message = "%s - %s" % (progress, message)
+            elif progress:
+                message = progress
+            elif not message:
+                return
+            self.set_status(ltype, message, lid='SublimeCodeIntel Notification')
         sublime.set_timeout(_observer, 0)
 
     def on_pre_save(self, view):
@@ -502,11 +549,14 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
         else:
             redo_command = previous_command = before_previous_command = None
 
-        # print('on_modified', "'%s'" % current_char, redo_command, previous_command, before_previous_command)
+        # print('on_modified', "%r\n\tcommand_history: %r\n\tredo_command: %r\n\tprevious_command: %r\n\tbefore_previous_command: %r" % (current_char, bool(command_history), redo_command, previous_command, before_previous_command))
         if not command_history or redo_command[1] is None and (
             previous_command[0] == 'paste' or
             previous_command[0] == 'insert' and previous_command[1]['characters'][-1] not in ('\n', '\t') or
-            previous_command[0] == 'insert_snippet' and previous_command[1]['contents'] == '($0)' or
+            previous_command[0] == 'insert_snippet' and previous_command[1]['contents'] in (
+                '(${0:$SELECTION})', '[${0:$SELECTION}]', '{${0:$SELECTION}}', '`${0:$SELECTION}`', '"${0:$SELECTION}"', "'${0:$SELECTION}'",
+                '($0)', '[$0]', '{$0}', '`$0`', '"$0"', "'$0'",
+            ) or
             before_previous_command[0] in ('insert', 'paste') and (
                 previous_command[0] == 'commit_completion' or
                 previous_command[0] == 'insert_completion' or
@@ -515,11 +565,14 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
         ):
             buf = self.buf_from_view(view)
             if buf:
-                is_stop_char = current_char in buf.cpln_stop_chars
+                if view.is_auto_complete_visible():
+                    # Fillup characters commit autocomplete
+                    if current_char in buf.cpln_fillup_chars:
+                        view.run_command('commit_completion')
 
-                # Stop characters hide autocomplete window
-                if is_stop_char:
-                    view.run_command('hide_auto_complete')
+                    # Stop characters hide autocomplete window
+                    if current_char in buf.cpln_stop_chars:
+                        view.run_command('hide_auto_complete')
 
                 buf.scan_document(self, True)
                 buf.trg_from_pos(self, True)
@@ -576,12 +629,19 @@ def get_setting(lang, setting, default=None):
 
 
 def settings_changed():
+    """Restores user settings."""
+    global settings
+
+    if settings is None:
+        settings = sublime.load_settings(settings_name + '.sublime-settings')
+
     excluded = settings.get('codeintel_scan_exclude_paths')
     if excluded:
         ex = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in excluded]
         settings.set('codeintel_scan_exclude_paths', ex)
 
-    oop_command = settings.get('codeintel_oop_command')
+    codeintel_command = settings.get('codeintel_command')
+    oop_mode = settings.get('codeintel_oop_mode')
     log_levels = settings.get('codeintel_log_levels')
     env = dict(os.environ)
     codeintel_env = settings.get('codeintel_env')
@@ -621,7 +681,8 @@ def settings_changed():
     else:
         ci.activate(
             reset_db_as_necessary=False,
-            oop_command=oop_command,
+            codeintel_command=codeintel_command,
+            oop_mode=oop_mode,
             log_levels=log_levels,
             env=env,
             prefs=prefs,
@@ -629,14 +690,8 @@ def settings_changed():
 
 
 def plugin_loaded():
-    """Restores user settings."""
-    global ci, settings
-
-    settings_name = 'SublimeCodeIntel'
-    settings = sublime.load_settings(settings_name + '.sublime-settings')
-    settings.add_on_change(settings_name, settings_changed)
-
     settings_changed()
+    settings.add_on_change(settings_name, settings_changed)
 
 
 ci = CodeIntel()

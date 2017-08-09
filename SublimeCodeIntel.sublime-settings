@@ -21,7 +21,10 @@
        "Objective-C++": "C++",
        "Python Django": "Python",
        "HTML (Django)": "Django",
-       "JavaScript (Babel)": "Node.js"
+       "JavaScript": "ECMAScript",
+       "JavaScript (Babel)": "ECMAScript",
+       "Node.js": "ECMAScript",
+       "JSX": "ECMAScript"
     },
 
     /*
@@ -30,9 +33,14 @@
     "codeintel_disabled_languages": [],
 
     /*
-        codeintel_oop_command - Executable for OOP codeintel command.
+        codeintel_command - Executable for OOP codeintel command.
     */
-    "codeintel_oop_command": "/usr/local/bin/codeintel",
+    "codeintel_command": "/usr/local/bin/codeintel",
+
+    /*
+        codeintel_oop_mode - OOP mode.
+    */
+    "codeintel_oop_mode": "pipe",
 
     /*
         codeintel_log_levels - Set the logging levels for the OOP loggers
