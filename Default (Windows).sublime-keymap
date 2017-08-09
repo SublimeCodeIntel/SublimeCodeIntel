@@ -1,5 +1,6 @@
 [
-	{ "keys": ["shift+ctrl+space"], "command": "code_intel_auto_complete" },
-	{ "keys": ["super+alt+ctrl+up"], "command": "goto_python_definition"},
-	{ "keys": ["super+alt+ctrl+left"], "command": "back_to_python_definition"}
+	{ "keys": [ "shift+ctrl+space" ], "command": "codeintel_auto_complete" },
+	{ "keys": [ "super+alt+ctrl+up" ], "command": "goto_python_definition" },
+	{ "keys": [ "super+alt+ctrl+left" ], "command": "back_to_python_definition" },
+	{ "keys": [ "<character>" ], "command": "codeintel_complete_commit", "context": [ { "key": "auto_complete_visible" }, { "key": "setting.codeintel_complete_commit" } ] }
 ]

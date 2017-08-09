@@ -51,6 +51,19 @@
     "codeintel_log_levels" : ["WARNING"],
 
     /*
+        codeintel_complete_commit - Makes auto complete close autocomplete
+        window with certain characters.
+    */
+    "codeintel_complete_commit": true,
+
+    /*
+        codeintel_complete_commit_fillup - Makes codeintel fillup characters
+        when possible (inserting the selected item in the autocomplete). This
+        setting requires codeintel_complete_commit.
+    */
+    "codeintel_complete_commit_fillup": true,
+
+    /*
         codeintel_selected_catalogs - API Catalogs.
         SublimeCodeIntel uses API catalogs to provide autocomplete and calltips
         for 3rd-party libraries.

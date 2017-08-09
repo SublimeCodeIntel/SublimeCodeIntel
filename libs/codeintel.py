@@ -52,7 +52,7 @@ PRIORITY_BACKGROUND = 4     # info may be needed sometime
 
 logger_name = 'CodeIntel.codeintel'
 
-logging.getLogger(logger_name).setLevel(logging.INFO)
+logging.getLogger(logger_name).setLevel(logging.INFO)  # INFO
 
 
 class CodeIntel(object):

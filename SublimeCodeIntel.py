@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2015
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.15"
+VERSION = "3.0.0-beta.16"
 
 
 import os
@@ -75,7 +75,7 @@ EXTRA_PATHS_MAP = {
 }
 
 
-class CodeIntelHandler(object):
+class CodeintelHandler(object):
     HISTORY_SIZE = 64
     jump_history_by_window = {}  # map of window id -> collections.deque([], HISTORY_SIZE)
 
@@ -85,7 +85,7 @@ class CodeIntelHandler(object):
 
     def __init__(self, *args, **kwargs):
         self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
-        super(CodeIntelHandler, self).__init__(*args, **kwargs)
+        super(CodeintelHandler, self).__init__(*args, **kwargs)
         ci.add_observer(self)
 
     @property
@@ -132,46 +132,46 @@ class CodeIntelHandler(object):
                 msg = repr(msg)
         msg = msg.strip()
 
-        CodeIntelHandler.status_lock.acquire()
+        CodeintelHandler.status_lock.acquire()
         try:
-            CodeIntelHandler.status_msg.setdefault(lid, [None, None, 0])
-            if msg == CodeIntelHandler.status_msg[lid][1]:
+            CodeintelHandler.status_msg.setdefault(lid, [None, None, 0])
+            if msg == CodeintelHandler.status_msg[lid][1]:
                 return
-            CodeIntelHandler.status_msg[lid][2] += 1
-            order = CodeIntelHandler.status_msg[lid][2]
+            CodeintelHandler.status_msg[lid][2] += 1
+            order = CodeintelHandler.status_msg[lid][2]
         finally:
-            CodeIntelHandler.status_lock.release()
+            CodeintelHandler.status_lock.release()
 
         def _set_status():
             is_warning = 'warning' in lid
             if not is_warning:
                 view_sel = view.sel()
                 lineno = view.rowcol(view_sel[0].end())[0] if view_sel else 0
-            CodeIntelHandler.status_lock.acquire()
+            CodeintelHandler.status_lock.acquire()
             try:
-                current_type, current_msg, current_order = CodeIntelHandler.status_msg.get(lid, [None, None, 0])
+                current_type, current_msg, current_order = CodeintelHandler.status_msg.get(lid, [None, None, 0])
                 if msg != current_msg and order == current_order:
                     _logger_obj = getattr(logger, ltype, None) if logger_obj is None else logger_obj
                     if _logger_obj:
                         _logger_obj(msg)
                     if ltype != 'debug':
                         view.set_status(lid, "%s %s: %s" % (lid, ltype.capitalize(), msg.rstrip('.')))
-                        CodeIntelHandler.status_msg[lid] = [ltype, msg, order]
+                        CodeintelHandler.status_msg[lid] = [ltype, msg, order]
                     if not is_warning:
-                        CodeIntelHandler.status_lineno[lid] = lineno
+                        CodeintelHandler.status_lineno[lid] = lineno
             finally:
-                CodeIntelHandler.status_lock.release()
+                CodeintelHandler.status_lock.release()
 
         def _erase_status():
-            CodeIntelHandler.status_lock.acquire()
+            CodeintelHandler.status_lock.acquire()
             try:
-                if msg == CodeIntelHandler.status_msg.get(lid, [None, None, 0])[1]:
+                if msg == CodeintelHandler.status_msg.get(lid, [None, None, 0])[1]:
                     view.erase_status(lid)
-                    CodeIntelHandler.status_msg[lid][1] = None
-                    if lid in CodeIntelHandler.status_lineno:
-                        del CodeIntelHandler.status_lineno[lid]
+                    CodeintelHandler.status_msg[lid][1] = None
+                    if lid in CodeintelHandler.status_lineno:
+                        del CodeintelHandler.status_lineno[lid]
             finally:
-                CodeIntelHandler.status_lock.release()
+                CodeintelHandler.status_lock.release()
 
         if msg:
             sublime.set_timeout(_set_status, delay or 0)
@@ -187,28 +187,30 @@ class CodeIntelHandler(object):
         language = settings.get('codeintel_syntax_map', {}).get(lang, lang)
         logger.info("Language guessed: %s (for %s)", language, lang)
         if language in settings.get('codeintel_disabled_languages'):
-            return None
+            return
         return language
 
     def buf_from_view(self, view):
         if not view:
-            return None
+            return
 
         view_sel = view.sel()
         if not view_sel:
-            return None
+            return
 
         file_name = view.file_name()
         path = file_name if file_name else "<Unsaved>"
 
         lang = self.guess_language(view, path)
         if not lang or lang not in ci.languages:
-            return None
-
-        if not get_setting(lang, 'codeintel_live'):
+            logger.debug("buf_from_view: %r, %r? no: language unavailable in: [%s]", path, lang, ", ".join(ci.languages))
             return
 
-        logger.debug("buf_from_view: %r, %r, %r", view, path, lang)
+        if not get_setting(lang, 'codeintel_live'):
+            logger.debug("buf_from_view: %r, %r? no: live disabled", path, lang)
+            return
+
+        logger.debug("buf_from_view: %r, %r? yes", path, lang)
 
         vid = view.id()
         try:
@@ -463,9 +465,9 @@ class CodeIntelHandler(object):
 
             window = sublime.active_window()
             wid = window.id()
-            if wid not in CodeIntelHandler.jump_history_by_window:
-                CodeIntelHandler.jump_history_by_window[wid] = collections.deque([], CodeIntelHandler.HISTORY_SIZE)
-            jump_history = CodeIntelHandler.jump_history_by_window[wid]
+            if wid not in CodeintelHandler.jump_history_by_window:
+                CodeintelHandler.jump_history_by_window[wid] = collections.deque([], CodeintelHandler.HISTORY_SIZE)
+            jump_history = CodeintelHandler.jump_history_by_window[wid]
 
             # Save current position so we can return to it
             row, col = view.rowcol(view_sel[0].begin())
@@ -480,7 +482,7 @@ class CodeIntelHandler(object):
         pass
 
 
-class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
+class SublimeCodeIntel(CodeintelHandler, sublime_plugin.EventListener):
     def observer(self, topic, data):
         def _get_and_log_message(response):
             message = response.get('message')
@@ -551,8 +553,8 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
 
         # print('on_modified', "%r\n\tcommand_history: %r\n\tredo_command: %r\n\tprevious_command: %r\n\tbefore_previous_command: %r" % (current_char, bool(command_history), redo_command, previous_command, before_previous_command))
         if not command_history or redo_command[1] is None and (
-            previous_command[0] == 'paste' or
             previous_command[0] == 'insert' and previous_command[1]['characters'][-1] not in ('\n', '\t') or
+            previous_command[0] in ('insert_completion', 'paste', 'codeintel_complete_commit') or
             previous_command[0] == 'insert_snippet' and previous_command[1]['contents'] in (
                 '(${0:$SELECTION})', '[${0:$SELECTION}]', '{${0:$SELECTION}}', '`${0:$SELECTION}`', '"${0:$SELECTION}"', "'${0:$SELECTION}'",
                 '($0)', '[$0]', '{$0}', '`$0`', '"$0"', "'$0'",
@@ -564,16 +566,8 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
             )
         ):
             buf = self.buf_from_view(view)
+            # print('on_modified.triggering', bool(buf))
             if buf:
-                if view.is_auto_complete_visible():
-                    # Fillup characters commit autocomplete
-                    if current_char in buf.cpln_fillup_chars:
-                        view.run_command('commit_completion')
-
-                    # Stop characters hide autocomplete window
-                    if current_char in buf.cpln_stop_chars:
-                        view.run_command('hide_auto_complete')
-
                 buf.scan_document(self, True)
                 buf.trg_from_pos(self, True)
 
@@ -582,29 +576,37 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
         buf = self.buf_from_view(view)
-        if not buf:
-            return
-        cplns, buf.cplns = getattr(buf, 'cplns', None), None
-        return cplns
+        if buf:
+            cplns, buf.cplns = getattr(buf, 'cplns', None), None
+            return cplns
+
+    def on_query_context(self, view, key, operator, operand, match_all):
+        if key.startswith("codeintel.setting."):
+            setting_name = key[len("codeintel.setting."):]
+            value = settings.get(setting_name)
+            if operator == sublime.OP_NOT_EQUAL:
+                return value != operand
+            elif operator == sublime.OP_EQUAL:
+                return value == operand
 
 
-class CodeIntelAutoComplete(CodeIntelHandler, sublime_plugin.TextCommand):
+class CodeintelAutoComplete(CodeintelHandler, sublime_plugin.TextCommand):
     def run(self, edit, block=False):
         view = self.view
 
         buf = self.buf_from_view(view)
 
-        if not buf:
-            return
-        buf.scan_document(self, True)
-        buf.trg_from_pos(self, True)
+        if buf:
+            buf.scan_document(self, True)
+            buf.trg_from_pos(self, True)
 
 
-class GotoPythonDefinition(CodeIntelHandler, sublime_plugin.TextCommand):
+class GotoPythonDefinition(CodeintelHandler, sublime_plugin.TextCommand):
     def run(self, edit, block=False):
         view = self.view
 
         buf = self.buf_from_view(view)
+
         if buf:
             buf.scan_document(self, True)
             buf.defn_trg_from_pos(self)
@@ -612,16 +614,42 @@ class GotoPythonDefinition(CodeIntelHandler, sublime_plugin.TextCommand):
 
 class BackToPythonDefinition(sublime_plugin.TextCommand):
     def run(self, edit, block=False):
-
         window = sublime.active_window()
         wid = window.id()
-        if wid in CodeIntelHandler.jump_history_by_window:
-            jump_history = CodeIntelHandler.jump_history_by_window[wid]
+        if wid in CodeintelHandler.jump_history_by_window:
+            jump_history = CodeintelHandler.jump_history_by_window[wid]
 
             if len(jump_history) > 0:
                 previous_location = jump_history.pop()
                 window = sublime.active_window()
                 window.open_file(previous_location, sublime.ENCODED_POSITION)
+
+
+class CodeintelCompleteCommitCommand(CodeintelHandler, sublime_plugin.TextCommand):
+    def run(self, edit, character):
+        view = self.view
+
+        buf = self.buf_from_view(view)
+        if buf:
+            cpln_fillup_chars = buf.cpln_fillup_chars
+            cpln_stop_chars = buf.cpln_stop_chars
+        else:
+            cpln_fillup_chars = ""
+            cpln_stop_chars = "~`!@#$%^&*()-=+{}[]|\\;:'\",.<>?/ "
+
+        # Fillup characters commit autocomplete
+        if settings.get('codeintel_complete_commit_fillup') and character in cpln_fillup_chars:
+            view.window().run_command('commit_completion')
+            if character not in ("(", "="):
+                view.run_command('insert', {'characters': character})
+
+        # Stop characters hide autocomplete window
+        elif character in cpln_stop_chars:
+            view.run_command('hide_auto_complete')
+            view.run_command('insert', {'characters': character})
+
+        else:
+            view.run_command('insert', {'characters': character})
 
 
 def get_setting(lang, setting, default=None):
@@ -630,6 +658,9 @@ def get_setting(lang, setting, default=None):
 
 def settings_changed():
     """Restores user settings."""
+    if sublime is None:
+        return  # module must have been reloaded
+
     global settings
 
     if settings is None:
