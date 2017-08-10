@@ -61,7 +61,7 @@
         when possible (inserting the selected item in the autocomplete). This
         setting requires codeintel_complete_commit.
     */
-    "codeintel_complete_commit_fillup": true,
+    "codeintel_complete_commit_fillup": false,
 
     /*
         codeintel_selected_catalogs - API Catalogs.
