@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2015
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.17"
+VERSION = "3.0.0-beta.19"
 
 
 import os
@@ -501,7 +501,7 @@ class SublimeCodeIntel(CodeintelHandler, sublime_plugin.EventListener):
                 return
             else:
                 return
-            progress = data.get('progress')
+            progress = data.get('progress') or data.get('completed')
             if progress is not None:
                 total = data.get('total', 100)
                 if total == 100:

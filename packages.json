@@ -25,9 +25,9 @@
                 },
                 {
                     "sublime_text": "*",
-                    "version": "3.0.0-beta.17",
-                    "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v3.0.0-beta.17.zip",
-                    "date": "2017-08-09 00:00:00"
+                    "version": "3.0.0-beta.19",
+                    "url": "https://github.com/SublimeCodeIntel/SublimeCodeIntel/archive/v3.0.0-beta.19.zip",
+                    "date": "2017-08-14 00:00:00"
                 }
             ]
         }

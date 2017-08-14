@@ -836,6 +836,8 @@ class CodeIntelManager(threading.Thread):
         self.log.debug("CodeIntelManager thread started...")
 
         while True:
+            ok = False
+
             self.init_child()
             if not self.proc:
                 break  # init child failed
@@ -850,6 +852,7 @@ class CodeIntelManager(threading.Thread):
                     if not ch:
                         # nothing read, EOF
                         raise IOError("Failed to read from socket")
+                    ok = True
                     if ch == b'{':
                         length = int(buf)
                         buf = ch
@@ -896,7 +899,7 @@ class CodeIntelManager(threading.Thread):
                 self.state = CodeIntelManager.STATE_WAITING
                 self.close()
 
-            if self.proc is True:
+            if not ok:
                 time.sleep(3)
 
         self.log.debug("CodeIntelManager thread ended!")
