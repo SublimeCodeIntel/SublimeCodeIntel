@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2015
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.19"
+VERSION = "3.0.0-beta.20"
 
 
 import os
@@ -42,22 +42,25 @@ if python_sitelib_path not in sys.path:
     sys.path.insert(0, python_sitelib_path)
 
 import re
+import json
 import logging
 import textwrap
 import threading
-import collections
+from collections import deque, defaultdict
+from copy import deepcopy
 
 import sublime
 import sublime_plugin
 
-from codeintel import CodeIntel, CodeIntelBuffer
+from codeintel import CodeIntel, CodeIntelBuffer, logger as codeintel_logger, logger_level as codeintel_logger_level
 
-settings_name = 'SublimeCodeIntel'
+PLUGIN_NAME = 'SublimeCodeIntel'
 
-settings = None
 logger_name = 'CodeIntel'
+logger_level = logging.WARNING  # WARNING
+
 logger = logging.getLogger(logger_name)
-logger.setLevel(logging.WARNING)  # WARNING
+logger.setLevel(logger_level)
 if logger.root.handlers:
     logger.root.handlers[0].setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
 
@@ -74,10 +77,324 @@ EXTRA_PATHS_MAP = {
     'C++': 'cppExtraPaths',
 }
 
+EXCLUDE_PATHS_MAP = {
+    'ECMAScript': 'ecmascriptExcludePaths',
+    'JavaScript': 'javascriptExcludePaths',
+    'Node.js': 'nodejsExcludePaths',
+    'Perl': 'perlExcludePaths',
+    'PHP': 'phpExcludePaths',
+    'Python3': 'python3ExcludePaths',
+    'Python': 'pythonExcludePaths',
+    'Ruby': 'rubyExcludePaths',
+    'C++': 'cppExcludePaths',
+}
+
+
+class Settings:
+    """This class provides global access to and management of plugin settings."""
+
+    def __init__(self):
+        """Initialize a new instance."""
+        self.settings = {}
+        self.previous_settings = {}
+        self.changeset = set()
+        self.plugin_settings = None
+        self.on_update_callback = None
+        self.edits = defaultdict(list)
+
+    def load(self, force=False):
+        """Load the plugin settings."""
+        if force or not self.settings:
+            self.observe()
+            self.on_update()
+
+    def has_setting(self, setting):
+        """Return whether the given setting exists."""
+        return setting in self.settings
+
+    def get(self, setting, default=None, lang=None):
+        """Return a plugin setting, defaulting to default if not found."""
+        language_settings = self.settings.get('language_settings', {}).get(lang)
+        if language_settings and setting in language_settings:
+            return language_settings[setting]
+        return self.settings.get(setting, default)
+
+    def set(self, setting, value, changed=False):
+        """
+        Set a plugin setting to the given value.
+
+        Clients of this module should always call this method to set a value
+        instead of doing settings['foo'] = 'bar'.
+
+        If the caller knows for certain that the value has changed,
+        they should pass changed=True.
+
+        """
+        self.copy()
+        self.settings[setting] = value
+
+        if changed:
+            self.changeset.add(setting)
+
+    def pop(self, setting, default=None):
+        """
+        Remove a given setting and return default if it is not in self.settings.
+
+        Clients of this module should always call this method to pop a value
+        instead of doing settings.pop('foo').
+
+        """
+        self.copy()
+        return self.settings.pop(setting, default)
+
+    def copy(self):
+        """Save a copy of the plugin settings."""
+        self.previous_settings = deepcopy(self.settings)
+
+    def observe(self, observer=None):
+        """Observer changes to the plugin settings."""
+        self.plugin_settings = sublime.load_settings('{}.sublime-settings'.format(PLUGIN_NAME))
+        self.plugin_settings.clear_on_change(PLUGIN_NAME)
+        self.plugin_settings.add_on_change(PLUGIN_NAME, observer or self.on_update)
+
+    def on_update_call(self, callback):
+        """Set a callback to call when user settings are updated."""
+        self.on_update_callback = callback
+
+    def merge_user_settings(self, settings):
+        """Return the default linter settings merged with the user's settings."""
+
+        default = settings.get('default', {})
+        user = settings.get('user', {})
+
+        if user:
+            for setting_name in ('codeintel_syntax_map', 'codeintel_language_settings'):
+                default_setting = default.pop(setting_name, {})
+                user_setting = user.get(setting_name, {})
+
+                for name, data in user_setting.items():
+                    if name in default_setting:
+                        default_setting[name].update(data)
+                    else:
+                        default_setting[name] = data
+                default[setting_name] = default_setting
+                user.pop(setting_name, None)
+            default.update(user)
+
+        return default
+
+    def get_prefs(self, lang=None):
+        prefs = {
+            'codeintel_max_recursive_dir_depth': self.settings.get('max_recursive_dir_depth'),
+            'codeintel_scan_files_in_project': self.settings.get('scan_files_in_project'),
+            'codeintel_selected_catalogs': self.settings.get('selected_catalogs'),
+        }
+
+        disabled_languages = self.settings.get('disabled_languages', [])
+
+        scan_extra_paths = self.settings.get('scan_extra_paths', [])
+        if scan_extra_paths:
+            scan_extra_paths = set(os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_extra_paths)
+
+        scan_exclude_paths = self.settings.get('scan_exclude_paths', [])
+        if scan_exclude_paths:
+            scan_exclude_paths = set(os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_exclude_paths)
+
+        language_settings = self.settings.get('language_settings', {})
+        for l, s in language_settings.items():
+            if lang is not None and l != lang:
+                continue
+
+            if l in disabled_languages or s.get('@disable'):
+                continue
+
+            for k, v in s.items():
+                if k not in self.settings:
+                    prefs[k] = v
+
+            extra_paths_name = EXTRA_PATHS_MAP.get(l)
+            language_scan_extra_paths = set(s.get('scan_extra_paths', [])) | set(s.get(extra_paths_name, []))
+            if language_scan_extra_paths:
+                language_scan_extra_paths = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_extra_paths | language_scan_extra_paths]
+            if extra_paths_name:
+                prefs[extra_paths_name] = os.pathsep.join(language_scan_extra_paths)
+
+            exclude_paths_name = EXCLUDE_PATHS_MAP.get(l)
+            language_scan_exclude_paths = set(s.get('scan_exclude_paths', [])) | set(s.get(exclude_paths_name, []))
+            if language_scan_exclude_paths:
+                language_scan_exclude_paths = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_exclude_paths | language_scan_exclude_paths]
+            if exclude_paths_name:
+                prefs[exclude_paths_name] = os.pathsep.join(language_scan_exclude_paths)
+
+        return prefs
+
+    def on_update(self):
+        """
+        Update state when the user settings change.
+
+        The settings before the change are compared with the new settings.
+        Depending on what changes, views will either be redrawn or relinted.
+
+        """
+
+        settings = self.merge_user_settings(self.plugin_settings)
+        self.settings.clear()
+        self.settings.update(settings)
+
+        need_deactivate = False
+        for setting in ('@disable', 'command', 'oop_mode', 'log_levels'):
+            if (
+                setting in self.changeset or
+                self.previous_settings.get(setting, False) != self.settings.get(setting, False)
+            ):
+                self.changeset.discard(setting)
+                need_deactivate = True
+
+        if (
+            'debug' in self.changeset or
+            self.previous_settings.get('debug', False) != self.settings.get('debug', False)
+        ):
+            self.changeset.discard('debug')
+
+            if self.settings.get('debug'):
+                logger.setLevel(logging.DEBUG)
+                codeintel_logger.setLevel(logging.DEBUG)
+            else:
+                logger.setLevel(logger_level)
+                codeintel_logger.setLevel(codeintel_logger_level)
+
+        if need_deactivate:
+            ci.deactivate()
+
+        if not self.settings.get('@disable'):
+            env = dict(os.environ)
+            env.update(self.settings.get('env', {}))
+
+            prefs = self.get_prefs()
+
+            if ci.enabled:
+                ci.mgr.set_global_environment(
+                    env=env,
+                    prefs=prefs,
+                )
+            else:
+                command = self.settings.get('command')
+                oop_mode = self.settings.get('oop_mode')
+                log_levels = self.settings.get('log_levels')
+                ci.activate(
+                    reset_db_as_necessary=False,
+                    codeintel_command=command,
+                    oop_mode=oop_mode,
+                    log_levels=log_levels,
+                    env=env,
+                    prefs=prefs,
+                )
+
+        self.changeset.clear()
+
+        if self.previous_settings and self.on_update_callback:
+            self.on_update_callback(self)
+
+    def save(self, view=None):
+        """
+        Regenerate and save the user settings.
+
+        User settings are updated with the default settings and the defaults
+        from every linter, and if the user settings are currently being edited,
+        the view is updated.
+
+        """
+
+        self.load()
+
+        # Fill in default linter settings
+        settings = self.settings
+
+        settings_filename = '{}.sublime-settings'.format(PLUGIN_NAME)
+        user_settings_path = os.path.join(sublime.packages_path(), 'User', settings_filename)
+        settings_views = []
+
+        if view is None:
+            # See if any open views are the user prefs
+            for window in sublime.windows():
+                for view in window.views():
+                    if view.file_name() == user_settings_path:
+                        settings_views.append(view)
+        else:
+            settings_views = [view]
+
+        if settings_views:
+            def replace(edit):
+                if not view.is_dirty():
+                    j = json.dumps({'user': settings}, indent=4, sort_keys=True)
+                    j = j.replace(' \n', '\n')
+                    view.replace(edit, sublime.Region(0, view.size()), j)
+
+            for view in settings_views:
+                self.edits[view.id()].append(replace)
+                view.run_command('codeintel_edit')
+                view.run_command('save')
+        else:
+            user_settings = sublime.load_settings(settings_filename)
+            user_settings.set('user', settings)
+            sublime.save_settings(settings_filename)
+
+    def edit(self, vid, edit):
+        """Perform an operation on a view with the given edit object."""
+        callbacks = self.edits.pop(vid, [])
+
+        for c in callbacks:
+            c(edit)
+
+
+class CodeintelEditCommand(sublime_plugin.TextCommand):
+    """A plugin command used to generate an edit object for a view."""
+
+    def run(self, edit):
+        """Run the command."""
+        settings.edit(self.view.id(), edit)
+
+
+class CodeintelToggleSettingCommand(sublime_plugin.WindowCommand):
+    """Command that toggles a setting."""
+
+    def is_visible(self, **args):
+        """Return True if the opposite of the setting is True."""
+        if args.get('checked', False):
+            return True
+
+        if settings.has_setting(args['setting']):
+            setting = settings.get(args['setting'], None)
+            return setting is not None and setting is not args['value']
+        else:
+            return args['value'] is not None
+
+    def is_checked(self, **args):
+        """Return True if the setting should be checked."""
+        if args.get('checked', False):
+            setting = settings.get(args['setting'], False)
+            return setting is True
+        else:
+            return False
+
+    def run(self, **args):
+        """Toggle the setting if value is boolean, or remove it if None."""
+
+        if 'value' in args:
+            if args['value'] is None:
+                settings.pop(args['setting'])
+            else:
+                settings.set(args['setting'], args['value'], changed=True)
+        else:
+            setting = settings.get(args['setting'], False)
+            settings.set(args['setting'], not setting, changed=True)
+
+        settings.save()
+
 
 class CodeintelHandler(object):
     HISTORY_SIZE = 64
-    jump_history_by_window = {}  # map of window id -> collections.deque([], HISTORY_SIZE)
+    jump_history_by_window = {}  # map of window id -> deque([], HISTORY_SIZE)
 
     status_msg = {}
     status_lineno = {}
@@ -183,12 +500,14 @@ class CodeintelHandler(object):
         return len(content[:pos].encode('utf-8'))
 
     def guess_language(self, view, path):
-        lang = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
-        language = settings.get('codeintel_syntax_map', {}).get(lang, lang)
-        logger.info("Language guessed: %s (for %s)", language, lang)
-        if language in settings.get('codeintel_disabled_languages'):
+        language = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
+        lang = settings.get('syntax_map', {}).get(language, language)
+        logger.info("Language guessed: %s (for %s)", lang, language)
+        if lang in settings.get('disabled_languages'):
             return
-        return language
+        if settings.get('@disable', False, lang=lang):
+            return
+        return lang
 
     def buf_from_view(self, view):
         if not view:
@@ -206,7 +525,7 @@ class CodeintelHandler(object):
             logger.debug("buf_from_view: %r, %r? no: language unavailable in: [%s]", path, lang, ", ".join(ci.languages))
             return
 
-        if not get_setting(lang, 'codeintel_live'):
+        if not settings.get('live', False, lang=lang):
             logger.debug("buf_from_view: %r, %r? no: live disabled", path, lang)
             return
 
@@ -237,30 +556,26 @@ class CodeintelHandler(object):
         buf.text_in_current_line = text_in_current_line
         buf.original_pos = original_pos
 
-        prefs = {}
+        prefs = settings.get_prefs(lang)
 
-        language_settings = settings.get('codeintel_language_settings')
-        for k, v in language_settings.get(lang, {}).items():
-            prefs[k] = v
-
-        if get_setting(lang, 'codeintel_scan_files_in_project'):
+        if settings.get('scan_files_in_project', lang=lang):
             window = sublime.active_window()
-            extra_path_name = EXTRA_PATHS_MAP.get(lang)
-            if extra_path_name:
-                excluded = get_setting(lang, 'codeintel_scan_exclude_paths', [])
-                extra_path = []
-                for f in window.folders():
-                    f = os.path.normcase(os.path.normpath(f)).rstrip(os.sep)
-                    if f not in excluded:
-                        extra_path.append(f)
-                if extra_path:
-                    prefs[extra_path_name] = os.pathsep.join(extra_path)
+            extra_paths_name = EXTRA_PATHS_MAP.get(lang)
+            extra_paths = prefs.get(extra_paths_name, '').split(os.pathsep)
+            exclude_paths_name = EXCLUDE_PATHS_MAP.get(lang)
+            exclude_paths = prefs.get(exclude_paths_name, '').split(os.pathsep)
+            for f in window.folders():
+                f = os.path.normcase(os.path.normpath(f)).rstrip(os.sep)
+                if f not in exclude_paths and f not in extra_paths:
+                    extra_paths.append(f)
+            if extra_paths:
+                prefs[extra_paths_name] = os.pathsep.join(extra_paths)
 
         buf.prefs = prefs
 
         return buf
 
-    def format_completions_by_language(self, cplns, language, text_in_current_line, type):
+    def format_completions_by_language(self, cplns, lang, text_in_current_line, type):
         function = None if 'import ' in text_in_current_line else 'function'
 
         def get_desc(c):
@@ -276,7 +591,7 @@ class CodeintelHandler(object):
         def get_type(c):
             return c[0].title()
 
-        if language == 'PHP' and type != 'object-members':
+        if lang == 'PHP' and type != 'object-members':
             def get_name(c):
                 name = c[1]
                 if c[0] == 'variable':
@@ -286,7 +601,7 @@ class CodeintelHandler(object):
                     name += "($0)"
                 return name
 
-        if language == 'ECMAScript':
+        if lang == 'ECMAScript':
             def get_name(c):
                 name = c[1]
                 name = name.replace("$", "\\$")
@@ -466,7 +781,7 @@ class CodeintelHandler(object):
             window = sublime.active_window()
             wid = window.id()
             if wid not in CodeintelHandler.jump_history_by_window:
-                CodeintelHandler.jump_history_by_window[wid] = collections.deque([], CodeintelHandler.HISTORY_SIZE)
+                CodeintelHandler.jump_history_by_window[wid] = deque([], CodeintelHandler.HISTORY_SIZE)
             jump_history = CodeintelHandler.jump_history_by_window[wid]
 
             # Save current position so we can return to it
@@ -533,7 +848,7 @@ class SublimeCodeIntel(CodeintelHandler, sublime_plugin.EventListener):
         if not view_sel:
             return
 
-        if not settings.get('codeintel_live'):
+        if settings.get('@disable', False) or not settings.get('live', False):
             return
 
         sel = view_sel[0]
@@ -638,7 +953,7 @@ class CodeintelCompleteCommitCommand(CodeintelHandler, sublime_plugin.TextComman
             cpln_stop_chars = "~`!@#$%^&*()-=+{}[]|\\;:'\",.<>?/ "
 
         # Fillup characters commit autocomplete
-        if settings.get('codeintel_complete_commit_fillup') and character in cpln_fillup_chars:
+        if settings.get(buf.lang, 'complete_commit_fillup') and character in cpln_fillup_chars:
             view.window().run_command('commit_completion')
             if character not in ("(", "="):
                 view.run_command('insert', {'characters': character})
@@ -652,84 +967,24 @@ class CodeintelCompleteCommitCommand(CodeintelHandler, sublime_plugin.TextComman
             view.run_command('insert', {'characters': character})
 
 
-def get_setting(lang, setting, default=None):
-    return settings.get('codeintel_language_settings', {}).get(lang, settings).get(setting, settings.get(setting, default))
+if 'plugin_is_loaded' not in globals():
+    settings = Settings()
+    ci = CodeIntel()
 
-
-def settings_changed():
-    """Restores user settings."""
-    if sublime is None:
-        return  # module must have been reloaded
-
-    global settings
-
-    if settings is None:
-        settings = sublime.load_settings(settings_name + '.sublime-settings')
-
-    excluded = settings.get('codeintel_scan_exclude_paths')
-    if excluded:
-        ex = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in excluded]
-        settings.set('codeintel_scan_exclude_paths', ex)
-
-    codeintel_command = settings.get('codeintel_command')
-    oop_mode = settings.get('codeintel_oop_mode')
-    log_levels = settings.get('codeintel_log_levels')
-    env = dict(os.environ)
-    codeintel_env = settings.get('codeintel_env')
-    if codeintel_env:
-        env.update(codeintel_env)
-
-    prefs = {
-        'codeintel_max_recursive_dir_depth': settings.get('codeintel_max_recursive_dir_depth'),
-        'codeintel_scan_files_in_project': settings.get('codeintel_max_recursive_dir_depth'),
-        'codeintel_selected_catalogs': settings.get('codeintel_selected_catalogs'),
-    }
-
-    extra_paths = settings.get('codeintel_scan_extra_paths')
-
-    language_settings = settings.get('codeintel_language_settings', {})
-    for l, s in language_settings.items():
-        excluded = language_settings.get('codeintel_scan_exclude_paths')
-        if excluded:
-            ex = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in excluded]
-            excluded.clear()
-            excluded.extend(ex)
-        language_extra_paths = s.pop('codeintel_scan_extra_paths', None)
-        if language_extra_paths is None:
-            language_extra_paths = extra_paths
-        for k, v in s.items():
-            if settings.get(k) is None and not k.startswith('codeintel_'):
-                prefs[k] = v
-        extra_path_name = EXTRA_PATHS_MAP.get(l)
-        if extra_path_name:
-            prefs[extra_path_name] = os.pathsep.join(language_extra_paths)
-
-    if ci.mgr and ci.mgr.is_alive():
-        ci.mgr.set_global_environment(
-            env=env,
-            prefs=prefs,
-        )
-    else:
-        ci.activate(
-            reset_db_as_necessary=False,
-            codeintel_command=codeintel_command,
-            oop_mode=oop_mode,
-            log_levels=log_levels,
-            env=env,
-            prefs=prefs,
-        )
+    # Set to true when the plugin is loaded at startup
+    plugin_is_loaded = False
 
 
 def plugin_loaded():
-    settings_changed()
-    settings.add_on_change(settings_name, settings_changed)
+    global plugin_is_loaded, settings
+    plugin_is_loaded = True
 
+    settings.load()
 
-ci = CodeIntel()
 
 # ST3 features a plugin_loaded hook which is called when ST's API is ready.
 #
 # We must therefore call our init callback manually on ST2. It must be the last
 # thing in this plugin (thanks, beloved contributors!).
-if not int(sublime.version()) > 3000:
+if int(sublime.version()) < 3000:
     plugin_loaded()

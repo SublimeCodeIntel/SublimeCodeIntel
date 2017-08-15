@@ -51,8 +51,10 @@ PRIORITY_OPEN = 3           # UI will likely require info on this file soon
 PRIORITY_BACKGROUND = 4     # info may be needed sometime
 
 logger_name = 'CodeIntel.codeintel'
+logger_level = logging.INFO  # INFO
 
-logging.getLogger(logger_name).setLevel(logging.INFO)  # INFO
+logger = logging.getLogger(logger_name)
+logger.setLevel(logger_level)
 
 
 class CodeIntel(object):
@@ -151,7 +153,7 @@ class CodeIntel(object):
 
     @property
     def enabled(self):
-        return self._enabled
+        return self._enabled and self.mgr and self.mgr.is_alive()
 
     def deactivate(self):
         with self._mgr_lock:

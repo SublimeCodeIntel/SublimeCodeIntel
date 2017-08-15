@@ -1,0 +1,152 @@
+[
+    {
+        "caption": "Preferences: SublimeCodeIntel Settings – Default",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/SublimeCodeIntel/SublimeCodeIntel.sublime-settings"
+        }
+    },
+    {
+        "caption": "Preferences: SublimeCodeIntel Settings – User",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/User/SublimeCodeIntel.sublime-settings"
+        }
+    },
+
+    {
+        "caption": "Preferences: SublimeCodeIntel Key Bindings – Default",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/SublimeCodeIntel/Default (OSX).sublime-keymap",
+            "platform": "OSX"
+        }
+    },
+    {
+        "caption": "Preferences: SublimeCodeIntel Key Bindings – User",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/User/Default (OSX).sublime-keymap",
+            "platform": "OSX"
+        }
+    },
+
+    {
+        "caption": "Preferences: SublimeCodeIntel Key Bindings – Default",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/SublimeCodeIntel/Default (Linux).sublime-keymap",
+            "platform": "Linux"
+        }
+    },
+    {
+        "caption": "Preferences: SublimeCodeIntel Key Bindings – User",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/User/Default (Linux).sublime-keymap",
+            "platform": "Linux"
+        }
+    },
+
+    {
+        "caption": "Preferences: SublimeCodeIntel Key Bindings – Default",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/SublimeCodeIntel/Default (Windows).sublime-keymap",
+            "platform": "Windows"
+        }
+    },
+    {
+        "caption": "Preferences: SublimeCodeIntel Key Bindings – User",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/User/Default (Windows).sublime-keymap",
+            "platform": "Windows"
+        }
+    },
+
+
+    {
+        "caption": "Preferences: SublimeCodeIntel Mouse Bindings – Default",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/SublimeCodeIntel/Default (OSX).sublime-mousemap",
+            "platform": "OSX"
+        }
+    },
+    {
+        "caption": "Preferences: SublimeCodeIntel Mouse Bindings – User",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/User/Default (OSX).sublime-mousemap",
+            "platform": "OSX"
+        }
+    },
+
+    {
+        "caption": "Preferences: SublimeCodeIntel Mouse Bindings – Default",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/SublimeCodeIntel/Default (Linux).sublime-mousemap",
+            "platform": "Linux"
+        }
+    },
+    {
+        "caption": "Preferences: SublimeCodeIntel Mouse Bindings – User",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/User/Default (Linux).sublime-mousemap",
+            "platform": "Linux"
+        }
+    },
+
+    {
+        "caption": "Preferences: SublimeCodeIntel Mouse Bindings – Default",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/SublimeCodeIntel/Default (Windows).sublime-mousemap",
+            "platform": "Windows"
+        }
+    },
+    {
+        "caption": "Preferences: SublimeCodeIntel Mouse Bindings – User",
+        "command": "open_file", "args":
+        {
+            "file": "${packages}/User/Default (Windows).sublime-mousemap",
+            "platform": "Windows"
+        }
+    },
+
+    {
+        "caption": "SublimeCodeIntel: Enable Code Intelligence",
+        "command": "codeintel_toggle_setting", "args":
+        {
+            "setting": "@disable",
+            "value": null
+        }
+    },
+    {
+        "caption": "SublimeCodeIntel: Disable Code Intelligence",
+        "command": "codeintel_toggle_setting", "args":
+        {
+            "setting": "@disable",
+            "value": true
+        }
+    },
+    {
+        "caption": "SublimeCodeIntel: Enable Debug Mode",
+        "command": "codeintel_toggle_setting", "args":
+        {
+            "setting": "debug",
+            "value": true
+        }
+    },
+    {
+        "caption": "SublimeCodeIntel: Disable Debug Mode",
+        "command": "codeintel_toggle_setting", "args":
+        {
+            "setting": "debug",
+            "value": false
+        }
+    },
+]
