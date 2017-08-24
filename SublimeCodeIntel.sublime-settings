@@ -155,6 +155,8 @@
             "Node.js": {
                 "nodejsDefaultInterpreter": ""
             },
+            "ECMAScript": {
+            },
             "PHP": {
                 "php": "",
                 "phpConfigFile": ""

@@ -58,7 +58,12 @@ logger.setLevel(logger_level)
 
 
 class CodeIntel(object):
-    def __init__(self):
+    def __init__(self, main_thread_runner):
+        """
+        main_thread_runner - Must be a function receiving a single parameter,
+                                a function to be executed in the main thread.
+        """
+        self._main_thread_runner = main_thread_runner
         self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
         self.mgr = None
         self._mgr_lock = threading.Lock()
@@ -451,6 +456,7 @@ class CodeIntelManager(threading.Thread):
         if env is not None:
             self.env = env
         self._state_condvar = threading.Condition()
+        self._discard_time = time.time()
         self.requests = {}  # keyed by request id; value is tuple (callback, request data, time sent) requests will time out at some point...
         self.unsent_requests = queue.Queue()
         threading.Thread.__init__(self, name="CodeIntel Manager Thread")
@@ -471,25 +477,28 @@ class CodeIntelManager(threading.Thread):
 
     def shutdown(self):
         """Abort any outstanding requests and shut down gracefully"""
-        self.abort()
         if self.state is CodeIntelManager.STATE_DESTROYED:
             return  # already dead
+        self.abort()
+        self.quit()
         if not self.pipe:
             # not quite dead, but already disconnected... ungraceful shutdown
             self.kill()
             return
-        self._send(command='quit', callback=self.do_quit)
-        self.state = CodeIntelManager.STATE_QUITTING
 
     def abort(self):
         """Abort all running requests"""
         for req in list(self.requests.keys()):
             self._abort.add(req)
-            self._send(
+            self.send(
                 command='abort',
                 id=req,
                 callback=lambda request, response: None,
             )
+
+    def quit(self):
+        self.send(command='quit', callback=self.do_quit)
+        self.state = CodeIntelManager.STATE_QUITTING
 
     def close(self):
         try:
@@ -741,10 +750,10 @@ class CodeIntelManager(threading.Thread):
                 self._send_request_thread.start()
             update("CodeIntel ready.", state=CodeIntelManager.STATE_READY)
 
-        self._send(callback=get_cpln_langs, command='get-languages', type='cpln')
         self._send(callback=get_citadel_langs, command='get-languages', type='citadel')
         self._send(callback=get_xml_langs, command='get-languages', type='xml')
         self._send(callback=get_stdlib_langs, command='get-languages', type='stdlib-supported')
+        self._send(callback=get_cpln_langs, command='get-languages', type='cpln')
 
         self.set_global_environment(self.env, self.prefs)
 
@@ -758,7 +767,7 @@ class CodeIntelManager(threading.Thread):
     def set_global_environment(self, env, prefs):
         self.env = env
         self.prefs = [prefs] if isinstance(prefs, dict) else prefs
-        self._send(
+        self.send(
             command='set-environment',
             env=self.env,
             prefs=self.prefs,
@@ -770,7 +779,7 @@ class CodeIntelManager(threading.Thread):
                 self.available_catalogs = response.get('catalogs', [])
             if update_callback:
                 update_callback(response)
-        self._send(callback=get_available_catalogs, command='get-available-catalogs')
+        self.send(callback=get_available_catalogs, command='get-available-catalogs')
 
     def send(self, callback=None, **kwargs):
         """Public API for sending a request.
@@ -785,11 +794,12 @@ class CodeIntelManager(threading.Thread):
 
     def _send_queued_requests(self):
         """Worker to send unsent requests"""
-        while True:
-            with self._state_condvar:
-                if self.state is CodeIntelManager.STATE_DESTROYED:
-                    break  # Manager already shut down
-                if self.state is not CodeIntelManager.STATE_READY:
+
+        self.log.info("%s thread started..." % threading.current_thread().name)
+
+        while self.state not in (CodeIntelManager.STATE_QUITTING, CodeIntelManager.STATE_DESTROYED):
+            if self.state is not CodeIntelManager.STATE_READY:
+                with self._state_condvar:
                     self._state_condvar.wait()
                     continue  # wait...
             callback, kwargs = self.unsent_requests.get()
@@ -797,6 +807,8 @@ class CodeIntelManager(threading.Thread):
                 # end of queue (shutting down)
                 break
             self._send(callback, **kwargs)
+
+        self.log.info("%s thread ended!" % threading.current_thread().name)
 
     def _send(self, callback=None, **kwargs):
         """
@@ -806,8 +818,8 @@ class CodeIntelManager(threading.Thread):
         calling thread until the data has been written (though possibly not yet
         received on the other end).
         """
-        if not self.pipe or self.state is CodeIntelManager.STATE_QUITTING:
-            return  # Nope, eating all commands during quit
+        if not self.pipe:
+            return
         req_id = hex(self._next_id)
         kwargs['req_id'] = req_id
         text = json.dumps(kwargs, separators=(',', ':'))
@@ -835,9 +847,9 @@ class CodeIntelManager(threading.Thread):
         assert threading.current_thread().name != "MainThread", \
             "CodeIntelManager.run should run on background thread!"
 
-        self.log.debug("CodeIntelManager thread started...")
+        self.log.info("%s thread started..." % threading.current_thread().name)
 
-        while True:
+        while self.state not in (CodeIntelManager.STATE_QUITTING, CodeIntelManager.STATE_DESTROYED):
             ok = False
 
             self.init_child()
@@ -845,7 +857,6 @@ class CodeIntelManager(threading.Thread):
                 break  # init child failed
 
             first_buf = True
-            discard_time = 0.0
             try:
                 buf = b''
                 while self.proc and self.pipe:
@@ -877,20 +888,6 @@ class CodeIntelManager(threading.Thread):
                             raise ValueError("Invalid frame length character: %r" % ch)
                         buf += ch
 
-                    now = time.time()
-                    if now - discard_time > 60:  # discard some stale results
-                        for req_id, (callback, request, sent_time) in list(self.requests.items()):
-                            if sent_time < now - 5 * 60:
-                                # sent 5 minutes ago - it's irrelevant now
-                                try:
-                                    if callback:
-                                        callback(request, {})
-                                except Exception as e:
-                                    self.log.error("Failed timing out request")
-                                else:
-                                    self.log.debug("Discarding request %r", request)
-                                del self.requests[req_id]
-
             except Exception as e:
                 if self.state in (CodeIntelManager.STATE_QUITTING, CodeIntelManager.STATE_DESTROYED):
                     self.log.debug("IOError in codeintel during shutdown; ignoring")
@@ -904,43 +901,63 @@ class CodeIntelManager(threading.Thread):
             if not ok:
                 time.sleep(3)
 
-        self.log.debug("CodeIntelManager thread ended!")
+        self.log.info("%s thread ended!" % threading.current_thread().name)
 
     def handle(self, response):
         """Handle a response from the codeintel process"""
-        self.log.debug("handling: %r", response)
-        req_id = response.get('req_id')
-        callback, request, sent_time = self.requests.get(req_id, (None, None, None))
-        request_command = request.get('command', '') if request else None
-        response_command = response.get('command', request_command)
-        if req_id is None or request_command != response_command:
-            # unsolicited response, look for a handler
-            try:
-                if not response_command:
-                    self.log.error("No 'command' in response %r", response)
-                    raise ValueError("Invalid response frame %r" % response)
-                meth = getattr(self, 'do_' + response_command.replace('-', '_'), None)
-                if not meth:
-                    self.log.error("Unknown command %r, response %r", response_command, response)
-                    raise ValueError("Unknown unsolicited response \"%s\"" % response_command)
-                meth(response)
-            except Exception as e:
-                self.log.error("Error handling unsolicited response")
-            return
-        if not request:
-            self.log.error("Discard response for unknown request %s (command %s): have %s",
-                      req_id, response_command or '%r' % response, sorted(self.requests.keys()))
-            return
-        self.log.debug("Request %s (command %s) took %0.2f seconds", req_id, request_command or '<unknown>', time.time() - sent_time)
-        if 'success' in response:
-            # remove completed request
-            self.log.debug("Removing completed request %s", req_id)
-            del self.requests[req_id]
-        else:
-            # unfinished response; update the sent time so it doesn't time out
-            self.requests[req_id] = (callback, request, time.time())
-        if callback:
-            callback(request, response)
+        def _handle():
+            assert threading.current_thread().name == "MainThread", \
+                "CodeIntelManager.handle() should run on main thread!"
+
+            now = time.time()
+            if now - self._discard_time > 60:  # (not so often) discard some stale results
+                self._discard_time = now
+                for req_id, (callback, request, sent_time) in list(self.requests.items()):
+                    if sent_time < now - 5 * 60:
+                        # sent 5 minutes ago - it's irrelevant now
+                        try:
+                            if callback:
+                                callback(request, {})
+                        except Exception as e:
+                            self.log.error("Failed timing out request")
+                        else:
+                            self.log.debug("Discarding request %r", request)
+                        del self.requests[req_id]
+
+            self.log.debug("handling: %r", response)
+            req_id = response.get('req_id')
+            callback, request, sent_time = self.requests.get(req_id, (None, None, None))
+            request_command = request.get('command', '') if request else None
+            response_command = response.get('command', request_command)
+            if req_id is None or request_command != response_command:
+                # unsolicited response, look for a handler
+                try:
+                    if not response_command:
+                        self.log.error("No 'command' in response %r", response)
+                        raise ValueError("Invalid response frame %r" % response)
+                    meth = getattr(self, 'do_' + response_command.replace('-', '_'), None)
+                    if not meth:
+                        self.log.error("Unknown command %r, response %r", response_command, response)
+                        raise ValueError("Unknown unsolicited response \"%s\"" % response_command)
+                    meth(response)
+                except Exception as e:
+                    self.log.error("Error handling unsolicited response")
+                return
+            if not request:
+                self.log.error("Discard response for unknown request %s (command %s): have %s",
+                        req_id, response_command or '%r' % response, sorted(self.requests.keys()))
+                return
+            self.log.debug("Request %s (command %s) took %0.2f seconds", req_id, request_command or '<unknown>', time.time() - sent_time)
+            if 'success' in response:
+                # remove completed request
+                self.log.debug("Removing completed request %s", req_id)
+                del self.requests[req_id]
+            else:
+                # unfinished response; update the sent time so it doesn't time out
+                self.requests[req_id] = (callback, request, time.time())
+            if callback:
+                callback(request, response)
+        self.service._main_thread_runner(_handle)  # Do handling in main thread
 
     def do_scan_complete(self, response):
         """Scan complete unsolicited response"""

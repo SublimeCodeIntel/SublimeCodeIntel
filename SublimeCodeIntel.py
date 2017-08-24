@@ -23,12 +23,12 @@
 """
 CodeIntel is a plugin intended to display "code intelligence" information.
 The plugin is based in code from the Open Komodo Editor and has a MPL license.
-Port by German M. Bravo (Kronuz). 2011-2015
+Port by German M. Bravo (Kronuz). 2011-2017
 
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.20"
+VERSION = "3.0.0-beta.24"
 
 
 import os
@@ -245,7 +245,7 @@ class Settings:
         for setting in ('@disable', 'command', 'oop_mode', 'log_levels'):
             if (
                 setting in self.changeset or
-                self.previous_settings.get(setting, False) != self.settings.get(setting, False)
+                self.previous_settings and self.previous_settings.get(setting) != self.settings.get(setting)
             ):
                 self.changeset.discard(setting)
                 need_deactivate = True
@@ -294,6 +294,8 @@ class Settings:
 
         if self.previous_settings and self.on_update_callback:
             self.on_update_callback(self)
+
+        self.copy()
 
     def save(self, view=None):
         """
@@ -819,8 +821,10 @@ class SublimeCodeIntel(CodeintelHandler, sublime_plugin.EventListener):
             progress = data.get('progress') or data.get('completed')
             if progress is not None:
                 total = data.get('total', 100)
-                if total == 100:
-                    progress = "%s%%" % progress
+                if not total:
+                    progress = None
+                elif total == 100:
+                    progress = ("%0.1f" % progress).rstrip('.0') + "%"
                 else:
                     progress = "%s/%s" % (progress, total)
             message = _get_and_log_message(data)
@@ -883,7 +887,6 @@ class SublimeCodeIntel(CodeintelHandler, sublime_plugin.EventListener):
             buf = self.buf_from_view(view)
             # print('on_modified.triggering', bool(buf))
             if buf:
-                buf.scan_document(self, True)
                 buf.trg_from_pos(self, True)
 
     def on_selection_modified(self, view):
@@ -912,7 +915,6 @@ class CodeintelAutoComplete(CodeintelHandler, sublime_plugin.TextCommand):
         buf = self.buf_from_view(view)
 
         if buf:
-            buf.scan_document(self, True)
             buf.trg_from_pos(self, True)
 
 
@@ -923,7 +925,6 @@ class GotoPythonDefinition(CodeintelHandler, sublime_plugin.TextCommand):
         buf = self.buf_from_view(view)
 
         if buf:
-            buf.scan_document(self, True)
             buf.defn_trg_from_pos(self)
 
 
@@ -969,7 +970,7 @@ class CodeintelCompleteCommitCommand(CodeintelHandler, sublime_plugin.TextComman
 
 if 'plugin_is_loaded' not in globals():
     settings = Settings()
-    ci = CodeIntel()
+    ci = CodeIntel(lambda fn: sublime.set_timeout(fn, 0))
 
     # Set to true when the plugin is loaded at startup
     plugin_is_loaded = False
