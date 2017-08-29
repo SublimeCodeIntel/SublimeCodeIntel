@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2017
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.25"
+VERSION = "3.0.0-beta.26"
 
 
 import os
@@ -439,7 +439,7 @@ class CodeintelHandler(object):
             return
 
         if timeout is None:
-            timeout = {'error': 3000, 'warning': 5000, 'info': 10000,
+            timeout = {'critical': 3000, 'error': 3000, 'warning': 5000, 'info': 10000, 'debug': 10000,
                        'event': 10000}.get(ltype, 3000)
 
         if msg is None:
@@ -818,6 +818,25 @@ class SublimeCodeIntel(CodeintelHandler, sublime_plugin.EventListener):
                 return
             else:
                 return
+            logger_obj = None
+            if data.get('type') == 'logging':
+                # logger_name = data.get('name')
+                level = data.get('level')
+                if level >= logging.CRITICAL:
+                    logger_obj = logger.critical
+                    ltype = 'critical'
+                elif level >= logging.ERROR:
+                    logger_obj = logger.error
+                    ltype = 'error'
+                elif level >= logging.WARNING:
+                    logger_obj = logger.warn
+                    ltype = 'warning'
+                elif level >= logging.INFO:
+                    logger_obj = logger.info
+                    ltype = 'info'
+                elif level >= logging.DEBUG:
+                    logger_obj = logger.debug
+                    ltype = 'debug'
             progress = data.get('progress') or data.get('completed')
             if progress is not None:
                 total = data.get('total', 100)
@@ -834,7 +853,7 @@ class SublimeCodeIntel(CodeintelHandler, sublime_plugin.EventListener):
                 message = progress
             elif not message:
                 return
-            self.set_status(ltype, message, lid='SublimeCodeIntel Notification')
+            self.set_status(ltype, message, lid='SublimeCodeIntel Notification', logger_obj=logger_obj)
         sublime.set_timeout(_observer, 0)
 
     def on_pre_save(self, view):

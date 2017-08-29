@@ -883,10 +883,12 @@ class CodeIntelManager(threading.Thread):
                         response = json.loads(buf.decode('utf-8'))
                         self.handle(response)  # handle runs asynchronously and shouldn't raise exceptions
                         buf = b''
-                    else:
-                        if ch not in b'0123456789':
-                            raise ValueError("Invalid frame length character: %r" % ch)
+                    elif ch in b'0123456789':
                         buf += ch
+                    elif ch in b' \t\r\n':
+                        pass
+                    else:
+                        raise ValueError("Invalid frame length character: %r" % ch)
 
             except Exception as e:
                 if self.state in (CodeIntelManager.STATE_QUITTING, CodeIntelManager.STATE_DESTROYED):
