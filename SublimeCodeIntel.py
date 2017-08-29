@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2017
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.26"
+VERSION = "3.0.0-beta.27"
 
 
 import os
@@ -396,6 +396,7 @@ class CodeintelToggleSettingCommand(sublime_plugin.WindowCommand):
 
 class CodeintelHandler(object):
     HISTORY_SIZE = 64
+    MAX_FILESIZE = 1 * 1024 * 1024   # 1MB
     jump_history_by_window = {}  # map of window id -> deque([], HISTORY_SIZE)
 
     status_msg = {}
@@ -531,6 +532,11 @@ class CodeintelHandler(object):
             logger.debug("buf_from_view: %r, %r? no: live disabled", path, lang)
             return
 
+        view_size = view.size()
+        if view.size() > self.MAX_FILESIZE:
+            logger.warn("File %r has size greater than 1MB (%d)", path, view_size)
+            return
+
         logger.debug("buf_from_view: %r, %r? yes", path, lang)
 
         vid = view.id()
@@ -546,7 +552,7 @@ class CodeintelHandler(object):
         lpos = view.line(sel).begin()
 
         text_in_current_line = view.substr(sublime.Region(lpos, original_pos + 1))
-        text = view.substr(sublime.Region(0, view.size()))
+        text = view.substr(sublime.Region(0, view_size))
 
         # Get encoded content and current position
         pos = self.pos2bytes(text, original_pos)
