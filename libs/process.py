@@ -92,24 +92,33 @@ class ProcessError(Exception):
 if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
 
     import winprocess
+    import subprocess
+
+    # In Python 3 on Windows, a lot of the functions previously
+    # in _subprocess moved to _winapi
+    _subprocess = getattr(subprocess, '_subprocess', None)
+    _winapi = getattr(subprocess, '_winapi', None)
+
+    def subprocess_import(attr):
+        for mod in (subprocess, _subprocess, _winapi):
+            value = getattr(mod, attr, None)
+            if value is not None:
+                return value
+        raise ImportError
+
     try:
-        from subprocess import pywintypes, list2cmdline, STARTUPINFO
+        # These subprocess variables have moved around between Python versions.
+        list2cmdline = subprocess_import('list2cmdline')
+        STARTUPINFO = subprocess_import('STARTUPINFO')
+        SW_HIDE = subprocess_import('SW_HIDE')
+        STARTF_USESTDHANDLES = subprocess_import('STARTF_USESTDHANDLES')
+        STARTF_USESHOWWINDOW = subprocess_import('STARTF_USESHOWWINDOW')
+        GetVersion = subprocess_import('GetVersion')
+        CreateProcess = subprocess_import('CreateProcess')
+        TerminateProcess = subprocess_import('TerminateProcess')
     except ImportError:
         pass
     else:
-        try:
-            # These subprocess variables have moved around between Python versions.
-            from subprocess import (SW_HIDE,
-                                    STARTF_USESTDHANDLES, STARTF_USESHOWWINDOW,
-                                    GetVersion, CreateProcess, TerminateProcess)
-        except ImportError:
-            import subprocess
-            SW_HIDE = subprocess._subprocess.SW_HIDE
-            STARTF_USESTDHANDLES = subprocess._subprocess.STARTF_USESTDHANDLES
-            STARTF_USESHOWWINDOW = subprocess._subprocess.STARTF_USESHOWWINDOW
-            GetVersion = subprocess._subprocess.GetVersion
-            CreateProcess = subprocess._subprocess.CreateProcess
-            TerminateProcess = subprocess._subprocess.TerminateProcess
 
         # This fix is for killing child processes on windows, based on:
         #   http://www.microsoft.com/msj/0698/win320698.aspx
@@ -187,7 +196,7 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
                                             env,
                                             cwd,
                                             startupinfo)
-                except pywintypes.error as e:
+                except IOError as e:  # From 2.6 on, pywintypes.error was defined as IOError
                     # Translate pywintypes.error to WindowsError, which is
                     # a subclass of OSError.  FIXME: We should really
                     # translate errno using _sys_errlist (or simliar), but
