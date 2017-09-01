@@ -88,10 +88,7 @@ class ProcessError(Exception):
         self.errno = errno
 
 
-# Check if this is Windows NT and above.
-if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
-
-    import winprocess
+if sys.platform.startswith("win"):
     import subprocess
 
     # In Python 3 on Windows, a lot of the functions previously
@@ -105,6 +102,16 @@ if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
             if value is not None:
                 return value
         raise ImportError
+
+    GetStdHandle = subprocess_import('GetStdHandle')
+    STD_INPUT_HANDLE = subprocess_import('STD_INPUT_HANDLE')
+    STD_OUTPUT_HANDLE = subprocess_import('STD_OUTPUT_HANDLE')
+    STD_ERROR_HANDLE = subprocess_import('STD_ERROR_HANDLE')
+
+
+# Check if this is Windows NT and above.
+if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
+    import winprocess
 
     try:
         # These subprocess variables have moved around between Python versions.
@@ -389,7 +396,6 @@ class ProcessOpen(Popen):
             if sys.platform != "win32":
                 cls.__needToHackAroundStdHandles = False
             else:
-                from _subprocess import GetStdHandle, STD_INPUT_HANDLE
                 stdin_handle = GetStdHandle(STD_INPUT_HANDLE)
                 if stdin_handle is not None:
                     cls.__needToHackAroundStdHandles = True
@@ -397,8 +403,7 @@ class ProcessOpen(Popen):
                     cls.__needToHackAroundStdHandles = False
         return cls.__needToHackAroundStdHandles
 
-    @classmethod
-    def _isFileObjInheritable(cls, fileobj, stream_name):
+    def _isFileObjInheritable(self, fileobj, stream_name):
         """Check if a given file-like object (or whatever else subprocess.Popen
         takes as a handle/stream) can be correctly inherited by a child process.
         This just duplicates the code in subprocess.Popen._get_handles to make
@@ -408,7 +413,6 @@ class ProcessOpen(Popen):
         @param fileobj The object being used as a fd/handle/whatever
         @param stream_name The name of the stream, "stdin", "stdout", or "stderr"
         """
-        import _subprocess
         import ctypes
         import msvcrt
         new_handle = None
@@ -423,11 +427,11 @@ class ProcessOpen(Popen):
         try:
             if fileobj is None:
                 std_handle = {
-                    "stdin": _subprocess.STD_INPUT_HANDLE,
-                    "stdout": _subprocess.STD_OUTPUT_HANDLE,
-                    "stderr": _subprocess.STD_ERROR_HANDLE,
+                    "stdin": STD_INPUT_HANDLE,
+                    "stdout": STD_OUTPUT_HANDLE,
+                    "stderr": STD_ERROR_HANDLE,
                 }[stream_name]
-                handle = _subprocess.GetStdHandle(std_handle)
+                handle = GetStdHandle(std_handle)
                 if handle is None:
                     # subprocess.Popen._get_handles creates a new pipe here
                     # we don't have to worry about things we create
