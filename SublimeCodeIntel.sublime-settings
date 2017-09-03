@@ -41,7 +41,7 @@
         /*
             command - Executable for OOP codeintel command.
         */
-        "command": "/usr/local/bin/codeintel",
+        "command": "codeintel",
 
         /*
             oop_mode - OOP mode.

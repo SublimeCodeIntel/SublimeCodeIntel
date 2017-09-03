@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2017
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.29"
+VERSION = "3.0.0-beta.31"
 
 
 import os
@@ -168,7 +168,7 @@ class Settings:
         user = settings.get('user', {})
 
         if user:
-            for setting_name in ('codeintel_syntax_map', 'codeintel_language_settings'):
+            for setting_name in ('syntax_map', 'language_settings'):
                 default_setting = default.pop(setting_name, {})
                 user_setting = user.get(setting_name, {})
 
