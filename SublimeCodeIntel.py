@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2017
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.31"
+VERSION = "3.0.0-beta.32"
 
 
 import os
@@ -173,7 +173,7 @@ class Settings:
                 user_setting = user.get(setting_name, {})
 
                 for name, data in user_setting.items():
-                    if name in default_setting:
+                    if name in default_setting and isinstance(default_setting[name], dict):
                         default_setting[name].update(data)
                     else:
                         default_setting[name] = data
@@ -506,7 +506,7 @@ class CodeintelHandler(object):
         language = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
         lang = settings.get('syntax_map', {}).get(language, language)
         logger.info("Language guessed: %s (for %s)", lang, language)
-        if lang in settings.get('disabled_languages'):
+        if lang in settings.get('disabled_languages', []):
             return
         if settings.get('@disable', False, lang=lang):
             return
