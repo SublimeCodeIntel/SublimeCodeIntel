@@ -1,3 +1,3 @@
 [
-	{ "button": "button1", "modifiers": ["super"], "command": "goto_python_definition", "press_command": "drag_select" }
+	{ "button": "button1", "modifiers": ["super"], "command": "codeintel_go_to_definition", "press_command": "drag_select" }
 ]

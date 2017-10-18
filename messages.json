@@ -1,6 +1,4 @@
 {
-    "install": "messages/install.txt",
     "2.2.0": "messages/2.2.0.txt",
-    "2.2.0+st3": "messages/2.2.0.txt",
-    "3.0.0-beta6": "messages/3.0.0.txt"
+    "3.0.0": "messages/3.0.0.txt"
 }
