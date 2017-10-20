@@ -117,7 +117,7 @@ if sys.platform.startswith("win"):
 
 # Check if this is Windows NT and above.
 if sys.platform == "win32" and sys.getwindowsversion()[3] == 2:
-    import winprocess
+    from . import winprocess
 
     try:
         # These subprocess variables have moved around between Python versions.

@@ -322,7 +322,7 @@ class _ServerConnection(_Connection):
 
 
 if sys.platform.startswith("win"):
-    from win32_named_pipe import Win32Pipe
+    from .win32_named_pipe import Win32Pipe
 
     class _PipeConnection(Win32Pipe):
         """This is a wrapper around our Win32Pipe class to expose the expected
@@ -532,7 +532,7 @@ class CodeIntelManager(threading.Thread):
             self._shutdown_callback(self)
 
     def init_child(self):
-        import process
+        from . import process
         assert threading.current_thread().name != "MainThread", \
             "CodeIntelManager.init_child should run on background thread!"
         self.log.debug("initializing child process")
