@@ -3,7 +3,6 @@
 # Win32 named pipe helper
 
 from __future__ import absolute_import
-from six.moves import range
 __all__ = ["Win32Pipe"]
 
 import sys

@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2017
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.33"
+VERSION = "3.0.0-beta.34"
 
 
 import os

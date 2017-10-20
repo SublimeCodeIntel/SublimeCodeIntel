@@ -168,7 +168,7 @@ What's New
 v3.0.0 (unreleased, beta):
 
 + Uses CodeIntel as an OOP command and package.
-  Needs to install CodeIntel with pip: `pip install codeintel`
+  Needs to install CodeIntel with pip: `pip install -U CodeIntel`
 
 
 v2.2.0 (2015-03-26):

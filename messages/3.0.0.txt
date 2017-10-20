@@ -7,17 +7,20 @@ A full-featured code intelligence and smart autocomplete engine for Sublime Text
    (Code intelligence plugin ported from Open Komodo Editor to Sublime Text)
 
 
-+-------------------------------- HELP WANTED ---------------------------------+
-|     Maintaining this project is hard, I do it in my spare time, but I'm      |
-|     basically all alone. If anyone is interested in contributing, please     |
-|     contact me. I really need much more help maintaining SublimeCodeIntel    |
-|                                                                              |
-|                       Follow me on twitter @germbravo                        |
-|           You can find us at #sublimecodeintel on irc.freenode.net           |
-|                                                                              |
-|             If you like SublimeCodeIntel, please make a donation:            |
-|        http://sublimecodeintel.github.io/SublimeCodeIntel/donate.html        |
-+------------------------------------------------------------------------------+
+------------------------------- ❗ HELP WANTED ❗-------------------------------
+
+     Maintaining this project is hard, I do it in my spare time, but I'm
+     basically all alone. If anyone is interested in contributing, please
+     contact me. I really need much more help maintaining SublimeCodeIntel
+
+                       Follow me on twitter @germbravo
+                    Follow me on GitHub github.com/Kronuz
+           You can find us at #sublimecodeintel on irc.freenode.net
+
+      💰 If you like SublimeCodeIntel, please consider making a donation 💰
+                 http://www.sublimecodeintel.com/donate.html
+
+--------------------------------------------------------------------------------
 
 
 
@@ -29,8 +32,8 @@ A full-featured code intelligence and smart autocomplete engine for Sublime Text
 
 
 
-Release Notes for v3.0.0-beta6
-------------------------------
+Release Notes for v3.0.0
+------------------------
 
 SublimeCodeIntel v3 requires the CodeIntel Package (which is a Python 2 package)
 [https://pypi.python.org/pypi/CodeIntel] and it should be installed on your
@@ -38,17 +41,17 @@ system usually by using pip or easy_install. The Code Intelligence is handled by
 that package and the command ``codeintel`` it will install in your system.
 
 
-SublimeCodeIntel v3.0.0-beta6 requires CodeIntel v0.9.3. Make sure it's updated!
+SublimeCodeIntel v3 requires CodeIntel v2. Make sure it's updated!
 
-1. Install Python 2 and pip (http://www.pip-installer.org/en/latest/installing.html).
+1. Install Python and pip (http://www.pip-installer.org/en/latest/installing.html).
 
 2. Install (or upgrade) ``CodeIntel`` by typing the following in a terminal:
-   ``pip install -U codeintel``
+   ``pip install -U CodeIntel``
 
 
 Please take the time to read the documentation:
 
-* Online - http://sublimecodeintel.github.io/SublimeCodeIntel/
+* Online - http://www.sublimecodeintel.com
 * Git - https://github.com/SublimeCodeIntel/SublimeCodeIntel
 
 In case of trouble, please read the Troubleshooting section in the README.
@@ -60,7 +63,7 @@ In case of trouble, please read the Troubleshooting section in the README.
 What's New
 ----------
 
-v3.0.0 (unreleased, alpha):
+v3.0.0 (unreleased):
 
 + Uses CodeIntel as an OOP command and package.
-  Needs to install CodeIntel with pip: `pip install -U codeintel`
+  Needs to install CodeIntel with pip: `pip install -U CodeIntel`
