@@ -171,3 +171,42 @@ class SettingsViewEditorCommand(sublime_plugin.TextCommand):
     def run(self, edit, settings):
         """Run the command."""
         settings.edit(self.view.id(), edit)
+
+
+class SettingTogglerCommandMixin(object):
+    """Command that toggles a setting."""
+
+    settings = None
+
+    def is_visible(self, **args):
+        """Return True if the opposite of the setting is True."""
+        if args.get('checked', False):
+            return True
+
+        if self.settings.has_setting(args['setting']):
+            setting = self.settings.get(args['setting'], None)
+            return setting is not None and setting is not args['value']
+        else:
+            return args['value'] is not None
+
+    def is_checked(self, **args):
+        """Return True if the setting should be checked."""
+        if args.get('checked', False):
+            setting = self.settings.get(args['setting'], False)
+            return setting is True
+        else:
+            return False
+
+    def run(self, **args):
+        """Toggle the setting if value is boolean, or remove it if None."""
+
+        if 'value' in args:
+            if args['value'] is None:
+                self.settings.pop(args['setting'])
+            else:
+                self.settings.set(args['setting'], args['value'], changed=True)
+        else:
+            setting = self.settings.get(args['setting'], False)
+            self.settings.set(args['setting'], not setting, changed=True)
+
+        self.settings.save()

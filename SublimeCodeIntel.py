@@ -28,14 +28,10 @@ Port by German M. Bravo (Kronuz). 2011-2017
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.35"
-
+NAME = "SublimeCodeIntel"
+VERSION = "3.0.0-beta.36"
 
 import os
-
-__file__ = os.path.normpath(os.path.abspath(__file__))
-__path__ = os.path.dirname(__file__)
-
 import re
 import logging
 import textwrap
@@ -46,9 +42,7 @@ import sublime
 import sublime_plugin
 
 from .libs.codeintel import CodeIntel, CodeIntelBuffer, logger as codeintel_logger, logger_level as codeintel_logger_level
-from .settings import Settings
-
-PLUGIN_NAME = 'SublimeCodeIntel'
+from .settings import Settings, SettingTogglerCommandMixin
 
 logger_name = 'CodeIntel'
 logger_level = logging.WARNING  # WARNING
@@ -82,155 +76,6 @@ EXCLUDE_PATHS_MAP = {
     'Ruby': 'rubyExcludePaths',
     'C++': 'cppExcludePaths',
 }
-
-
-class CodeintelSettings(Settings):
-    nested_settings = ('syntax_map', 'language_settings')
-
-    def get(self, setting, default=None, lang=None):
-        """Return a plugin setting, defaulting to default if not found."""
-        language_settings = self.settings.get('language_settings', {}).get(lang)
-        if language_settings and setting in language_settings:
-            return language_settings[setting]
-        return super(CodeintelSettings, self).get(setting, default)
-
-    def on_update(self):
-        """
-        The previous settings are compared with the new settings; depending
-        on what changed, engine will either be reconfigured or restarted.
-
-        """
-        need_deactivate = False
-
-        for setting in ('@disable', 'command', 'oop_mode', 'log_levels'):
-            if (
-                setting in self.changeset or
-                self.previous_settings and self.previous_settings.get(setting) != self.settings.get(setting)
-            ):
-                self.changeset.discard(setting)
-                need_deactivate = True
-
-        if (
-            'debug' in self.changeset or
-            self.previous_settings.get('debug', False) != self.settings.get('debug', False)
-        ):
-            self.changeset.discard('debug')
-
-            if self.settings.get('debug'):
-                logger.setLevel(logging.DEBUG)
-                codeintel_logger.setLevel(logging.DEBUG)
-            else:
-                logger.setLevel(logger_level)
-                codeintel_logger.setLevel(codeintel_logger_level)
-
-        if need_deactivate:
-            ci.deactivate()
-
-        if not self.settings.get('@disable'):
-            env = dict(os.environ)
-            env.update(self.settings.get('env', {}))
-
-            prefs = self.get_prefs()
-
-            if ci.enabled:
-                ci.mgr.set_global_environment(
-                    env=env,
-                    prefs=prefs,
-                )
-            else:
-                command = self.settings.get('command')
-                oop_mode = self.settings.get('oop_mode')
-                log_levels = self.settings.get('log_levels')
-                ci.activate(
-                    reset_db_as_necessary=False,
-                    codeintel_command=command,
-                    oop_mode=oop_mode,
-                    log_levels=log_levels,
-                    env=env,
-                    prefs=prefs,
-                )
-
-    def get_prefs(self, lang=None):
-        prefs = {
-            'codeintel_max_recursive_dir_depth': self.settings.get('max_recursive_dir_depth'),
-            'codeintel_scan_files_in_project': self.settings.get('scan_files_in_project'),
-            'codeintel_selected_catalogs': self.settings.get('selected_catalogs'),
-        }
-
-        disabled_languages = self.settings.get('disabled_languages', [])
-
-        scan_extra_paths = self.settings.get('scan_extra_paths', [])
-        if scan_extra_paths:
-            scan_extra_paths = set(os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_extra_paths)
-
-        scan_exclude_paths = self.settings.get('scan_exclude_paths', [])
-        if scan_exclude_paths:
-            scan_exclude_paths = set(os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_exclude_paths)
-
-        language_settings = self.settings.get('language_settings', {})
-        for l, s in language_settings.items():
-            if lang is not None and l != lang:
-                continue
-
-            if l in disabled_languages or s.get('@disable'):
-                continue
-
-            for k, v in s.items():
-                if k not in self.settings:
-                    prefs[k] = v
-
-            extra_paths_name = EXTRA_PATHS_MAP.get(l)
-            language_scan_extra_paths = set(s.get('scan_extra_paths', [])) | set(s.get(extra_paths_name, []))
-            if language_scan_extra_paths:
-                language_scan_extra_paths = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_extra_paths | language_scan_extra_paths]
-            if extra_paths_name:
-                prefs[extra_paths_name] = os.pathsep.join(language_scan_extra_paths)
-
-            exclude_paths_name = EXCLUDE_PATHS_MAP.get(l)
-            language_scan_exclude_paths = set(s.get('scan_exclude_paths', [])) | set(s.get(exclude_paths_name, []))
-            if language_scan_exclude_paths:
-                language_scan_exclude_paths = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_exclude_paths | language_scan_exclude_paths]
-            if exclude_paths_name:
-                prefs[exclude_paths_name] = os.pathsep.join(language_scan_exclude_paths)
-
-        return prefs
-
-
-class CodeintelToggleSettingCommand(sublime_plugin.WindowCommand):
-    """Command that toggles a setting."""
-
-    def is_visible(self, **args):
-        """Return True if the opposite of the setting is True."""
-        if args.get('checked', False):
-            return True
-
-        if settings.has_setting(args['setting']):
-            setting = settings.get(args['setting'], None)
-            return setting is not None and setting is not args['value']
-        else:
-            return args['value'] is not None
-
-    def is_checked(self, **args):
-        """Return True if the setting should be checked."""
-        if args.get('checked', False):
-            setting = settings.get(args['setting'], False)
-            return setting is True
-        else:
-            return False
-
-    def run(self, **args):
-        """Toggle the setting if value is boolean, or remove it if None."""
-
-        if 'value' in args:
-            if args['value'] is None:
-                settings.pop(args['setting'])
-            else:
-                settings.set(args['setting'], args['value'], changed=True)
-        else:
-            setting = settings.get(args['setting'], False)
-            settings.set(args['setting'], not setting, changed=True)
-
-        settings.save()
 
 
 class CodeintelHandler(object):
@@ -832,18 +677,133 @@ class CodeintelCompleteCommitCommand(CodeintelHandler, sublime_plugin.TextComman
             view.run_command('insert', {'characters': character})
 
 
-if 'plugin_is_loaded' not in globals():
-    settings = CodeintelSettings(PLUGIN_NAME)
+################################################################################
+# Initialize settings and main objects only once
+
+class CodeintelSettings(Settings):
+    nested_settings = ('syntax_map', 'language_settings')
+
+    def get(self, setting, default=None, lang=None):
+        """Return a plugin setting, defaulting to default if not found."""
+        language_settings = self.settings.get('language_settings', {}).get(lang)
+        if language_settings and setting in language_settings:
+            return language_settings[setting]
+        return super(CodeintelSettings, self).get(setting, default)
+
+    def on_update(self):
+        """
+        The previous settings are compared with the new settings; depending
+        on what changed, engine will either be reconfigured or restarted.
+
+        """
+        need_deactivate = False
+
+        for setting in ('@disable', 'command', 'oop_mode', 'log_levels'):
+            if (
+                setting in self.changeset or
+                self.previous_settings and self.previous_settings.get(setting) != self.settings.get(setting)
+            ):
+                self.changeset.discard(setting)
+                need_deactivate = True
+
+        if (
+            'debug' in self.changeset or
+            self.previous_settings.get('debug', False) != self.settings.get('debug', False)
+        ):
+            self.changeset.discard('debug')
+
+            if self.settings.get('debug'):
+                logger.setLevel(logging.DEBUG)
+                codeintel_logger.setLevel(logging.DEBUG)
+            else:
+                logger.setLevel(logger_level)
+                codeintel_logger.setLevel(codeintel_logger_level)
+
+        if need_deactivate:
+            ci.deactivate()
+
+        if not self.settings.get('@disable'):
+            env = dict(os.environ)
+            env.update(self.settings.get('env', {}))
+
+            prefs = self.get_prefs()
+
+            if ci.enabled:
+                ci.mgr.set_global_environment(
+                    env=env,
+                    prefs=prefs,
+                )
+            else:
+                command = self.settings.get('command')
+                oop_mode = self.settings.get('oop_mode')
+                log_levels = self.settings.get('log_levels')
+                ci.activate(
+                    reset_db_as_necessary=False,
+                    codeintel_command=command,
+                    oop_mode=oop_mode,
+                    log_levels=log_levels,
+                    env=env,
+                    prefs=prefs,
+                )
+
+    def get_prefs(self, lang=None):
+        prefs = {
+            'codeintel_max_recursive_dir_depth': self.settings.get('max_recursive_dir_depth'),
+            'codeintel_scan_files_in_project': self.settings.get('scan_files_in_project'),
+            'codeintel_selected_catalogs': self.settings.get('selected_catalogs'),
+        }
+
+        disabled_languages = self.settings.get('disabled_languages', [])
+
+        scan_extra_paths = self.settings.get('scan_extra_paths', [])
+        if scan_extra_paths:
+            scan_extra_paths = set(os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_extra_paths)
+
+        scan_exclude_paths = self.settings.get('scan_exclude_paths', [])
+        if scan_exclude_paths:
+            scan_exclude_paths = set(os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_exclude_paths)
+
+        language_settings = self.settings.get('language_settings', {})
+        for l, s in language_settings.items():
+            if lang is not None and l != lang:
+                continue
+
+            if l in disabled_languages or s.get('@disable'):
+                continue
+
+            for k, v in s.items():
+                if k not in self.settings:
+                    prefs[k] = v
+
+            extra_paths_name = EXTRA_PATHS_MAP.get(l)
+            language_scan_extra_paths = set(s.get('scan_extra_paths', [])) | set(s.get(extra_paths_name, []))
+            if language_scan_extra_paths:
+                language_scan_extra_paths = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_extra_paths | language_scan_extra_paths]
+            if extra_paths_name:
+                prefs[extra_paths_name] = os.pathsep.join(language_scan_extra_paths)
+
+            exclude_paths_name = EXCLUDE_PATHS_MAP.get(l)
+            language_scan_exclude_paths = set(s.get('scan_exclude_paths', [])) | set(s.get(exclude_paths_name, []))
+            if language_scan_exclude_paths:
+                language_scan_exclude_paths = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_exclude_paths | language_scan_exclude_paths]
+            if exclude_paths_name:
+                prefs[exclude_paths_name] = os.pathsep.join(language_scan_exclude_paths)
+
+        return prefs
+
+
+if 'settings' not in globals():
+    settings = CodeintelSettings(NAME)
+
+    class CodeintelToggleSettingCommand(SettingTogglerCommandMixin, sublime_plugin.WindowCommand):
+        settings = settings
+
     ci = CodeIntel(lambda fn: sublime.set_timeout(fn, 0))
 
-    # Set to true when the plugin is loaded at startup
-    plugin_is_loaded = False
 
+################################################################################
 
 def plugin_loaded():
-    global plugin_is_loaded, settings
-    plugin_is_loaded = True
-
     settings.load()
 
 
