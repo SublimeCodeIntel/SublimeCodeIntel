@@ -1,11 +1,169 @@
 /*
-    SublimeCodeIntel default settings for Windows
+    SublimeCodeIntel default settings
 */
 {
     "default": {
         /*
+            debug - Enbles/disables debug mode.
+        */
+        "debug": false,
+
+        /*
+            live - Enbles/disables live codeintel autocomplete.
+        */
+        "live": true,
+
+        /*
+        Maps syntax names to languages. This allows variations on a syntax
+        (for example "Python (Django)") to be used. The key is
+        the base filename of the .tmLanguage syntax files, and the value
+        is the syntax it maps to.
+        */
+        "syntax_map": {
+            "C": "C++",
+            "C++11": "C++",
+            "Objective-C": "C++",
+            "Objective-C++": "C++",
+            "Python Django": "Python",
+            "PythonImproved": "Python",
+            "HTML (Django)": "Django",
+            "JavaScript": "ECMAScript",
+            "JavaScript (Babel)": "ECMAScript",
+            "Node.js": "ECMAScript",
+            "JSX": "ECMAScript"
+        },
+
+        /*
+            disabled_languages - List of codeintel disabled languages.
+        */
+        "disabled_languages": [],
+
+        /*
+            command - Executable for OOP codeintel command.
+        */
+        "command": "codeintel",
+
+        /*
             oop_mode - OOP mode.
         */
         "oop_mode": "tcp",
+
+        /*
+            log_levels - Set the logging levels for the OOP loggers
+            This can be DEBUG, INFO, WARNING or ERROR; WARNGING is recommended,
+            other settings might have an impact in the perfocmance.
+        */
+
+        "log_levels" : ["WARNING"],
+
+        /*
+            complete_commit - Makes auto complete close autocomplete
+            window with certain characters.
+        */
+        "complete_commit": true,
+
+        /*
+            complete_commit_fillup - Makes codeintel fillup characters
+            when possible (inserting the selected item in the autocomplete). This
+            setting requires complete_commit.
+        */
+        "complete_commit_fillup": false,
+
+        /*
+            selected_catalogs - API Catalogs.
+            SublimeCodeIntel uses API catalogs to provide autocomplete and calltips
+            for 3rd-party libraries.
+
+            NOTE: Add only the libraries that you use in your code. Adding all API
+                catalogs for a particular language can lead to confusing results.
+
+            Avaliable catalogs:
+                PyWin32 (Python3) (for Python3: Python Extensions for Windows)
+                PyWin32 (for Python: Python Extensions for Windows)
+                Rails (for Ruby: Rails version 1.1.6)
+                jQuery (for JavaScript: jQuery JavaScript library - version 1.9.1)
+                Prototype (for JavaScript: JavaScript framework for web development)
+                dojo (for JavaScript: Dojo Toolkit API - version 1.5.0)
+                Ext_30 (for JavaScript: Ext JavaScript framework - version 3.0)
+                HTML5 (for JavaScript: HTML5 (Canvas, Web Messaging, Microdata))
+                MochiKit (for JavaScript: A lightweight JavaScript library - v1.4.2)
+                Mozilla Toolkit (for JavaScript: Mozilla Toolkit API - version 1.8)
+                XBL (for JavaScript: XBL JavaScript support - version 1.0)
+                YUI (for JavaScript: Yahoo! User Interface Library - v2.8.1)
+                Drupal (for PHP: A full-featured PHP content management/discussion engine -- v5.1)
+                PECL (for PHP: A collection of PHP Extensions)
+        */
+        "selected_catalogs": [],
+
+        /*
+            scan_files_in_project - Include all files and directories from
+            the project base directory and in the Sublime Text project.
+        */
+        "scan_files_in_project": true,
+
+        /*
+            max_recursive_dir_depth - Maximum recursion to use, when applicable.
+        */
+        "max_recursive_dir_depth": 10,
+
+        /*
+            scan_extra_paths - Extra directories to include during the scan,
+            additional to the ones configured by default.
+        */
+        "scan_extra_paths": [],
+
+        /*
+            scan_exclude_paths - Directories to exclude from the scan.
+        */
+        "scan_exclude_paths": ["/build/", "/min/"],
+
+        /*
+            env - Additional environment variables to use.
+        */
+        "env": {},
+
+        /*
+            Defines a configuration for each language. Each language can include any
+            of the available settings listed above, plus any others passed to CodeIntel.
+        */
+        "language_settings": {
+            "Python": {
+                "python": ""
+            },
+            "Python3": {
+                "python3": ""
+            },
+            "Ruby": {
+                "ruby": ""
+            },
+            "Perl": {
+                "perl": ""
+            },
+            "Go": {
+                "golangDefaultLocation": "",
+                "gocodeDefaultLocation": "",
+                "godefDefaultLocation": ""
+            },
+            "HTML": {
+                "defaultHTMLDecl": "-//W3C//DTD HTML 5//EN"
+            },
+            "HTML5": {
+                "defaultHTML5Decl": "-//W3C//DTD HTML 5//EN"
+            },
+            "JavaScript": {
+            },
+            "Node.js": {
+                "nodejsDefaultInterpreter": ""
+            },
+            "ECMAScript": {
+            },
+            "PHP": {
+                "php": "",
+                "phpConfigFile": ""
+            },
+            "C++": {
+                "cppFlags": ["-I/usr/local/include", "-L/usr/local/lib"]
+            }
+        }
     }
 }
