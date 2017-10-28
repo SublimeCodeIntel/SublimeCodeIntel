@@ -1,0 +1,11 @@
+/*
+    SublimeCodeIntel default settings for Windows
+*/
+{
+    "default": {
+        /*
+            oop_mode - OOP mode.
+        */
+        "oop_mode": "tcp",
+    }
+}
