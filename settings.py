@@ -11,6 +11,7 @@ import sublime_plugin
 
 class Settings(object):
     """This class provides global access to and management of plugin settings."""
+    nested_settings = ()
 
     def __init__(self, name):
         """Initialize a new instance."""
