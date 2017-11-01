@@ -760,13 +760,13 @@ class CodeintelSettings(Settings):
             'codeintel_selected_catalogs': self.settings.get('selected_catalogs'),
         }
 
-        disabled_languages = self.settings.get('disabled_languages', [])
+        disabled_languages = set(self.settings.get('disabled_languages', []))
 
-        scan_extra_paths = self.settings.get('scan_extra_paths', [])
+        scan_extra_paths = set(self.settings.get('scan_extra_paths', []))
         if scan_extra_paths:
             scan_extra_paths = set(os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_extra_paths)
 
-        scan_exclude_paths = self.settings.get('scan_exclude_paths', [])
+        scan_exclude_paths = set(self.settings.get('scan_exclude_paths', []))
         if scan_exclude_paths:
             scan_exclude_paths = set(os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in scan_exclude_paths)
 
