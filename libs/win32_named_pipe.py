@@ -212,7 +212,7 @@ class Win32Pipe(object):
                                        True):
                 raise ctypes.WinError(ctypes.get_last_error())
             assert read.value == count
-            return str(buf.value)
+            return buf.value
         finally:
             CloseHandle(overlapped.hEvent)
 
