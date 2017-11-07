@@ -45,10 +45,11 @@ import logging
 import threading
 import warnings
 
-if sys.version_info[0] == 3:
-    string_types = str
-else:
+PY2 = sys.version_info[0] == 2
+if PY2:
     string_types = basestring
+else:
+    string_types = str
 
 #-------- Globals -----------#
 
@@ -491,17 +492,22 @@ class ProcessOpen(Popen):
                     # http://bugs.activestate.com/show_bug.cgi?id=75467
                     cmd = '"%s"' % (cmd, )
 
+            # Environment variables on Python 2 + Windows must be str.
             # XXX - subprocess needs to be updated to use the wide string API.
             # subprocess uses a Windows API that does not accept unicode, so
             # we need to convert all the environment variables to strings
             # before we make the call. Temporary fix to bug:
             #   http://bugs.activestate.com/show_bug.cgi?id=72311
-            if env:
+            if env and PY2:
                 encoding = sys.getfilesystemencoding()
                 _enc_env = {}
                 for key, value in env.items():
                     try:
-                        _enc_env[key.encode(encoding)] = value.encode(encoding)
+                        if not isinstance(key, str):
+                            key = key.encode(encoding)
+                        if not isinstance(value, str):
+                            value = value.encode(encoding)
+                        _enc_env[key] = value
                     except UnicodeEncodeError:
                         # Could not encode it, warn we are dropping it.
                         log.warn("Could not encode environment variable %r "

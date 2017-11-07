@@ -29,7 +29,7 @@ Port by German M. Bravo (Kronuz). 2011-2017
 from __future__ import absolute_import, unicode_literals, print_function
 
 NAME = "SublimeCodeIntel"
-VERSION = "3.0.0-beta.40"
+VERSION = "3.0.0-rc.1"
 
 import os
 import re
