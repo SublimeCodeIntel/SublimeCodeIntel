@@ -20,11 +20,11 @@ The plugin provides the following features:
 -   Jump to Symbol Definition - Jump to the file and line of the
     definition of a symbol.
 -   Imports autocomplete - Shows autocomplete with the available
-    modules/symbols in real time.
+    modules/symbols in real-time.
 -   Function Call tooltips - Displays information in the status bar
     about the working function.
 
-The package should work in all three platforms (MacOS X, Windows and Linux).
+The package should work on all three platforms (MacOS X, Windows, and Linux).
 
 [![Click here to lend your support to CodeIntel/SublimeCodeIntel and make a donation!](https://www.paypalobjects.com/en_GB/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=VVX4Q9H3924LE)
 
@@ -71,7 +71,7 @@ directory, located somewhere in user's "Home" directory:
 
     git clone git://github.com/SublimeCodeIntel/SublimeCodeIntel.git
 
-The "Packages" packages directory is located differently in different
+The "Packages" packages directory is located differently on different
 platforms. To access the directory use:
 
 -   OS X:
@@ -89,7 +89,7 @@ platforms. To access the directory use:
 Using
 -----
 
--   Start typing code as usual, autocomplete will pop up whenever it's
+-   Start typing code, as usual, autocomplete will pop up whenever it's
     available. SublimeCodeIntel will also allow you to jump around
     symbol definitions even across files with just a click ..and back.
 
@@ -122,9 +122,9 @@ It just works!
 Configuring
 -----------
 
-For adding additional library paths (django and extra libs paths for
+For adding additional library paths (Django and extra libs paths for
 Python or extra paths to look for .js files for JavaScript for example),
-either add those paths as folders to your Sublime Text project, or
+either add those paths as folders to your Sublime Text project or
 modify SublimeCodeIntel User settings. User settings can be configured
 in the User File Settings:
 
@@ -178,8 +178,7 @@ follow these steps:
     and the directory `db`. In Windows, this should be at
     `%userprofile%\.codeintel`.
 -   Delete the whole directory `~/.codeintel` and all of its content.
-    Particularly, if you want to delete only the indexes, the code
-    intelligence database indexes are located inside `~/.codeintel/db`.
+    Particularly, if you want to delete only the indexes, the code intelligence database indexes are located inside `~/.codeintel/db`.
 -   Start Sublime Text
 -   Try doing some code intelligence with the files in your project and
     enjoy a clean re-indexing! (Remember that the database is being
@@ -189,7 +188,7 @@ follow these steps:
 
 ### Opening an issue
 
-If the problems persists after trying the above solutions, open a new
+If the problems persist after trying the above solutions, open a new
 issue in <https://github.com/SublimeCodeIntel/SublimeCodeIntel/issues/>
 
 When opening new issues, please check no other issues exist which report
@@ -217,6 +216,6 @@ v2.2.0 (2015-03-26):
 License
 -------
 
-The plugin is based in code from the Open Komodo Editor and has a MPL license.
+The plugin is based on code from the Open Komodo Editor and has an MPL license.
 
 Ported from Open Komodo by German M. Bravo (Kronuz).
