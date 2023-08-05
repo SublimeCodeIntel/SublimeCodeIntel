@@ -10,7 +10,7 @@ import sublime_plugin
 
 
 class Settings(object):
-    """This class provides global access to and management of plugin settings."""
+    This class provides global access to and management of plugin settings.
     nested_settings = ()
 
     def __init__(self, name):
@@ -23,7 +23,7 @@ class Settings(object):
         self.edits = defaultdict(list)
 
     def load(self, force=False):
-        """Load the plugin settings."""
+        Load the plugin settings.
         if force or not self.settings:
             self.observe()
             self.on_change()
@@ -37,7 +37,7 @@ class Settings(object):
         return self.settings.get(setting, default)
 
     def set(self, setting, value, changed=False):
-        """
+        
         Set a plugin setting to the given value.
 
         Clients of this module should always call this method to set a value
@@ -46,7 +46,7 @@ class Settings(object):
         If the caller knows for certain that the value has changed,
         they should pass changed=True.
 
-        """
+        
         self.copy()
         self.settings[setting] = value
 
@@ -54,32 +54,32 @@ class Settings(object):
             self.changeset.add(setting)
 
     def pop(self, setting, default=None):
-        """
+        
         Remove a given setting and return default if it is not in self.settings.
 
         Clients of this module should always call this method to pop a value
         instead of doing settings.pop('foo').
 
-        """
+        
         self.copy()
         return self.settings.pop(setting, default)
 
     def copy(self):
-        """Save a copy of the plugin settings."""
+        Save a copy of the plugin settings.
         self.previous_settings = deepcopy(self.settings)
 
     def observe(self, observer=None):
-        """Observer changes to the plugin settings."""
+        Observer changes to the plugin settings.
         self.plugin_settings = sublime.load_settings('{}.sublime-settings'.format(self.name))
         self.plugin_settings.clear_on_change(self.name)
         self.plugin_settings.add_on_change(self.name, observer or self.on_change)
 
     def merge_user_settings(self, settings):
-        """
+        
         Return the default settings merged with the user's settings.
         If there are any nested settings, those get merged as well.
 
-        """
+        
 
         default = settings.get('default', {})
         user = settings.get('user', {})
@@ -101,7 +101,7 @@ class Settings(object):
         return default
 
     def on_change(self):
-        """Update state when the user settings change."""
+        Update state when the user settings change.
 
         settings = self.merge_user_settings(self.plugin_settings)
         self.settings.clear()
@@ -113,20 +113,20 @@ class Settings(object):
         self.copy()
 
     def on_update(self):
-        """To be implemented by the user, when needed."""
+        To be implemented by the user, when needed.
         pass
 
     def save(self, view=None):
-        """
+        
         Regenerate and save the user settings.
 
         User settings are updated and merged with the default settings and if
         the user settings are currently being edited, the view is also updated.
 
-        """
+        
         self.load()
 
-        # Fill in default settings
+        Fill in default settings
         settings = self.settings
 
         settings_filename = '{}.sublime-settings'.format(self.name)
@@ -159,7 +159,7 @@ class Settings(object):
             sublime.save_settings(settings_filename)
 
     def edit(self, vid, edit):
-        """Perform an operation on a view with the given edit object."""
+        Perform an operation on a view with the given edit object.
         callbacks = self.edits.pop(vid, [])
 
         for c in callbacks:
@@ -167,7 +167,7 @@ class Settings(object):
 
 
 class SettingsViewEditorCommand(sublime_plugin.TextCommand):
-    """A plugin command used to generate an edit object for a view."""
+    A plugin command used to generate an edit object for a view.
 
     def run(self, edit, settings):
         """Run the command."""
@@ -175,12 +175,12 @@ class SettingsViewEditorCommand(sublime_plugin.TextCommand):
 
 
 class SettingTogglerCommandMixin(object):
-    """Command that toggles a setting."""
+    Command that toggles a setting.
 
     settings = None
 
     def is_visible(self, **args):
-        """Return True if the opposite of the setting is True."""
+        Return True if the opposite of the setting is True.
         if args.get('checked', False):
             return True
 
@@ -191,7 +191,7 @@ class SettingTogglerCommandMixin(object):
             return args['value'] is not None
 
     def is_checked(self, **args):
-        """Return True if the setting should be checked."""
+        Return True if the setting should be checked.
         if args.get('checked', False):
             setting = self.settings.get(args['setting'], False)
             return setting is True
@@ -199,7 +199,7 @@ class SettingTogglerCommandMixin(object):
             return False
 
     def run(self, **args):
-        """Toggle the setting if value is boolean, or remove it if None."""
+        Toggle the setting if value is boolean, or remove it if None.
 
         if 'value' in args:
             if args['value'] is None:
