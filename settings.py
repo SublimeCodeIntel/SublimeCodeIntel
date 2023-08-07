@@ -14,7 +14,7 @@ class Settings(object):
     nested_settings = ()
 
     def __init__(self, name):
-        """Initialize a new instance."""
+        Initialize a new instance."""
         self.name = name
         self.settings = {}
         self.previous_settings = {}
@@ -29,11 +29,11 @@ class Settings(object):
             self.on_change()
 
     def has_setting(self, setting):
-        """Return whether the given setting exists."""
+        Return whether the given setting exists."""
         return setting in self.settings
 
     def get(self, setting, default=None):
-        """Return a plugin setting, defaulting to default if not found."""
+        Return a plugin setting, defaulting to default if not found."""
         return self.settings.get(setting, default)
 
     def set(self, setting, value, changed=False):
@@ -129,12 +129,12 @@ class Settings(object):
         Fill in default settings
         settings = self.settings
 
-        settings_filename = '{}.sublime-settings'.format(self.name)
-        user_settings_path = os.path.join(sublime.packages_path(), 'User', settings_filename)
+        settings_filename = {}.sublime-settings'.format(self.name)
+        user_settings_path = os.path.join(sublime.packages_path(), User, settings_filename)
         settings_views = []
 
         if view is None:
-            # See if any open views are the user prefs
+            See if any open views are the user prefs
             for window in sublime.windows():
                 for view in window.views():
                     if view.file_name() == user_settings_path:
@@ -170,7 +170,7 @@ class SettingsViewEditorCommand(sublime_plugin.TextCommand):
     A plugin command used to generate an edit object for a view.
 
     def run(self, edit, settings):
-        """Run the command."""
+        Run the command.
         settings.edit(self.view.id(), edit)
 
 
@@ -179,7 +179,7 @@ class SettingTogglerCommandMixin(object):
 
     settings = None
 
-    def is_visible(self, **args):
+    def is_visible(self, args):
         Return True if the opposite of the setting is True.
         if args.get('checked', False):
             return True
@@ -190,7 +190,7 @@ class SettingTogglerCommandMixin(object):
         else:
             return args['value'] is not None
 
-    def is_checked(self, **args):
+    def is_checked(self, args):
         Return True if the setting should be checked.
         if args.get('checked', False):
             setting = self.settings.get(args['setting'], False)
@@ -198,10 +198,10 @@ class SettingTogglerCommandMixin(object):
         else:
             return False
 
-    def run(self, **args):
+    def run(self, args):
         Toggle the setting if value is boolean, or remove it if None.
 
-        if 'value' in args:
+        if value in args:
             if args['value'] is None:
                 self.settings.pop(args['setting'])
             else:
