@@ -1,4 +1,4 @@
-from __future__ import absolute_import, unicode_literals, print_function
+from__future__ import absolute_import, unicode_literals, print_function
 
 import os
 import json
@@ -46,14 +46,13 @@ class Settings(object):
         If the caller knows for certain that the value has changed,
         they should pass changed=True.
 
-        
-        self.copy()
+
         self.settings[setting] = value
 
         if changed:
-            self.changeset.add(setting)
+            self.chaneset.add(setting)
 
-    def pop(self, setting, default=None):
+    def pop(self, setting, deault=None):
         
         Remove a given setting and return default if it is not in self.settings.
 
